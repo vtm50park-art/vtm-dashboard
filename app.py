@@ -696,7 +696,7 @@ def page_emp_home():
       <p>{'✅ 출근 완료 — '+atp if not att.empty else '❗ 아직 출근 체크 전'}</p>
       <p>{'📝 업무 보고: '+rst if not rep.empty else '📝 업무 보고 미제출'}</p>
       <p style="color:#64748B;font-size:0.8rem;margin-top:6px;">
-          위쪽 메뉴 → ⏰ 출퇴근 → 📝 업무 보고 순으로 진행하세요.
+          왼쪽 메뉴 → ⏰ 출퇴근 → 📝 업무 보고 순으로 진행하세요.
       </p>
     </div>""", unsafe_allow_html=True)
 
@@ -894,14 +894,13 @@ def page_emp_calendar():
 
     cal = calendar.monthcalendar(yr, mo)
     html = """<table class="cal-tbl"><thead><tr>
-        <th class="wk">일</th>
         <th>월</th><th>화</th><th>수</th><th>목</th><th>금</th>
-        <th class="wk">토</th>
+        <th class="wk">토</th><th class="wk">일</th>
     </tr></thead><tbody>"""
     for week in cal:
         html += "<tr>"
         for i, day in enumerate(week):
-            is_wk = (i == 0 or i == 6)
+            is_wk = (i == 5 or i == 6)
             if day == 0:
                 html += f'<td class="{"wk" if is_wk else ""}"></td>'; continue
             d = f"{yr}-{mo:02d}-{day:02d}"
