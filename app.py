@@ -12,7 +12,7 @@ st.set_page_config(
     page_title="(주) 브이티엠 운영 대시보드",
     page_icon="🏢",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="collapsed"
 )
 
 KST = timezone(timedelta(hours=9))
@@ -133,8 +133,7 @@ def logo_svg(size=72):
     </svg>"""
 
 def inject_all():
-    # 모바일에서 PC와 동일하게 보이도록 뷰포트 고정
-    st.markdown("""<meta name="viewport" content="width=1024">""", unsafe_allow_html=True)
+    st.markdown("""<meta name="viewport" content="width=1024, user-scalable=yes">""", unsafe_allow_html=True)
     st.markdown(f"""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&display=swap');
