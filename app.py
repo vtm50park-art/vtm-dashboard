@@ -133,6 +133,14 @@ def logo_svg(size=72):
     </svg>"""
 
 def inject_all():
+    # 모바일에서도 PC와 동일하게: 뷰포트 스케일 고정
+    st.markdown("""
+<meta name="viewport" content="width=1200, initial-scale=0.5, maximum-scale=5.0, user-scalable=yes">
+<style>
+/* 강제 최소폭: 항상 PC 레이아웃 유지 */
+html, body { min-width: 900px !important; }
+</style>
+""", unsafe_allow_html=True)
     st.markdown(f"""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&display=swap');
@@ -179,7 +187,6 @@ section[data-testid="stSidebar"] > div > div:first-child > div > div > button {{
     width: 245px !important;
     visibility: visible !important;
 }}
-/* 모바일: 위 고정폭 덮어쓰기 (미디어쿼리에서 재정의) */
 [data-testid="stSidebar"] * {{ color: #F1F5F9 !important; }}
 [data-testid="stMain"] {{ margin-left: 0 !important; padding-left: 8px !important; }}
 
@@ -325,70 +332,7 @@ label,.stTextInput label,.stSelectbox label,.stTextArea label,
 .tg-hold {{ display:block; background:#F59E0B; color:#fff!important; border-radius:3px; padding:1px 2px; font-size:0.6rem; margin:1px 0; font-weight:700; }}
 .tg-no  {{ display:block; background:#374151; color:#9CA3AF!important; border-radius:3px; padding:1px 2px; font-size:0.6rem; margin:1px 0; }}
 
-@media (max-width:768px) {{
-    /* 사이드바: 좁은 아이콘 전용 폭으로 고정 */
-    [data-testid="stSidebar"] {{
-        min-width: 60px !important;
-        max-width: 60px !important;
-        width: 60px !important;
-        overflow: hidden !important;
-        transform: none !important;
-        visibility: visible !important;
-    }}
-    /* 사이드바 안 텍스트/라벨 숨김, 아이콘만 */
-    [data-testid="stSidebar"] h2,
-    [data-testid="stSidebar"] p,
-    [data-testid="stSidebar"] .kst-badge,
-    [data-testid="stSidebar"] hr {{
-        display: none !important;
-    }}
-    /* 사이드바 버튼: 아이콘(이모지)만 보이게 */
-    [data-testid="stSidebar"] .stButton > button {{
-        font-size: 1.3rem !important;
-        padding: 10px 4px !important;
-        text-align: center !important;
-        letter-spacing: 0 !important;
-        overflow: hidden !important;
-        white-space: nowrap !important;
-    }}
-    /* home-active-badge 아이콘만 */
-    .home-active-badge span {{
-        display: none !important;
-    }}
-    .home-active-badge {{
-        padding: 10px 6px !important;
-        justify-content: center !important;
-        margin: 3px 2px !important;
-    }}
-    /* 메인 영역 나머지 폭 전부 사용 */
-    [data-testid="stMain"] {{
-        margin-left: 0 !important;
-        padding-left: 4px !important;
-        padding-right: 4px !important;
-        min-width: 0 !important;
-        flex: 1 !important;
-    }}
-    [data-testid="stMainBlockContainer"] {{
-        padding: 6px 4px !important;
-        max-width: 100% !important;
-    }}
-    .topbar {{
-        flex-direction: column;
-        align-items: flex-start;
-        padding: 7px 8px;
-        gap: 3px;
-    }}
-    .tb-title {{ font-size:0.9rem; }}
-    .tb-info  {{ font-size:0.65rem; }}
-    .met-val  {{ font-size:1.2rem; }}
-    .vtm-card {{ padding:9px 10px; font-size:0.85rem; }}
-    .cal-tbl th,.cal-tbl td {{ font-size:0.52rem; padding:2px 1px; }}
-    /* 2컬럼 레이아웃 폭 보정 */
-    [data-testid="stHorizontalBlock"] {{
-        flex-wrap: wrap !important;
-        gap: 4px !important;
-    }}
-}}
+/* 모바일 반응형 없음 - PC와 동일 표시 */
 
 #MainMenu, footer, header {{ visibility:hidden !important; }}
 [data-testid="stDecoration"]  {{ display:none !important; }}
@@ -514,7 +458,6 @@ label,.stTextInput label,.stSelectbox label,.stTextArea label,
 <script>
 (function(){{
     function hideSidebarToggle(){{
-        if(window.innerWidth<=768) return; /* 모바일: 건드리지 않음 */
         var selectors=[
             '[data-testid="stSidebarCollapseButton"]',
             '[data-testid="collapsedControl"]',
