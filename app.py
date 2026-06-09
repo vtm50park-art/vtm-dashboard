@@ -696,7 +696,7 @@ def page_emp_home():
       <p>{'✅ 출근 완료 — '+atp if not att.empty else '❗ 아직 출근 체크 전'}</p>
       <p>{'📝 업무 보고: '+rst if not rep.empty else '📝 업무 보고 미제출'}</p>
       <p style="color:#64748B;font-size:0.8rem;margin-top:6px;">
-          왼쪽 메뉴 → ⏰ 출퇴근 → 📝 업무 보고 순으로 진행하세요.
+          위쪽 메뉴 → ⏰ 출퇴근 → 📝 업무 보고 순으로 진행하세요.
       </p>
     </div>""", unsafe_allow_html=True)
 
