@@ -179,6 +179,7 @@ section[data-testid="stSidebar"] > div > div:first-child > div > div > button {{
     width: 245px !important;
     visibility: visible !important;
 }}
+/* 모바일: 위 고정폭 덮어쓰기 (미디어쿼리에서 재정의) */
 [data-testid="stSidebar"] * {{ color: #F1F5F9 !important; }}
 [data-testid="stMain"] {{ margin-left: 0 !important; padding-left: 8px !important; }}
 
@@ -324,112 +325,69 @@ label,.stTextInput label,.stSelectbox label,.stTextArea label,
 .tg-hold {{ display:block; background:#F59E0B; color:#fff!important; border-radius:3px; padding:1px 2px; font-size:0.6rem; margin:1px 0; font-weight:700; }}
 .tg-no  {{ display:block; background:#374151; color:#9CA3AF!important; border-radius:3px; padding:1px 2px; font-size:0.6rem; margin:1px 0; }}
 
-/* ══════════════════════════════════════════
-   모바일 : 사이드바 완전 숨김 + 하단 탭바
-══════════════════════════════════════════ */
 @media (max-width:768px) {{
-    [data-testid="stSidebar"],
-    [data-testid="stSidebar"][aria-expanded="true"],
-    [data-testid="stSidebar"][aria-expanded="false"] {{
-        display: none !important;
-        width: 0 !important;
-        min-width: 0 !important;
-        max-width: 0 !important;
-        visibility: hidden !important;
+    /* 사이드바: 좁은 아이콘 전용 폭으로 고정 */
+    [data-testid="stSidebar"] {{
+        min-width: 60px !important;
+        max-width: 60px !important;
+        width: 60px !important;
         overflow: hidden !important;
-        position: absolute !important;
+        transform: none !important;
+        visibility: visible !important;
     }}
+    /* 사이드바 안 텍스트/라벨 숨김, 아이콘만 */
+    [data-testid="stSidebar"] h2,
+    [data-testid="stSidebar"] p,
+    [data-testid="stSidebar"] .kst-badge,
+    [data-testid="stSidebar"] hr {{
+        display: none !important;
+    }}
+    /* 사이드바 버튼: 아이콘(이모지)만 보이게 */
+    [data-testid="stSidebar"] .stButton > button {{
+        font-size: 1.3rem !important;
+        padding: 10px 4px !important;
+        text-align: center !important;
+        letter-spacing: 0 !important;
+        overflow: hidden !important;
+        white-space: nowrap !important;
+    }}
+    /* home-active-badge 아이콘만 */
+    .home-active-badge span {{
+        display: none !important;
+    }}
+    .home-active-badge {{
+        padding: 10px 6px !important;
+        justify-content: center !important;
+        margin: 3px 2px !important;
+    }}
+    /* 메인 영역 나머지 폭 전부 사용 */
     [data-testid="stMain"] {{
         margin-left: 0 !important;
-        padding-left: 6px !important;
-        padding-right: 6px !important;
-        width: 100% !important;
-    }}
-    [data-testid="stAppViewContainer"] {{
-        flex-direction: column !important;
+        padding-left: 4px !important;
+        padding-right: 4px !important;
+        min-width: 0 !important;
+        flex: 1 !important;
     }}
     [data-testid="stMainBlockContainer"] {{
-        padding: 6px 6px 80px 6px !important;
+        padding: 6px 4px !important;
+        max-width: 100% !important;
     }}
     .topbar {{
         flex-direction: column;
         align-items: flex-start;
-        padding: 8px 10px;
-        gap: 4px;
+        padding: 7px 8px;
+        gap: 3px;
     }}
-    .tb-title {{ font-size:0.95rem; }}
-    .tb-info  {{ font-size:0.7rem; }}
-    .met-val {{ font-size:1.3rem; }}
-    .vtm-card {{ padding:10px 12px; }}
-    .cal-tbl th,.cal-tbl td {{ font-size:0.55rem; padding:2px 1px; }}
-}}
-
-.mob-nav {{ display: none; }}
-@media (max-width:768px) {{
-    .mob-nav {{
-        display: flex !important;
-        position: fixed;
-        bottom: 0; left: 0; right: 0;
-        background: linear-gradient(180deg,#111827 0%,#0B1120 100%);
-        border-top: 2px solid #D4AF37;
-        z-index: 9999;
-        padding: 0;
-        height: 62px;
-        align-items: stretch;
-        box-shadow: 0 -4px 20px rgba(0,0,0,0.55);
+    .tb-title {{ font-size:0.9rem; }}
+    .tb-info  {{ font-size:0.65rem; }}
+    .met-val  {{ font-size:1.2rem; }}
+    .vtm-card {{ padding:9px 10px; font-size:0.85rem; }}
+    .cal-tbl th,.cal-tbl td {{ font-size:0.52rem; padding:2px 1px; }}
+    /* 2컬럼 레이아웃 폭 보정 */
+    [data-testid="stHorizontalBlock"] {{
+        flex-wrap: wrap !important;
+        gap: 4px !important;
     }}
-    .mob-nav-item {{
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        gap: 2px;
-        cursor: pointer;
-        border: none;
-        background: transparent;
-        color: #64748B !important;
-        font-size: 0.58rem;
-        font-weight: 700;
-        font-family: 'Noto Sans KR', sans-serif;
-        padding: 6px 2px;
-        transition: background 0.15s;
-        text-decoration: none;
-        -webkit-tap-highlight-color: transparent;
-    }}
-    .mob-nav-item .icon {{ font-size: 1.2rem; line-height: 1; }}
-    .mob-nav-item.active {{
-        color: #D4AF37 !important;
-        background: rgba(212,175,55,0.10);
-        border-top: 2px solid #D4AF37;
-        margin-top: -2px;
-    }}
-    .mob-nav-item.active .icon {{
-        filter: drop-shadow(0 0 4px rgba(212,175,55,0.7));
-    }}
-    .mob-header {{
-        display: flex !important;
-        align-items: center;
-        gap: 8px;
-        background: linear-gradient(90deg,#1E293B,#0F172A);
-        border-bottom: 1px solid #D4AF37;
-        padding: 7px 12px;
-        margin-bottom: 8px;
-        border-radius: 0 0 10px 10px;
-    }}
-    .mob-header-name {{ color:#F1F5F9!important; font-weight:900; font-size:0.82rem; }}
-    .mob-header-role {{ color:#D4AF37!important; font-size:0.7rem; font-weight:700; }}
-    .mob-header-time {{ margin-left:auto; color:#94A3B8!important; font-size:0.68rem; font-weight:700; }}
-    .mob-logout-btn {{
-        background: linear-gradient(135deg,#FF6B6B,#EF4444);
-        border: none; border-radius:6px;
-        color:#fff!important; font-size:0.68rem; font-weight:900;
-        padding:4px 8px; cursor:pointer; margin-left:6px;
-    }}
-}}
-@media (min-width:769px) {{
-    .mob-header {{ display: none !important; }}
-    .mob-nav    {{ display: none !important; }}
 }}
 
 #MainMenu, footer, header {{ visibility:hidden !important; }}
@@ -556,6 +514,7 @@ label,.stTextInput label,.stSelectbox label,.stTextArea label,
 <script>
 (function(){{
     function hideSidebarToggle(){{
+        if(window.innerWidth<=768) return; /* 모바일: 건드리지 않음 */
         var selectors=[
             '[data-testid="stSidebarCollapseButton"]',
             '[data-testid="collapsedControl"]',
@@ -791,89 +750,6 @@ def render_sidebar():
                 st.session_state[k] = False if k == "logged_in" else None
             st.session_state.page = "home"; st.rerun()
         st.markdown('</div>', unsafe_allow_html=True)
-
-def render_mobile_nav():
-    """모바일 전용: 상단 미니헤더 + 하단 탭 네비게이션"""
-    kst_now  = now_kst().strftime("%H:%M")
-    kst_date = now_kst().strftime("%m/%d")
-    role_txt = "🔴 관리자" if st.session_state.is_admin else "🟢 직원"
-
-    # ── 상단 미니헤더 ──
-    st.markdown(f"""
-    <div class="mob-header">
-      <span style="font-size:0.95rem;">{logo_svg(22)}</span>
-      <div>
-        <div class="mob-header-name">{st.session_state.user_name}</div>
-        <div class="mob-header-role">{role_txt}</div>
-      </div>
-      <div class="mob-header-time">🇰🇷 KST {kst_date} {kst_now}</div>
-    </div>""", unsafe_allow_html=True)
-
-    # ── 하단 탭바 (관리자 / 직원 분기) ──
-    cur = st.session_state.page
-    if st.session_state.is_admin:
-        tabs = [
-            ("home",          "🏠", "홈"),
-            ("admin_attend",  "📋", "출퇴근"),
-            ("admin_tasks",   "📊", "업무"),
-            ("admin_approve", "✅", "승인"),
-            ("admin_emp",     "👥", "직원"),
-            ("admin_excel",   "📥", "엑셀"),
-            ("admin_logs",    "🔍", "로그"),
-        ]
-    else:
-        tabs = [
-            ("home",         "🏠", "홈"),
-            ("emp_attend",   "⏰", "출퇴근"),
-            ("emp_report",   "📝", "보고"),
-            ("emp_calendar", "📅", "달력"),
-        ]
-
-    items_html = ""
-    for key, icon, lbl in tabs:
-        active_cls = "active" if cur == key else ""
-        items_html += f"""<button class="mob-nav-item {active_cls}"
-            onclick="window.location.href='?mob_page={key}'"
-            style="border:none;outline:none;">
-          <span class="icon">{icon}</span>
-          <span>{lbl}</span>
-        </button>"""
-
-    st.markdown(f'<div class="mob-nav">{items_html}</div>', unsafe_allow_html=True)
-
-    # ── URL 파라미터로 페이지 전환 처리 ──
-    params = st.query_params
-    if "mob_page" in params:
-        new_page = params["mob_page"]
-        valid_pages = [t[0] for t in tabs]
-        if new_page in valid_pages and new_page != st.session_state.page:
-            st.session_state.page = new_page
-            st.query_params.clear()
-            st.rerun()
-
-    # ── 로그아웃 버튼 (모바일용 작은 버튼, 탭바 위 우측) ──
-    st.markdown("""
-    <style>
-    .mob-logout-area { display:none; }
-    @media (max-width:768px) {
-        .mob-logout-area {
-            display: flex !important;
-            justify-content: flex-end;
-            padding: 0 10px 6px;
-        }
-    }
-    </style>""", unsafe_allow_html=True)
-
-    col_spacer, col_btn = st.columns([6, 1])
-    with col_btn:
-        if st.button("🚪", key="mob_logout", help="로그아웃"):
-            wlog("LOGOUT", st.session_state.user_name)
-            for k in ["logged_in", "user_id", "user_name", "is_admin"]:
-                st.session_state[k] = False if k == "logged_in" else None
-            st.session_state.page = "home"
-            st.query_params.clear()
-            st.rerun()
-
 
 def topbar(title):
     kst = now_kst()
@@ -1551,8 +1427,7 @@ inject_all()
 if not st.session_state.logged_in:
     render_login()
 else:
-    render_sidebar()       # PC 사이드바
-    render_mobile_nav()    # 모바일 상단헤더 + 하단탭바
+    render_sidebar()
 
     if st.session_state.is_admin:
         pages = {
