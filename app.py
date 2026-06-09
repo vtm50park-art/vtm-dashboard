@@ -3,7 +3,7 @@ import streamlit as st
 import sqlite3
 import pandas as pd
 import io
-from datetime import datetime, date, timedelta
+from datetime import datetime, date, timedelta, timezone
 import calendar
 import time
 import re
@@ -14,6 +14,23 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded"
 )
+
+# ═══════════════════════════════════════════
+#  KST 시간대 설정 (UTC+9 고정)
+# ═══════════════════════════════════════════
+KST = timezone(timedelta(hours=9))
+
+def now_kst() -> datetime:
+    """현재 한국 시간(KST) datetime 반환"""
+    return datetime.now(tz=KST)
+
+def today_str() -> str:
+    """오늘 날짜 KST 기준 YYYY-MM-DD"""
+    return now_kst().strftime("%Y-%m-%d")
+
+def now_str() -> str:
+    """현재 KST 날짜+시간 YYYY-MM-DD HH:MM:SS"""
+    return now_kst().strftime("%Y-%m-%d %H:%M:%S")
 
 # ═══════════════════════════════════════════
 #  DB
@@ -51,12 +68,12 @@ def init_db():
         detail TEXT, created_at TEXT)""")
     c.execute("SELECT COUNT(*) FROM employees WHERE id='admin_park'")
     if c.fetchone()[0] == 0:
-        now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        _now = now_str()
         c.executemany("INSERT INTO employees VALUES(?,?,?,?,?,?,?)",[
-            ('admin_park','박동진 본부장','본부장',1,'5638',1,now),
-            ('emp_kim','김소원 대리','대리',0,'',1,now),
-            ('emp_seo','서아영 디자이너','디자이너',0,'',1,now),
-            ('emp_ahn','안효민 디렉터','디렉터',0,'',1,now),
+            ('admin_park','박동진 본부장','본부장',1,'5638',1,_now),
+            ('emp_kim','김소원 대리','대리',0,'',1,_now),
+            ('emp_seo','서아영 디자이너','디자이너',0,'',1,_now),
+            ('emp_ahn','안효민 디렉터','디렉터',0,'',1,_now),
         ])
     conn.commit(); conn.close()
 
@@ -65,35 +82,38 @@ init_db()
 # ═══════════════════════════════════════════
 #  유틸
 # ═══════════════════════════════════════════
-def today_str(): return date.today().strftime("%Y-%m-%d")
-def now_str():   return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-def wlog(action,actor,target="",detail=""):
+def wlog(action, actor, target="", detail=""):
     try:
-        conn=get_conn()
-        conn.execute("INSERT INTO logs(action,actor,target,detail,created_at) VALUES(?,?,?,?,?)",
-                     (action,actor,target,detail,now_str()))
+        conn = get_conn()
+        conn.execute(
+            "INSERT INTO logs(action,actor,target,detail,created_at) VALUES(?,?,?,?,?)",
+            (action, actor, target, detail, now_str())
+        )
         conn.commit(); conn.close()
-    except: pass
+    except:
+        pass
 
 def get_employees(active_only=True):
-    conn=get_conn()
-    q=("SELECT * FROM employees WHERE active=1 ORDER BY is_admin DESC,name"
-       if active_only else "SELECT * FROM employees ORDER BY is_admin DESC,name")
-    df=pd.read_sql(q,conn); conn.close(); return df
+    conn = get_conn()
+    q = ("SELECT * FROM employees WHERE active=1 ORDER BY is_admin DESC,name"
+         if active_only else
+         "SELECT * FROM employees ORDER BY is_admin DESC,name")
+    df = pd.read_sql(q, conn); conn.close(); return df
 
 def to_excel(dfs):
-    buf=io.BytesIO()
-    with pd.ExcelWriter(buf,engine="openpyxl") as w:
-        for s,d in dfs.items(): d.to_excel(w,sheet_name=s[:31],index=False)
+    buf = io.BytesIO()
+    with pd.ExcelWriter(buf, engine="openpyxl") as w:
+        for s, d in dfs.items():
+            d.to_excel(w, sheet_name=s[:31], index=False)
     return buf.getvalue()
 
 # ═══════════════════════════════════════════
 #  세션
 # ═══════════════════════════════════════════
-for k,v in {"logged_in":False,"user_id":None,"user_name":None,
-            "is_admin":False,"page":"home"}.items():
-    if k not in st.session_state: st.session_state[k]=v
+for k, v in {"logged_in": False, "user_id": None, "user_name": None,
+             "is_admin": False, "page": "home"}.items():
+    if k not in st.session_state:
+        st.session_state[k] = v
 
 # ═══════════════════════════════════════════
 #  SVG 로고
@@ -140,8 +160,6 @@ html,body,.stApp,
 /* ══════════════════════════════════════════
    사이드바 : 항상 고정 표시 / 접기 버튼 완전 제거
 ══════════════════════════════════════════ */
-
-/* 사이드바 접기/펼치기 토글 버튼 완전 숨김 */
 [data-testid="stSidebarCollapseButton"],
 [data-testid="collapsedControl"],
 button[kind="header"],
@@ -154,8 +172,6 @@ section[data-testid="stSidebar"] > div > div:first-child > div > div > button {{
     width: 0 !important;
     height: 0 !important;
 }}
-
-/* 사이드바 본체 항상 표시 강제 고정 */
 [data-testid="stSidebar"] {{
     background: linear-gradient(180deg,#0B1120 0%,#0F172A 100%) !important;
     border-right: 2px solid #1E3A5F !important;
@@ -169,8 +185,6 @@ section[data-testid="stSidebar"] > div > div:first-child > div > div > button {{
     flex-shrink: 0 !important;
     transition: none !important;
 }}
-
-/* 사이드바가 collapsed 상태일 때도 강제 펼침 */
 [data-testid="stSidebar"][aria-expanded="false"] {{
     transform: none !important;
     margin-left: 0 !important;
@@ -178,17 +192,8 @@ section[data-testid="stSidebar"] > div > div:first-child > div > div > button {{
     width: 245px !important;
     visibility: visible !important;
 }}
-
-/* 사이드바 내부 텍스트 색상 */
-[data-testid="stSidebar"] * {{
-    color: #F1F5F9 !important;
-}}
-
-/* 메인 컨텐츠 영역 여백 보정 */
-[data-testid="stMain"] {{
-    margin-left: 0 !important;
-    padding-left: 8px !important;
-}}
+[data-testid="stSidebar"] * {{ color: #F1F5F9 !important; }}
+[data-testid="stMain"] {{ margin-left: 0 !important; padding-left: 8px !important; }}
 
 /* ══════════════════════════════════════════
    사이드바 내부 버튼 : 기본 골드
@@ -366,7 +371,6 @@ label,.stTextInput label,.stSelectbox label,.stTextArea label,
 
 /* ══════════════════════════════════════════
    사이드바 : 홈 버튼 초록 특수 스타일
-   .sidebar-home-btn 래퍼 안의 버튼만 덮어씀
 ══════════════════════════════════════════ */
 .sidebar-home-btn .stButton > button {{
     background: linear-gradient(135deg,#05F080 0%,#10B981 50%,#059669 100%) !important;
@@ -390,10 +394,8 @@ label,.stTextInput label,.stSelectbox label,.stTextArea label,
 .sidebar-home-btn .stButton > button::before {{
     content: "";
     position: absolute;
-    top: -40%;
-    left: -40%;
-    width: 60%;
-    height: 180%;
+    top: -40%; left: -40%;
+    width: 60%; height: 180%;
     background: linear-gradient(120deg,
         rgba(255,255,255,0.00) 0%,
         rgba(255,255,255,0.22) 50%,
@@ -414,8 +416,6 @@ label,.stTextInput label,.stSelectbox label,.stTextArea label,
     color: #FFFFFF !important;
     font-weight: 900 !important;
 }}
-
-/* 홈 버튼 활성(현재 페이지) 표시 배너 */
 .home-active-badge {{
     background: linear-gradient(135deg,#05F080,#10B981);
     border-radius: 13px;
@@ -464,12 +464,24 @@ label,.stTextInput label,.stSelectbox label,.stTextArea label,
     border: none !important;
     box-shadow: 0 3px 12px rgba(239,68,68,0.40) !important;
 }}
-.sidebar-logout-btn .stButton > button * {{
-    color: #fff !important;
-}}
+.sidebar-logout-btn .stButton > button * {{ color: #fff !important; }}
 .sidebar-logout-btn .stButton > button:hover {{
     background: linear-gradient(135deg,#FF8A8A,#DC2626) !important;
     transform: translateX(3px) !important;
+}}
+
+/* ── KST 배지 ── */
+.kst-badge {{
+    display:inline-block;
+    background:rgba(212,175,55,0.15);
+    border:1px solid rgba(212,175,55,0.4);
+    border-radius:6px;
+    padding:2px 7px;
+    font-size:0.7rem;
+    font-weight:700;
+    color:#D4AF37 !important;
+    margin-left:6px;
+    vertical-align:middle;
 }}
 </style>
 
@@ -479,7 +491,6 @@ label,.stTextInput label,.stSelectbox label,.stTextArea label,
 
 <script>
 (function(){{
-    /* ── 사이드바 접기 버튼 주기적 강제 숨김 (DOM 변화 대응) ── */
     function hideSidebarToggle(){{
         var selectors=[
             '[data-testid="stSidebarCollapseButton"]',
@@ -495,7 +506,6 @@ label,.stTextInput label,.stSelectbox label,.stTextArea label,
             }});
         }});
     }}
-    /* MutationObserver로 DOM 변경 때마다 실행 */
     var obs=new MutationObserver(hideSidebarToggle);
     function startObs(){{
         obs.observe(document.body,{{childList:true,subtree:true}});
@@ -505,7 +515,6 @@ label,.stTextInput label,.stSelectbox label,.stTextArea label,
     else document.addEventListener('DOMContentLoaded',startObs);
     setInterval(hideSidebarToggle,800);
 
-    /* ── 별 애니메이션 ── */
     function bootStars(){{
         var cv=document.getElementById('vtm-stars');
         if(!cv){{setTimeout(bootStars,500);return;}}
@@ -559,7 +568,7 @@ label,.stTextInput label,.stSelectbox label,.stTextArea label,
 # ═══════════════════════════════════════════
 def render_login():
     inject_all()
-    _,mid,_ = st.columns([1,2,1])
+    _, mid, _ = st.columns([1, 2, 1])
     with mid:
         st.markdown(f"""
         <div style="margin-top:50px;background:rgba(15,23,42,0.92);
@@ -585,21 +594,22 @@ def render_login():
 
         emp_df  = get_employees(active_only=True)
         options = ["담당자를 선택하세요"] + [
-            f"{r['name']} ({r['role']})" for _,r in emp_df.iterrows()
+            f"{r['name']} ({r['role']})" for _, r in emp_df.iterrows()
         ]
         sel = st.selectbox("👤 담당자 선택", options, key="login_sel")
 
-        selected=None
+        selected = None
         if sel != "담당자를 선택하세요":
             nm = sel.split(" (")[0]
-            m  = emp_df[emp_df["name"]==nm]
-            if not m.empty: selected=m.iloc[0]
+            m  = emp_df[emp_df["name"] == nm]
+            if not m.empty:
+                selected = m.iloc[0]
 
-        pw_input=""
+        pw_input = ""
         if selected is not None:
             if str(selected["password"]).strip():
-                pw_input = st.text_input("🔑 비밀번호",type="password",
-                    placeholder="비밀번호 입력",key="login_pw")
+                pw_input = st.text_input("🔑 비밀번호", type="password",
+                    placeholder="비밀번호 입력", key="login_pw")
             else:
                 st.markdown("""
                 <div style="background:rgba(16,185,129,0.15);border:1px solid #10B981;
@@ -607,22 +617,22 @@ def render_login():
                   <span style="color:#10B981;font-weight:700;font-size:0.84rem;">
                       🔓 비밀번호 없이 접속 가능
                   </span>
-                </div>""",unsafe_allow_html=True)
+                </div>""", unsafe_allow_html=True)
 
-        st.markdown("<div style='height:6px'></div>",unsafe_allow_html=True)
-        if st.button("🚀  시스템 접속",key="btn_login",use_container_width=True):
-            if sel=="담당자를 선택하세요" or selected is None:
+        st.markdown("<div style='height:6px'></div>", unsafe_allow_html=True)
+        if st.button("🚀  시스템 접속", key="btn_login", use_container_width=True):
+            if sel == "담당자를 선택하세요" or selected is None:
                 st.error("⚠️ 담당자를 선택해 주세요.")
             else:
-                pw_ok=(not str(selected["password"]).strip()) or \
-                      (pw_input==str(selected["password"]))
+                pw_ok = (not str(selected["password"]).strip()) or \
+                        (pw_input == str(selected["password"]))
                 if pw_ok:
-                    st.session_state.logged_in=True
-                    st.session_state.user_id=selected["id"]
-                    st.session_state.user_name=selected["name"]
-                    st.session_state.is_admin=bool(int(selected["is_admin"]))
-                    st.session_state.page="home"
-                    wlog("LOGIN",selected["name"])
+                    st.session_state.logged_in  = True
+                    st.session_state.user_id    = selected["id"]
+                    st.session_state.user_name  = selected["name"]
+                    st.session_state.is_admin   = bool(int(selected["is_admin"]))
+                    st.session_state.page       = "home"
+                    wlog("LOGIN", selected["name"])
                     st.rerun()
                 else:
                     st.error("❌ 비밀번호가 올바르지 않습니다.")
@@ -632,14 +642,13 @@ def render_login():
           <p style="color:#475569;font-size:0.75rem;font-weight:700;">
               개발자: 박동진 본부장
           </p>
-        </div>""",unsafe_allow_html=True)
+        </div>""", unsafe_allow_html=True)
 
 # ═══════════════════════════════════════════
 #  사이드바
 # ═══════════════════════════════════════════
 def render_sidebar():
     with st.sidebar:
-        # ── 로고 + 타이틀 ──
         st.markdown(f"""
         <div style="text-align:center;padding:14px 6px 6px;">
           {logo_svg(38)}
@@ -649,24 +658,27 @@ def render_sidebar():
               VTM 운영 대시보드 v1.0</p>
         </div>
         <hr style="border-color:#1E3A5F;margin:7px 0;">
-        """,unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
 
-        # ── 사용자 정보 배지 ──
-        role_txt="🔴 관리자" if st.session_state.is_admin else "🟢 직원"
+        role_txt = "🔴 관리자" if st.session_state.is_admin else "🟢 직원"
+        # ── KST 현재 시간 사이드바 표시 ──
+        kst_now = now_kst().strftime("%H:%M")
+        kst_date = now_kst().strftime("%m/%d")
         st.markdown(f"""
         <div style="background:#1E293B;border-radius:10px;padding:8px 12px;
                     margin:4px;border-left:3px solid #D4AF37;">
           <p style="color:#D4AF37;font-weight:900;font-size:0.8rem;margin:0;">
-              {role_txt}</p>
+              {role_txt}
+              <span class="kst-badge">🇰🇷 KST {kst_date} {kst_now}</span>
+          </p>
           <p style="color:#F1F5F9;font-weight:700;font-size:0.92rem;margin:3px 0 0;">
               {st.session_state.user_name}</p>
-        </div>""",unsafe_allow_html=True)
+        </div>""", unsafe_allow_html=True)
 
-        st.markdown("<hr style='border-color:#1E3A5F;margin:7px 0;'>",unsafe_allow_html=True)
+        st.markdown("<hr style='border-color:#1E3A5F;margin:7px 0;'>", unsafe_allow_html=True)
 
-        # ── 메뉴 정의 ──
         if st.session_state.is_admin:
-            menus=[
+            menus = [
                 ("home",          "🏠 대시보드 홈",   True),
                 ("admin_attend",  "📋 출퇴근 현황",   False),
                 ("admin_tasks",   "📊 업무 현황",     False),
@@ -676,35 +688,28 @@ def render_sidebar():
                 ("admin_logs",    "🔍 시스템 로그",   False),
             ]
         else:
-            menus=[
+            menus = [
                 ("home",         "🏠 내 대시보드",   True),
                 ("emp_attend",   "⏰ 출퇴근",        False),
                 ("emp_report",   "📝 업무 보고",     False),
                 ("emp_calendar", "📅 업무 달력",     False),
             ]
 
-        # ── 메뉴 렌더링 ──
         for key, label, is_home in menus:
             is_active = (st.session_state.page == key)
-
             if is_home:
-                # ── 홈 버튼 : 초록 특수 디자인 ──
                 if is_active:
-                    # 현재 활성 상태 → 빛나는 초록 배지 (클릭 불필요)
                     st.markdown(f"""
                     <div class="home-active-badge">
                       <div class="home-active-dot"></div>
                       <span>{label}</span>
-                    </div>""",unsafe_allow_html=True)
+                    </div>""", unsafe_allow_html=True)
                 else:
-                    # 비활성 상태 → 초록 버튼
-                    st.markdown('<div class="sidebar-home-btn">',unsafe_allow_html=True)
+                    st.markdown('<div class="sidebar-home-btn">', unsafe_allow_html=True)
                     if st.button(label, key=f"nav_{key}", use_container_width=True):
-                        st.session_state.page=key; st.rerun()
-                    st.markdown('</div>',unsafe_allow_html=True)
-
+                        st.session_state.page = key; st.rerun()
+                    st.markdown('</div>', unsafe_allow_html=True)
             else:
-                # ── 일반 메뉴 : 골드 버튼 or 활성 배지 ──
                 if is_active:
                     st.markdown(f"""
                     <div style="background:linear-gradient(135deg,#F6D365,#D4AF37);
@@ -713,71 +718,71 @@ def render_sidebar():
                       <span style="color:#000!important;font-weight:900;font-size:0.86rem;">
                           {label}
                       </span>
-                    </div>""",unsafe_allow_html=True)
+                    </div>""", unsafe_allow_html=True)
                 else:
                     if st.button(label, key=f"nav_{key}", use_container_width=True):
-                        st.session_state.page=key; st.rerun()
+                        st.session_state.page = key; st.rerun()
 
-        # ── 하단 정보 + 로그아웃 ──
-        st.markdown("<hr style='border-color:#1E3A5F;margin:12px 0 5px;'>",unsafe_allow_html=True)
+        st.markdown("<hr style='border-color:#1E3A5F;margin:12px 0 5px;'>", unsafe_allow_html=True)
         st.markdown("""<p style="color:#475569;font-size:0.67rem;text-align:center;font-weight:700;">
-            개발자: 박동진 본부장</p>""",unsafe_allow_html=True)
+            개발자: 박동진 본부장</p>""", unsafe_allow_html=True)
 
-        st.markdown('<div class="sidebar-logout-btn">',unsafe_allow_html=True)
+        st.markdown('<div class="sidebar-logout-btn">', unsafe_allow_html=True)
         if st.button("🚪 로그아웃", key="btn_logout", use_container_width=True):
-            wlog("LOGOUT",st.session_state.user_name)
-            for k in ["logged_in","user_id","user_name","is_admin"]:
-                st.session_state[k]=False if k=="logged_in" else None
-            st.session_state.page="home"; st.rerun()
-        st.markdown('</div>',unsafe_allow_html=True)
+            wlog("LOGOUT", st.session_state.user_name)
+            for k in ["logged_in", "user_id", "user_name", "is_admin"]:
+                st.session_state[k] = False if k == "logged_in" else None
+            st.session_state.page = "home"; st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
 
 # ─── 탑바 ───────────────────────────────────
 def topbar(title):
-    today=date.today()
-    day_kr=["월","화","수","목","금","토","일"][today.weekday()]
+    kst = now_kst()
+    day_kr = ["월","화","수","목","금","토","일"][kst.weekday()]
     st.markdown(f"""
     <div class="topbar">
       <span class="tb-title">{title}</span>
       <span class="tb-info">
-          📅 {today.strftime('%Y년 %m월 %d일')} ({day_kr})
+          📅 {kst.strftime('%Y년 %m월 %d일')} ({day_kr})
+          &nbsp;·&nbsp; 🇰🇷 KST {kst.strftime('%H:%M')}
           &nbsp;·&nbsp; 👤 {st.session_state.user_name}
       </span>
-    </div>""",unsafe_allow_html=True)
+    </div>""", unsafe_allow_html=True)
 
 # ═══════════════════════════════════════════
 #  직원: 홈
 # ═══════════════════════════════════════════
 def page_emp_home():
     topbar("🏠 내 대시보드")
-    uid=st.session_state.user_id; td=today_str()
-    conn=get_conn()
-    att=pd.read_sql("SELECT * FROM attendance WHERE emp_id=? AND work_date=? LIMIT 1",
-                    conn,params=(uid,td))
-    rep=pd.read_sql("SELECT * FROM reports WHERE emp_id=? AND work_date=? LIMIT 1",
-                    conn,params=(uid,td))
+    uid = st.session_state.user_id; td = today_str()
+    conn = get_conn()
+    att = pd.read_sql("SELECT * FROM attendance WHERE emp_id=? AND work_date=? LIMIT 1",
+                      conn, params=(uid, td))
+    rep = pd.read_sql("SELECT * FROM reports WHERE emp_id=? AND work_date=? LIMIT 1",
+                      conn, params=(uid, td))
     conn.close()
 
-    ci =att.iloc[0]["checkin"][-8:-3]  if(not att.empty and att.iloc[0]["checkin"])  else "--:--"
-    co =att.iloc[0]["checkout"][-8:-3] if(not att.empty and att.iloc[0]["checkout"]) else "--:--"
-    atp=att.iloc[0]["att_type"]        if not att.empty else "미출근"
-    prg=int(rep.iloc[0]["pm_progress"])if not rep.empty else 0
-    rst=rep.iloc[0]["status"]          if not rep.empty else "미제출"
+    ci  = att.iloc[0]["checkin"][-8:-3]  if (not att.empty and att.iloc[0]["checkin"])  else "--:--"
+    co  = att.iloc[0]["checkout"][-8:-3] if (not att.empty and att.iloc[0]["checkout"]) else "--:--"
+    atp = att.iloc[0]["att_type"]        if not att.empty else "미출근"
+    prg = int(rep.iloc[0]["pm_progress"]) if not rep.empty else 0
+    rst = rep.iloc[0]["status"]           if not rep.empty else "미제출"
 
-    c1,c2,c3,c4=st.columns(4)
-    for col,lbl,val,sub in[
-        (c1,"출근 시간",ci,atp),(c2,"퇴근 시간",co,""),
-        (c3,"업무 진행률",f"{prg}%",""),(c4,"보고 상태",rst,"")]:
+    c1, c2, c3, c4 = st.columns(4)
+    for col, lbl, val, sub in [
+        (c1, "출근 시간", ci, atp), (c2, "퇴근 시간", co, ""),
+        (c3, "업무 진행률", f"{prg}%", ""), (c4, "보고 상태", rst, "")]:
         col.markdown(f"""<div class="met-card">
           <span class="met-val">{val}</span>
           <span class="met-lbl">{lbl}</span>
           <span style="color:#64748B;font-size:0.66rem;font-weight:700;">{sub}</span>
-        </div>""",unsafe_allow_html=True)
+        </div>""", unsafe_allow_html=True)
 
     if not rep.empty:
-        s=rep.iloc[0]["status"]; c=rep.iloc[0]["admin_comment"] or ""
-        if   s=="승인": st.success(f"✅ 관리자 승인 완료  |  💬 {c or '승인되었습니다.'}")
-        elif s=="반려": st.error(  f"❌ 보고 반려  |  💬 {c or '수정 후 재제출 바랍니다.'}")
-        elif s=="보류": st.warning(f"⏸ 보류 처리  |  💬 {c}")
+        s = rep.iloc[0]["status"]; c = rep.iloc[0]["admin_comment"] or ""
+        if   s == "승인": st.success(f"✅ 관리자 승인 완료  |  💬 {c or '승인되었습니다.'}")
+        elif s == "반려": st.error(  f"❌ 보고 반려  |  💬 {c or '수정 후 재제출 바랍니다.'}")
+        elif s == "보류": st.warning(f"⏸ 보류 처리  |  💬 {c}")
 
     st.markdown(f"""<div class="vtm-card" style="margin-top:12px;">
       <h3>📌 오늘 현황</h3>
@@ -786,153 +791,171 @@ def page_emp_home():
       <p style="color:#64748B;font-size:0.8rem;margin-top:6px;">
           왼쪽 메뉴 → ⏰ 출퇴근 → 📝 업무 보고 순으로 진행하세요.
       </p>
-    </div>""",unsafe_allow_html=True)
+    </div>""", unsafe_allow_html=True)
 
 # ═══════════════════════════════════════════
 #  직원: 출퇴근
 # ═══════════════════════════════════════════
-ATT_TYPES=["정상출근","오전 반차","오후 반차","조퇴","연차","병가","공가"]
+ATT_TYPES = ["정상출근","오전 반차","오후 반차","조퇴","연차","병가","공가"]
 
 def page_emp_attend():
     topbar("⏰ 출퇴근")
-    uid=st.session_state.user_id; uname=st.session_state.user_name; td=today_str()
-    conn=get_conn()
-    att=pd.read_sql("SELECT * FROM attendance WHERE emp_id=? AND work_date=? LIMIT 1",
-                    conn,params=(uid,td))
+    uid = st.session_state.user_id; uname = st.session_state.user_name; td = today_str()
+    conn = get_conn()
+    att = pd.read_sql("SELECT * FROM attendance WHERE emp_id=? AND work_date=? LIMIT 1",
+                      conn, params=(uid, td))
     conn.close()
 
-    c1,c2=st.columns(2)
-    ci_t=att.iloc[0]["checkin"][-8:-3]  if(not att.empty and att.iloc[0]["checkin"])  else "--:--"
-    co_t=att.iloc[0]["checkout"][-8:-3] if(not att.empty and att.iloc[0]["checkout"]) else "--:--"
-    atp =att.iloc[0]["att_type"]        if not att.empty else "미출근"
+    c1, c2 = st.columns(2)
+    ci_t = att.iloc[0]["checkin"][-8:-3]  if (not att.empty and att.iloc[0]["checkin"])  else "--:--"
+    co_t = att.iloc[0]["checkout"][-8:-3] if (not att.empty and att.iloc[0]["checkout"]) else "--:--"
+    atp  = att.iloc[0]["att_type"]        if not att.empty else "미출근"
+
+    # KST 현재 시간 표시
+    kst_now_display = now_kst().strftime("%H:%M")
 
     with c1:
         st.markdown(f"""<div class="vtm-card" style="text-align:center;">
           <h3>🟢 출근 시간</h3>
           <p style="font-size:1.8rem;font-weight:900;color:#10B981;margin:8px 0;">{ci_t}</p>
           <p style="color:#64748B;">{atp}</p>
-        </div>""",unsafe_allow_html=True)
+        </div>""", unsafe_allow_html=True)
     with c2:
         st.markdown(f"""<div class="vtm-card" style="text-align:center;">
           <h3>🔴 퇴근 시간</h3>
           <p style="font-size:1.8rem;font-weight:900;color:#EF4444;margin:8px 0;">{co_t}</p>
-        </div>""",unsafe_allow_html=True)
+          <p style="color:#64748B;">현재 KST: {kst_now_display}</p>
+        </div>""", unsafe_allow_html=True)
 
     st.markdown("---")
     if att.empty:
-        sel_type=st.selectbox("출근 유형",ATT_TYPES,key="sel_att")
-        if st.button(f"✅  출근 체크인 ({sel_type})",key="btn_ci",use_container_width=True):
-            conn=get_conn()
-            conn.execute("INSERT INTO attendance(emp_id,emp_name,work_date,checkin,att_type,created_at)"
-                         " VALUES(?,?,?,?,?,?)",(uid,uname,td,now_str(),sel_type,now_str()))
+        sel_type = st.selectbox("출근 유형", ATT_TYPES, key="sel_att")
+        if st.button(f"✅  출근 체크인 ({sel_type})", key="btn_ci", use_container_width=True):
+            conn = get_conn()
+            conn.execute(
+                "INSERT INTO attendance(emp_id,emp_name,work_date,checkin,att_type,created_at)"
+                " VALUES(?,?,?,?,?,?)",
+                (uid, uname, td, now_str(), sel_type, now_str())
+            )
             conn.commit(); conn.close()
-            wlog("CHECKIN",uname,"",sel_type)
-            st.success(f"✅ 출근 완료! ({sel_type} {datetime.now().strftime('%H:%M')})")
+            wlog("CHECKIN", uname, "", sel_type)
+            st.success(f"✅ 출근 완료! ({sel_type} {now_kst().strftime('%H:%M')} KST)")
             st.rerun()
     else:
         st.success(f"✅ 출근 완료 — {ci_t} ({atp})")
         if not att.iloc[0]["checkout"]:
-            if st.button("🏠  퇴근 체크아웃",key="btn_co",use_container_width=True):
-                conn=get_conn()
+            if st.button("🏠  퇴근 체크아웃", key="btn_co", use_container_width=True):
+                conn = get_conn()
                 conn.execute("UPDATE attendance SET checkout=? WHERE emp_id=? AND work_date=?",
-                             (now_str(),uid,td))
+                             (now_str(), uid, td))
                 conn.commit(); conn.close()
-                wlog("CHECKOUT",uname)
-                st.success(f"🏠 퇴근 완료! ({datetime.now().strftime('%H:%M')})")
+                wlog("CHECKOUT", uname)
+                st.success(f"🏠 퇴근 완료! ({now_kst().strftime('%H:%M')} KST)")
                 st.rerun()
         else:
             st.success(f"🏠 퇴근 완료 — {co_t}")
 
     st.markdown("---")
-    st.markdown("<div class='vtm-card'><h3>📋 최근 출퇴근 기록</h3></div>",unsafe_allow_html=True)
-    conn=get_conn()
-    hist=pd.read_sql("SELECT work_date,att_type,checkin,checkout FROM attendance"
-                     " WHERE emp_id=? ORDER BY work_date DESC LIMIT 10",conn,params=(uid,))
+    st.markdown("<div class='vtm-card'><h3>📋 최근 출퇴근 기록</h3></div>", unsafe_allow_html=True)
+    conn = get_conn()
+    hist = pd.read_sql(
+        "SELECT work_date,att_type,checkin,checkout FROM attendance"
+        " WHERE emp_id=? ORDER BY work_date DESC LIMIT 10",
+        conn, params=(uid,)
+    )
     conn.close()
     if not hist.empty:
-        hist.columns=["날짜","유형","출근","퇴근"]
-        st.dataframe(hist,use_container_width=True,hide_index=True)
+        hist.columns = ["날짜","유형","출근","퇴근"]
+        st.dataframe(hist, use_container_width=True, hide_index=True)
 
 # ═══════════════════════════════════════════
 #  직원: 업무 보고
 # ═══════════════════════════════════════════
 def page_emp_report():
     topbar("📝 업무 보고")
-    uid=st.session_state.user_id; uname=st.session_state.user_name; td=today_str()
-    conn=get_conn()
-    exist=pd.read_sql("SELECT * FROM reports WHERE emp_id=? AND work_date=? LIMIT 1",
-                      conn,params=(uid,td))
+    uid = st.session_state.user_id; uname = st.session_state.user_name; td = today_str()
+    conn = get_conn()
+    exist = pd.read_sql("SELECT * FROM reports WHERE emp_id=? AND work_date=? LIMIT 1",
+                        conn, params=(uid, td))
     conn.close()
 
     if not exist.empty:
-        s=exist.iloc[0]["status"]; c=exist.iloc[0]["admin_comment"] or ""
+        s = exist.iloc[0]["status"]; c = exist.iloc[0]["admin_comment"] or ""
         st.success(f"✅ 오늘 업무보고 제출 완료  |  상태: {s}")
         if c: st.info(f"💬 관리자 코멘트: {c}")
 
-    tab1,tab2=st.tabs(["🌅 오전 업무 계획","🌇 퇴근 결과 보고"])
+    tab1, tab2 = st.tabs(["🌅 오전 업무 계획", "🌇 퇴근 결과 보고"])
 
     with tab1:
-        st.markdown("<div class='vtm-card'><h3>🌅 오전 업무 계획</h3></div>",unsafe_allow_html=True)
-        am_tasks=st.text_area("📌 오늘 할 업무",
+        st.markdown("<div class='vtm-card'><h3>🌅 오전 업무 계획</h3></div>", unsafe_allow_html=True)
+        am_tasks = st.text_area("📌 오늘 할 업무",
             value=exist.iloc[0]["am_tasks"] if not exist.empty else "",
-            height=110,placeholder="예) 홈페이지 배너 수정, 미팅 자료 준비...")
-        am_priority=st.selectbox("🎯 우선순위",
-            ["🔴 긴급","🟠 높음","🟡 보통","🟢 낮음"],key="am_p")
-        am_notes=st.text_area("📎 특이사항",
+            height=110, placeholder="예) 홈페이지 배너 수정, 미팅 자료 준비...")
+        am_priority = st.selectbox("🎯 우선순위",
+            ["🔴 긴급","🟠 높음","🟡 보통","🟢 낮음"], key="am_p")
+        am_notes = st.text_area("📎 특이사항",
             value=exist.iloc[0]["am_notes"] if not exist.empty else "",
-            height=75,placeholder="회의 일정, 협업 요청 등...")
-        if st.button("💾  오전 계획 저장",key="btn_am",use_container_width=True):
-            conn=get_conn()
+            height=75, placeholder="회의 일정, 협업 요청 등...")
+        if st.button("💾  오전 계획 저장", key="btn_am", use_container_width=True):
+            conn = get_conn()
             if exist.empty:
-                conn.execute("INSERT INTO reports(emp_id,emp_name,work_date,am_tasks,"
-                             "am_priority,am_notes,status,submitted_at) VALUES(?,?,?,?,?,?,'대기중',?)",
-                             (uid,uname,td,am_tasks,am_priority,am_notes,now_str()))
+                conn.execute(
+                    "INSERT INTO reports(emp_id,emp_name,work_date,am_tasks,"
+                    "am_priority,am_notes,status,submitted_at) VALUES(?,?,?,?,?,?,'대기중',?)",
+                    (uid, uname, td, am_tasks, am_priority, am_notes, now_str())
+                )
             else:
-                conn.execute("UPDATE reports SET am_tasks=?,am_priority=?,am_notes=?,"
-                             "submitted_at=? WHERE emp_id=? AND work_date=?",
-                             (am_tasks,am_priority,am_notes,now_str(),uid,td))
+                conn.execute(
+                    "UPDATE reports SET am_tasks=?,am_priority=?,am_notes=?,"
+                    "submitted_at=? WHERE emp_id=? AND work_date=?",
+                    (am_tasks, am_priority, am_notes, now_str(), uid, td)
+                )
             conn.commit(); conn.close()
-            wlog("AM_PLAN",uname,td)
+            wlog("AM_PLAN", uname, td)
             st.success("✅ 오전 계획 저장 완료!"); st.rerun()
 
     with tab2:
-        st.markdown("<div class='vtm-card'><h3>🌇 퇴근 결과 보고</h3></div>",unsafe_allow_html=True)
-        pm_done=st.text_area("✅ 완료한 업무",
+        st.markdown("<div class='vtm-card'><h3>🌇 퇴근 결과 보고</h3></div>", unsafe_allow_html=True)
+        pm_done = st.text_area("✅ 완료한 업무",
             value=exist.iloc[0]["pm_done"] if not exist.empty else "",
-            height=100,placeholder="오늘 완료한 업무 상세히...")
-        pm_progress=st.slider("📊 전체 진행률 (%)",0,100,
-            value=int(exist.iloc[0]["pm_progress"]) if not exist.empty else 0,step=5)
-        pm_tomorrow=st.text_area("📅 내일 예정",
-            value=exist.iloc[0]["pm_tomorrow"] if not exist.empty else "",height=75)
-        pm_remarks=st.text_area("💬 특이사항",
-            value=exist.iloc[0]["pm_remarks"] if not exist.empty else "",height=75)
+            height=100, placeholder="오늘 완료한 업무 상세히...")
+        pm_progress = st.slider("📊 전체 진행률 (%)", 0, 100,
+            value=int(exist.iloc[0]["pm_progress"]) if not exist.empty else 0, step=5)
+        pm_tomorrow = st.text_area("📅 내일 예정",
+            value=exist.iloc[0]["pm_tomorrow"] if not exist.empty else "", height=75)
+        pm_remarks = st.text_area("💬 특이사항",
+            value=exist.iloc[0]["pm_remarks"] if not exist.empty else "", height=75)
         st.markdown("""<div class='vtm-card'>
           <h3>🔗 산출물 링크</h3>
           <p style="font-size:0.8rem;color:#64748B;">
               완성본은 Google Drive에 날짜 폴더 생성 후 업로드해 주세요.
-          </p></div>""",unsafe_allow_html=True)
-        drive_link=st.text_input("📁 Google Drive 링크",
+          </p></div>""", unsafe_allow_html=True)
+        drive_link = st.text_input("📁 Google Drive 링크",
             value=exist.iloc[0]["drive_link"] if not exist.empty else "",
             placeholder="https://drive.google.com/...")
-        result_link=st.text_input("🔗 완성 결과물 링크",
+        result_link = st.text_input("🔗 완성 결과물 링크",
             value=exist.iloc[0]["result_link"] if not exist.empty else "",
             placeholder="https://...")
-        if st.button("📤  업무보고 제출",key="btn_pm",use_container_width=True):
-            conn=get_conn()
+        if st.button("📤  업무보고 제출", key="btn_pm", use_container_width=True):
+            conn = get_conn()
             if exist.empty:
-                conn.execute("INSERT INTO reports(emp_id,emp_name,work_date,pm_done,pm_progress,"
-                             "pm_tomorrow,pm_remarks,drive_link,result_link,status,submitted_at)"
-                             " VALUES(?,?,?,?,?,?,?,?,?,'대기중',?)",
-                             (uid,uname,td,pm_done,pm_progress,pm_tomorrow,
-                              pm_remarks,drive_link,result_link,now_str()))
+                conn.execute(
+                    "INSERT INTO reports(emp_id,emp_name,work_date,pm_done,pm_progress,"
+                    "pm_tomorrow,pm_remarks,drive_link,result_link,status,submitted_at)"
+                    " VALUES(?,?,?,?,?,?,?,?,?,'대기중',?)",
+                    (uid, uname, td, pm_done, pm_progress, pm_tomorrow,
+                     pm_remarks, drive_link, result_link, now_str())
+                )
             else:
-                conn.execute("UPDATE reports SET pm_done=?,pm_progress=?,pm_tomorrow=?,"
-                             "pm_remarks=?,drive_link=?,result_link=?,status='대기중',"
-                             "submitted_at=? WHERE emp_id=? AND work_date=?",
-                             (pm_done,pm_progress,pm_tomorrow,pm_remarks,
-                              drive_link,result_link,now_str(),uid,td))
+                conn.execute(
+                    "UPDATE reports SET pm_done=?,pm_progress=?,pm_tomorrow=?,"
+                    "pm_remarks=?,drive_link=?,result_link=?,status='대기중',"
+                    "submitted_at=? WHERE emp_id=? AND work_date=?",
+                    (pm_done, pm_progress, pm_tomorrow, pm_remarks,
+                     drive_link, result_link, now_str(), uid, td)
+                )
             conn.commit(); conn.close()
-            wlog("REPORT",uname,td)
+            wlog("REPORT", uname, td)
             st.success("✅ 업무보고가 완료되었습니다!")
             st.balloons(); st.rerun()
 
@@ -941,94 +964,98 @@ def page_emp_report():
 # ═══════════════════════════════════════════
 def page_emp_calendar():
     topbar("📅 업무 달력")
-    uid=st.session_state.user_id; today=date.today()
-    c1,c2,_=st.columns([1,1,2])
-    with c1: yr=st.number_input("연도",value=today.year,min_value=2024,max_value=2030,key="cy")
-    with c2: mo=st.number_input("월",value=today.month,min_value=1,max_value=12,key="cm")
-    yr=int(yr); mo=int(mo)
+    uid = st.session_state.user_id; today = now_kst().date()
+    c1, c2, _ = st.columns([1, 1, 2])
+    with c1: yr = st.number_input("연도", value=today.year,  min_value=2024, max_value=2030, key="cy")
+    with c2: mo = st.number_input("월",   value=today.month, min_value=1,    max_value=12,   key="cm")
+    yr = int(yr); mo = int(mo)
 
-    conn=get_conn()
-    att_df=pd.read_sql("SELECT work_date,att_type FROM attendance WHERE emp_id=? AND work_date LIKE ?",
-                       conn,params=(uid,f"{yr}-{mo:02d}-%"))
-    rep_df=pd.read_sql("SELECT work_date,status,pm_progress FROM reports WHERE emp_id=? AND work_date LIKE ?",
-                       conn,params=(uid,f"{yr}-{mo:02d}-%"))
+    conn = get_conn()
+    att_df = pd.read_sql(
+        "SELECT work_date,att_type FROM attendance WHERE emp_id=? AND work_date LIKE ?",
+        conn, params=(uid, f"{yr}-{mo:02d}-%"))
+    rep_df = pd.read_sql(
+        "SELECT work_date,status,pm_progress FROM reports WHERE emp_id=? AND work_date LIKE ?",
+        conn, params=(uid, f"{yr}-{mo:02d}-%"))
     conn.close()
 
-    att_map={r["work_date"]:r for _,r in att_df.iterrows()} if not att_df.empty else {}
-    rep_map={r["work_date"]:r for _,r in rep_df.iterrows()} if not rep_df.empty else {}
+    att_map = {r["work_date"]: r for _, r in att_df.iterrows()} if not att_df.empty else {}
+    rep_map = {r["work_date"]: r for _, r in rep_df.iterrows()} if not rep_df.empty else {}
 
-    cal=calendar.monthcalendar(yr,mo)
-    html="""<table class="cal-tbl"><thead><tr>
+    cal = calendar.monthcalendar(yr, mo)
+    html = """<table class="cal-tbl"><thead><tr>
         <th class="wk">일</th>
         <th>월</th><th>화</th><th>수</th><th>목</th><th>금</th>
         <th class="wk">토</th>
     </tr></thead><tbody>"""
     for week in cal:
-        html+="<tr>"
-        for i,day in enumerate(week):
-            is_wk=(i==0 or i==6)
-            if day==0:
-                html+=f'<td class="{"wk" if is_wk else ""}"></td>'; continue
-            d=f"{yr}-{mo:02d}-{day:02d}"
-            cls="wk" if is_wk else ""
-            if d==today_str(): cls+=" tday"
+        html += "<tr>"
+        for i, day in enumerate(week):
+            is_wk = (i == 0 or i == 6)
+            if day == 0:
+                html += f'<td class="{"wk" if is_wk else ""}"></td>'; continue
+            d = f"{yr}-{mo:02d}-{day:02d}"
+            cls = "wk" if is_wk else ""
+            if d == today_str(): cls += " tday"
             if is_wk:
-                html+=f'<td class="{cls}"><span style="font-size:0.58rem">{day}</span></td>'
+                html += f'<td class="{cls}"><span style="font-size:0.58rem">{day}</span></td>'
             else:
-                inner=f'<strong>{day}</strong>'
-                inner+=(f'<span class="tg-att">✅{att_map[d]["att_type"]}</span>'
-                        if d in att_map else '<span class="tg-no">미출근</span>')
+                inner = f'<strong>{day}</strong>'
+                inner += (f'<span class="tg-att">✅{att_map[d]["att_type"]}</span>'
+                          if d in att_map else '<span class="tg-no">미출근</span>')
                 if d in rep_map:
-                    r=rep_map[d]
-                    inner+=(f'<span class="tg-ok">✅{r["pm_progress"]}%</span>'
-                            if r["status"]=="승인"
-                            else f'<span class="tg-rep">📋{r["status"]}</span>')
+                    r = rep_map[d]
+                    inner += (f'<span class="tg-ok">✅{r["pm_progress"]}%</span>'
+                              if r["status"] == "승인"
+                              else f'<span class="tg-rep">📋{r["status"]}</span>')
                 else:
-                    inner+='<span class="tg-no">보고없음</span>'
-                html+=f'<td class="{cls}">{inner}</td>'
-        html+="</tr>"
-    html+="</tbody></table>"
-    st.markdown(html,unsafe_allow_html=True)
+                    inner += '<span class="tg-no">보고없음</span>'
+                html += f'<td class="{cls}">{inner}</td>'
+        html += "</tr>"
+    html += "</tbody></table>"
+    st.markdown(html, unsafe_allow_html=True)
 
 # ═══════════════════════════════════════════
 #  관리자: 홈
 # ═══════════════════════════════════════════
 def page_admin_home():
     topbar("🔴 관리자 대시보드")
-    td=today_str(); conn=get_conn()
-    total=pd.read_sql("SELECT COUNT(*) as c FROM employees WHERE active=1 AND is_admin=0",conn).iloc[0]["c"]
-    t_att=pd.read_sql("SELECT COUNT(*) as c FROM attendance WHERE work_date=?",conn,params=(td,)).iloc[0]["c"]
-    pend =pd.read_sql("SELECT COUNT(*) as c FROM reports WHERE status='대기중'",conn).iloc[0]["c"]
-    appr =pd.read_sql("SELECT COUNT(*) as c FROM reports WHERE status='승인' AND work_date=?",conn,params=(td,)).iloc[0]["c"]
-    emp_df=pd.read_sql("SELECT id,name FROM employees WHERE active=1 AND is_admin=0",conn)
-    att_td=pd.read_sql("SELECT emp_id,att_type,checkin,checkout FROM attendance WHERE work_date=?",conn,params=(td,))
-    rep_td=pd.read_sql("SELECT emp_id,status,pm_progress FROM reports WHERE work_date=?",conn,params=(td,))
+    td = today_str(); conn = get_conn()
+    total = pd.read_sql("SELECT COUNT(*) as c FROM employees WHERE active=1 AND is_admin=0", conn).iloc[0]["c"]
+    t_att = pd.read_sql("SELECT COUNT(*) as c FROM attendance WHERE work_date=?", conn, params=(td,)).iloc[0]["c"]
+    pend  = pd.read_sql("SELECT COUNT(*) as c FROM reports WHERE status='대기중'", conn).iloc[0]["c"]
+    appr  = pd.read_sql("SELECT COUNT(*) as c FROM reports WHERE status='승인' AND work_date=?", conn, params=(td,)).iloc[0]["c"]
+    emp_df  = pd.read_sql("SELECT id,name FROM employees WHERE active=1 AND is_admin=0", conn)
+    att_td  = pd.read_sql("SELECT emp_id,att_type,checkin,checkout FROM attendance WHERE work_date=?", conn, params=(td,))
+    rep_td  = pd.read_sql("SELECT emp_id,status,pm_progress FROM reports WHERE work_date=?", conn, params=(td,))
     conn.close()
 
-    c1,c2,c3,c4=st.columns(4)
-    for col,lbl,val,sub in[
-        (c1,"전체 직원",f"{total}명",""),(c2,"오늘 출근",f"{t_att}명",f"/{total}명"),
-        (c3,"승인 대기",f"{pend}건","검토 필요"),(c4,"오늘 승인",f"{appr}건","")]:
+    c1, c2, c3, c4 = st.columns(4)
+    for col, lbl, val, sub in [
+        (c1, "전체 직원", f"{total}명", ""),
+        (c2, "오늘 출근", f"{t_att}명", f"/{total}명"),
+        (c3, "승인 대기", f"{pend}건",  "검토 필요"),
+        (c4, "오늘 승인", f"{appr}건",  "")]:
         col.markdown(f"""<div class="met-card">
           <span class="met-val">{val}</span>
           <span class="met-lbl">{lbl}</span>
           <span style="color:#64748B;font-size:0.66rem;font-weight:700;">{sub}</span>
-        </div>""",unsafe_allow_html=True)
+        </div>""", unsafe_allow_html=True)
 
-    st.markdown("<div style='height:12px'></div>",unsafe_allow_html=True)
-    att_map={r["emp_id"]:r for _,r in att_td.iterrows()} if not att_td.empty else {}
-    rep_map={r["emp_id"]:r for _,r in rep_td.iterrows()} if not rep_td.empty else {}
+    st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
+    att_map = {r["emp_id"]: r for _, r in att_td.iterrows()} if not att_td.empty else {}
+    rep_map = {r["emp_id"]: r for _, r in rep_td.iterrows()} if not rep_td.empty else {}
 
-    for _,emp in emp_df.iterrows():
-        eid=emp["id"]; ename=emp["name"]
-        a=att_map.get(eid); r=rep_map.get(eid)
-        ci =a["checkin"][-8:-3]  if(a is not None and a["checkin"])  else "미출근"
-        co =a["checkout"][-8:-3] if(a is not None and a["checkout"]) else "퇴근전"
-        atp=a["att_type"]        if a is not None else "미출근"
-        rs =r["status"]          if r is not None else "미제출"
-        prg=r["pm_progress"]     if r is not None else 0
-        ci_c="#10B981" if a is not None else "#EF4444"
-        rs_c={"승인":"#10B981","대기중":"#F59E0B","반려":"#EF4444"}.get(rs,"#6B7280")
+    for _, emp in emp_df.iterrows():
+        eid = emp["id"]; ename = emp["name"]
+        a = att_map.get(eid); r = rep_map.get(eid)
+        ci  = a["checkin"][-8:-3]  if (a is not None and a["checkin"])  else "미출근"
+        co  = a["checkout"][-8:-3] if (a is not None and a["checkout"]) else "퇴근전"
+        atp = a["att_type"]        if a is not None else "미출근"
+        rs  = r["status"]          if r is not None else "미제출"
+        prg = r["pm_progress"]     if r is not None else 0
+        ci_c = "#10B981" if a is not None else "#EF4444"
+        rs_c = {"승인":"#10B981","대기중":"#F59E0B","반려":"#EF4444"}.get(rs,"#6B7280")
         st.markdown(f"""<div class="vtm-card" style="padding:12px;margin:3px 0;">
           <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;">
             <span style="font-size:0.96rem;font-weight:900;">{ename}</span>
@@ -1042,62 +1069,63 @@ def page_admin_home():
               <span>📊{prg}%</span>
             </div>
           </div>
-        </div>""",unsafe_allow_html=True)
+        </div>""", unsafe_allow_html=True)
 
 # ═══════════════════════════════════════════
 #  관리자: 출퇴근 현황
 # ═══════════════════════════════════════════
 def page_admin_attend():
     topbar("📋 출퇴근 현황")
-    c1,c2=st.columns(2)
-    with c1: sel_date=st.date_input("날짜",value=date.today(),key="aad")
+    c1, c2 = st.columns(2)
+    with c1: sel_date = st.date_input("날짜", value=now_kst().date(), key="aad")
     with c2:
-        emp_df=get_employees(); names=["전체"]+list(emp_df["name"])
-        sel_emp=st.selectbox("직원",names,key="aae")
-    conn=get_conn()
-    q="SELECT emp_name,att_type,checkin,checkout,work_date FROM attendance WHERE work_date=?"
-    p=[str(sel_date)]
-    if sel_emp!="전체": q+=" AND emp_name=?"; p.append(sel_emp)
-    att=pd.read_sql(q+" ORDER BY checkin",conn,params=p); conn.close()
-    if att.empty: st.info(f"📭 {sel_date} 출퇴근 기록 없음")
+        emp_df = get_employees(); names = ["전체"] + list(emp_df["name"])
+        sel_emp = st.selectbox("직원", names, key="aae")
+    conn = get_conn()
+    q = "SELECT emp_name,att_type,checkin,checkout,work_date FROM attendance WHERE work_date=?"
+    p = [str(sel_date)]
+    if sel_emp != "전체": q += " AND emp_name=?"; p.append(sel_emp)
+    att = pd.read_sql(q + " ORDER BY checkin", conn, params=p); conn.close()
+    if att.empty:
+        st.info(f"📭 {sel_date} 출퇴근 기록 없음")
     else:
-        att.columns=["직원명","유형","출근","퇴근","날짜"]
-        st.dataframe(att,use_container_width=True,hide_index=True)
-    if sel_emp=="전체":
-        all_emp=get_employees()
-        checked=set(att["직원명"].tolist()) if not att.empty else set()
-        absent=all_emp[(~all_emp["name"].isin(checked))&(all_emp["is_admin"]==0)]
+        att.columns = ["직원명","유형","출근","퇴근","날짜"]
+        st.dataframe(att, use_container_width=True, hide_index=True)
+    if sel_emp == "전체":
+        all_emp = get_employees()
+        checked = set(att["직원명"].tolist()) if not att.empty else set()
+        absent  = all_emp[(~all_emp["name"].isin(checked)) & (all_emp["is_admin"] == 0)]
         if not absent.empty:
             st.markdown("---")
-            for _,row in absent.iterrows():
+            for _, row in absent.iterrows():
                 st.markdown(f"""<div style="background:rgba(239,68,68,0.1);border:1px solid #EF4444;
                     border-radius:10px;padding:10px;margin:3px 0;">
                   <span style="color:#EF4444;font-weight:900;">
                       ❗ {row['name']} — 미출근 / 출근 전
-                  </span></div>""",unsafe_allow_html=True)
+                  </span></div>""", unsafe_allow_html=True)
 
 # ═══════════════════════════════════════════
 #  관리자: 업무 현황
 # ═══════════════════════════════════════════
 def page_admin_tasks():
     topbar("📊 업무 현황")
-    c1,c2=st.columns(2)
-    with c1: sel_date=st.date_input("날짜",value=date.today(),key="atd")
+    c1, c2 = st.columns(2)
+    with c1: sel_date = st.date_input("날짜", value=now_kst().date(), key="atd")
     with c2:
-        emp_df=get_employees(); names=["전체"]+list(emp_df["name"])
-        sel_emp=st.selectbox("직원",names,key="ate")
-    conn=get_conn()
-    q="SELECT * FROM reports WHERE work_date=?"
-    p=[str(sel_date)]
-    if sel_emp!="전체": q+=" AND emp_name=?"; p.append(sel_emp)
-    reps=pd.read_sql(q,conn,params=p); conn.close()
+        emp_df = get_employees(); names = ["전체"] + list(emp_df["name"])
+        sel_emp = st.selectbox("직원", names, key="ate")
+    conn = get_conn()
+    q = "SELECT * FROM reports WHERE work_date=?"
+    p = [str(sel_date)]
+    if sel_emp != "전체": q += " AND emp_name=?"; p.append(sel_emp)
+    reps = pd.read_sql(q, conn, params=p); conn.close()
     if reps.empty: st.info("📭 해당 조건 업무 보고 없음"); return
-    for _,r in reps.iterrows():
-        sc={"승인":"#10B981","대기중":"#F59E0B","반려":"#EF4444"}.get(r["status"],"#6B7280")
-        dl=(f'<a href="{r["drive_link"]}" target="_blank" style="color:#3B82F6;">링크</a>'
-            if r.get("drive_link") else "없음")
-        rl=(f'<a href="{r["result_link"]}" target="_blank" style="color:#3B82F6;">링크</a>'
-            if r.get("result_link") else "없음")
+    for _, r in reps.iterrows():
+        sc = {"승인":"#10B981","대기중":"#F59E0B","반려":"#EF4444"}.get(r["status"],"#6B7280")
+        dl = (f'<a href="{r["drive_link"]}" target="_blank" style="color:#3B82F6;">링크</a>'
+              if r.get("drive_link") else "없음")
+        rl = (f'<a href="{r["result_link"]}" target="_blank" style="color:#3B82F6;">링크</a>'
+              if r.get("result_link") else "없음")
         st.markdown(f"""<div class="vtm-card">
           <div style="display:flex;justify-content:space-between;align-items:center;">
             <h3>{r['emp_name']} — {r['work_date']}</h3>
@@ -1109,19 +1137,19 @@ def page_admin_tasks():
           <p><b>📊 진행률:</b> {r['pm_progress']}%</p>
           <p><b>📁 Drive:</b> {dl} &nbsp; <b>🔗 결과물:</b> {rl}</p>
           {('<p><b>💬 코멘트:</b> '+str(r['admin_comment'])+'</p>') if r.get('admin_comment') else ''}
-        </div>""",unsafe_allow_html=True)
+        </div>""", unsafe_allow_html=True)
 
 # ═══════════════════════════════════════════
 #  관리자: 결과 승인
 # ═══════════════════════════════════════════
 def page_admin_approve():
     topbar("✅ 결과 승인")
-    conn=get_conn()
-    pend=pd.read_sql("SELECT * FROM reports WHERE status='대기중' ORDER BY submitted_at DESC",conn)
+    conn = get_conn()
+    pend = pd.read_sql("SELECT * FROM reports WHERE status='대기중' ORDER BY submitted_at DESC", conn)
     conn.close()
     if pend.empty: st.success("✅ 승인 대기 보고 없음"); return
-    st.markdown(f"<div class='vtm-card'><h3>📋 대기 {len(pend)}건</h3></div>",unsafe_allow_html=True)
-    for _,r in pend.iterrows():
+    st.markdown(f"<div class='vtm-card'><h3>📋 대기 {len(pend)}건</h3></div>", unsafe_allow_html=True)
+    for _, r in pend.iterrows():
         with st.expander(f"📝 {r['emp_name']}  ·  {r['work_date']}  ·  {r['pm_progress']}%"):
             st.markdown(f"""
 **🌅 오전 계획:** {r['am_tasks'] or '없음'}
@@ -1132,146 +1160,157 @@ def page_admin_approve():
 
 **💬 특이사항:** {r['pm_remarks'] or '없음'}
 """)
-            if r.get("drive_link"): st.markdown(f"📁 [Google Drive]({r['drive_link']})")
+            if r.get("drive_link"):  st.markdown(f"📁 [Google Drive]({r['drive_link']})")
             if r.get("result_link"): st.markdown(f"🔗 [결과물 링크]({r['result_link']})")
-            cmt=st.text_input("💬 코멘트",key=f"cmt_{r['id']}")
-            ca,cb,cc=st.columns(3)
-            def do_approve(rid,status,emp,comment):
-                c2=get_conn()
+            cmt = st.text_input("💬 코멘트", key=f"cmt_{r['id']}")
+            ca, cb, cc = st.columns(3)
+            def do_approve(rid, status, emp, comment):
+                c2 = get_conn()
                 c2.execute("UPDATE reports SET status=?,admin_comment=?,approved_at=? WHERE id=?",
-                           (status,comment,now_str(),rid))
+                           (status, comment, now_str(), rid))
                 c2.commit(); c2.close()
-                wlog(f"APPROVE_{status}",st.session_state.user_name,emp,comment)
+                wlog(f"APPROVE_{status}", st.session_state.user_name, emp, comment)
                 st.rerun()
             with ca:
-                if st.button("✅ 승인",key=f"ap_{r['id']}",use_container_width=True):
-                    do_approve(r['id'],"승인",r['emp_name'],cmt or "승인")
+                if st.button("✅ 승인", key=f"ap_{r['id']}", use_container_width=True):
+                    do_approve(r['id'], "승인", r['emp_name'], cmt or "승인")
             with cb:
-                if st.button("❌ 반려",key=f"rj_{r['id']}",use_container_width=True):
-                    do_approve(r['id'],"반려",r['emp_name'],cmt or "반려")
+                if st.button("❌ 반려", key=f"rj_{r['id']}", use_container_width=True):
+                    do_approve(r['id'], "반려", r['emp_name'], cmt or "반려")
             with cc:
-                if st.button("⏸ 보류",key=f"hl_{r['id']}",use_container_width=True):
-                    do_approve(r['id'],"보류",r['emp_name'],cmt or "보류")
+                if st.button("⏸ 보류", key=f"hl_{r['id']}", use_container_width=True):
+                    do_approve(r['id'], "보류", r['emp_name'], cmt or "보류")
 
 # ═══════════════════════════════════════════
 #  관리자: 직원 관리
 # ═══════════════════════════════════════════
 def page_admin_emp():
     topbar("👥 직원 관리")
-    emp_df=get_employees(active_only=False)
-    st.markdown("<div class='vtm-card'><h3>👥 전체 직원 목록</h3></div>",unsafe_allow_html=True)
-    for _,emp in emp_df.iterrows():
-        ac="#10B981" if emp["active"] else "#EF4444"
-        at="재직 중" if emp["active"] else "퇴직"
-        adm="🔴 관리자" if emp["is_admin"] else "🟢 직원"
-        ci,cb=st.columns([5,1])
+    emp_df = get_employees(active_only=False)
+    st.markdown("<div class='vtm-card'><h3>👥 전체 직원 목록</h3></div>", unsafe_allow_html=True)
+    for _, emp in emp_df.iterrows():
+        ac  = "#10B981" if emp["active"] else "#EF4444"
+        at  = "재직 중" if emp["active"] else "퇴직"
+        adm = "🔴 관리자" if emp["is_admin"] else "🟢 직원"
+        ci, cb = st.columns([5, 1])
         with ci:
             st.markdown(f"""<div class="vtm-card" style="padding:9px 15px;margin:2px 0;">
               <span style="font-weight:900;">{emp['name']}</span>
               &nbsp;<span style="color:#64748B;font-weight:700;">{emp['role']}</span>
               &nbsp;<span style="color:{ac};font-weight:700;">{at}</span>
               &nbsp;<span style="font-weight:700;">{adm}</span>
-            </div>""",unsafe_allow_html=True)
+            </div>""", unsafe_allow_html=True)
         with cb:
             if emp["active"] and not emp["is_admin"]:
-                if st.button("🗑 퇴직",key=f"del_{emp['id']}",use_container_width=True):
-                    c2=get_conn(); c2.execute("UPDATE employees SET active=0 WHERE id=?",(emp["id"],))
+                if st.button("🗑 퇴직", key=f"del_{emp['id']}", use_container_width=True):
+                    c2 = get_conn()
+                    c2.execute("UPDATE employees SET active=0 WHERE id=?", (emp["id"],))
                     c2.commit(); c2.close()
-                    wlog("EMP_DEL",st.session_state.user_name,emp["name"])
+                    wlog("EMP_DEL", st.session_state.user_name, emp["name"])
                     st.success(f"'{emp['name']}' 퇴직 처리"); st.rerun()
             elif not emp["active"]:
-                if st.button("♻ 복직",key=f"act_{emp['id']}",use_container_width=True):
-                    c2=get_conn(); c2.execute("UPDATE employees SET active=1 WHERE id=?",(emp["id"],))
+                if st.button("♻ 복직", key=f"act_{emp['id']}", use_container_width=True):
+                    c2 = get_conn()
+                    c2.execute("UPDATE employees SET active=1 WHERE id=?", (emp["id"],))
                     c2.commit(); c2.close()
-                    wlog("EMP_ACT",st.session_state.user_name,emp["name"])
+                    wlog("EMP_ACT", st.session_state.user_name, emp["name"])
                     st.success(f"'{emp['name']}' 복직 완료"); st.rerun()
     st.markdown("---")
-    st.markdown("<div class='vtm-card'><h3>➕ 신규 직원 등록</h3></div>",unsafe_allow_html=True)
-    with st.form("form_emp",clear_on_submit=True):
-        f1,f2=st.columns(2)
+    st.markdown("<div class='vtm-card'><h3>➕ 신규 직원 등록</h3></div>", unsafe_allow_html=True)
+    with st.form("form_emp", clear_on_submit=True):
+        f1, f2 = st.columns(2)
         with f1:
-            new_name=st.text_input("이름",placeholder="홍길동")
-            new_role=st.text_input("직책",placeholder="대리 / 디자이너 ...")
+            new_name  = st.text_input("이름", placeholder="홍길동")
+            new_role  = st.text_input("직책", placeholder="대리 / 디자이너 ...")
         with f2:
-            new_pw=st.text_input("비밀번호 (없으면 빈칸)",type="password")
-            new_admin=st.checkbox("관리자 권한 부여")
-        if st.form_submit_button("✅  직원 등록",use_container_width=True):
+            new_pw    = st.text_input("비밀번호 (없으면 빈칸)", type="password")
+            new_admin = st.checkbox("관리자 권한 부여")
+        if st.form_submit_button("✅  직원 등록", use_container_width=True):
             if not new_name.strip() or not new_role.strip():
                 st.error("이름과 직책을 입력하세요.")
             else:
-                new_id="emp_"+re.sub(r'[^a-z0-9]','',new_name.lower())+str(int(time.time()))[-5:]
+                new_id = "emp_" + re.sub(r'[^a-z0-9]','', new_name.lower()) + str(int(time.time()))[-5:]
                 try:
-                    c2=get_conn()
-                    c2.execute("INSERT INTO employees(id,name,role,is_admin,password,active,created_at)"
-                               " VALUES(?,?,?,?,?,1,?)",
-                               (new_id,new_name.strip(),new_role.strip(),
-                                1 if new_admin else 0,new_pw,now_str()))
+                    c2 = get_conn()
+                    c2.execute(
+                        "INSERT INTO employees(id,name,role,is_admin,password,active,created_at)"
+                        " VALUES(?,?,?,?,?,1,?)",
+                        (new_id, new_name.strip(), new_role.strip(),
+                         1 if new_admin else 0, new_pw, now_str())
+                    )
                     c2.commit(); c2.close()
-                    wlog("EMP_ADD",st.session_state.user_name,new_name)
+                    wlog("EMP_ADD", st.session_state.user_name, new_name)
                     st.success(f"✅ '{new_name}' 등록 완료!"); st.rerun()
-                except Exception as e: st.error(f"등록 실패: {e}")
+                except Exception as e:
+                    st.error(f"등록 실패: {e}")
 
 # ═══════════════════════════════════════════
 #  관리자: 엑셀 다운로드
 # ═══════════════════════════════════════════
 def page_admin_excel():
     topbar("📥 엑셀 다운로드")
-    st.markdown("<div class='vtm-card'><h3>📥 다운로드 조건 설정</h3></div>",unsafe_allow_html=True)
-    emp_df=get_employees(); names=["전체 인원"]+list(emp_df["name"])
-    c1,c2=st.columns(2)
+    st.markdown("<div class='vtm-card'><h3>📥 다운로드 조건 설정</h3></div>", unsafe_allow_html=True)
+    emp_df = get_employees(); names = ["전체 인원"] + list(emp_df["name"])
+    c1, c2 = st.columns(2)
     with c1:
-        sel_emp=st.selectbox("👤 대상 인원",names,key="ex_emp")
-        rec_types=st.multiselect("📋 기록 유형",["출퇴근 기록","업무 보고"],
-                                 default=["출퇴근 기록","업무 보고"])
+        sel_emp  = st.selectbox("👤 대상 인원", names, key="ex_emp")
+        rec_types = st.multiselect("📋 기록 유형", ["출퇴근 기록","업무 보고"],
+                                   default=["출퇴근 기록","업무 보고"])
     with c2:
-        period=st.selectbox("📅 기간",["날짜별","주간","월간","전체"],key="ex_period")
-        if period=="날짜별":
-            df_=st.date_input("시작",value=date.today(),key="ex_df")
-            dt_=st.date_input("종료",value=date.today(),key="ex_dt")
-            d_from,d_to=str(df_),str(dt_)
-        elif period=="주간":
-            we=st.date_input("주 종료일",value=date.today(),key="ex_we")
-            ws=we-timedelta(days=we.weekday())
-            d_from,d_to=str(ws),str(we)
+        period = st.selectbox("📅 기간", ["날짜별","주간","월간","전체"], key="ex_period")
+        kst_today = now_kst().date()
+        if period == "날짜별":
+            df_ = st.date_input("시작", value=kst_today, key="ex_df")
+            dt_ = st.date_input("종료", value=kst_today, key="ex_dt")
+            d_from, d_to = str(df_), str(dt_)
+        elif period == "주간":
+            we  = st.date_input("주 종료일", value=kst_today, key="ex_we")
+            ws  = we - timedelta(days=we.weekday())
+            d_from, d_to = str(ws), str(we)
             st.markdown(f"<span style='color:#D4AF37;font-weight:700;font-size:0.84rem;'>"
-                        f"📅 {ws} ~ {we}</span>",unsafe_allow_html=True)
-        elif period=="월간":
-            my=st.number_input("연도",value=date.today().year,min_value=2024,max_value=2030,key="ex_my")
-            mm=st.number_input("월",value=date.today().month,min_value=1,max_value=12,key="ex_mm")
-            ld=calendar.monthrange(int(my),int(mm))[1]
-            d_from=str(date(int(my),int(mm),1)); d_to=str(date(int(my),int(mm),ld))
-        else: d_from,d_to="2024-01-01","2030-12-31"
+                        f"📅 {ws} ~ {we}</span>", unsafe_allow_html=True)
+        elif period == "월간":
+            my = st.number_input("연도", value=kst_today.year,  min_value=2024, max_value=2030, key="ex_my")
+            mm = st.number_input("월",   value=kst_today.month, min_value=1,    max_value=12,   key="ex_mm")
+            ld = calendar.monthrange(int(my), int(mm))[1]
+            d_from = str(date(int(my), int(mm), 1))
+            d_to   = str(date(int(my), int(mm), ld))
+        else:
+            d_from, d_to = "2024-01-01", "2030-12-31"
 
-    if st.button("📥  엑셀 생성",key="btn_excel",use_container_width=True):
+    if st.button("📥  엑셀 생성", key="btn_excel", use_container_width=True):
         if not rec_types: st.error("기록 유형을 선택하세요."); return
-        conn=get_conn(); sheets={}
+        conn = get_conn(); sheets = {}
         if "출퇴근 기록" in rec_types:
-            q=("SELECT emp_name,work_date,att_type,checkin,checkout"
-               " FROM attendance WHERE work_date BETWEEN ? AND ?")
-            p=[d_from,d_to]
-            if sel_emp!="전체 인원": q+=" AND emp_name=?"; p.append(sel_emp)
-            df=pd.read_sql(q+" ORDER BY work_date,emp_name",conn,params=p)
+            q = ("SELECT emp_name,work_date,att_type,checkin,checkout"
+                 " FROM attendance WHERE work_date BETWEEN ? AND ?")
+            p = [d_from, d_to]
+            if sel_emp != "전체 인원": q += " AND emp_name=?"; p.append(sel_emp)
+            df = pd.read_sql(q + " ORDER BY work_date,emp_name", conn, params=p)
             if not df.empty:
-                df.columns=["직원명","날짜","유형","출근","퇴근"]; sheets["출퇴근 기록"]=df
+                df.columns = ["직원명","날짜","유형","출근","퇴근"]
+                sheets["출퇴근 기록"] = df
         if "업무 보고" in rec_types:
-            q=("SELECT emp_name,work_date,am_tasks,am_priority,pm_done,pm_progress,"
-               "pm_tomorrow,pm_remarks,drive_link,result_link,status,admin_comment,submitted_at"
-               " FROM reports WHERE work_date BETWEEN ? AND ?")
-            p=[d_from,d_to]
-            if sel_emp!="전체 인원": q+=" AND emp_name=?"; p.append(sel_emp)
-            df=pd.read_sql(q+" ORDER BY work_date,emp_name",conn,params=p)
+            q = ("SELECT emp_name,work_date,am_tasks,am_priority,pm_done,pm_progress,"
+                 "pm_tomorrow,pm_remarks,drive_link,result_link,status,admin_comment,submitted_at"
+                 " FROM reports WHERE work_date BETWEEN ? AND ?")
+            p = [d_from, d_to]
+            if sel_emp != "전체 인원": q += " AND emp_name=?"; p.append(sel_emp)
+            df = pd.read_sql(q + " ORDER BY work_date,emp_name", conn, params=p)
             if not df.empty:
-                df.columns=["직원명","날짜","오전계획","우선순위","완료업무",
-                            "진행률","내일예정","특이사항","Drive","결과링크","상태","코멘트","제출시간"]
-                sheets["업무 보고"]=df
+                df.columns = ["직원명","날짜","오전계획","우선순위","완료업무",
+                              "진행률","내일예정","특이사항","Drive","결과링크","상태","코멘트","제출시간"]
+                sheets["업무 보고"] = df
         conn.close()
         if not sheets: st.warning("해당 조건 데이터 없음"); return
-        label=sel_emp.replace(" ","_") if sel_emp!="전체 인원" else "전체"
-        fname=f"VTM_{label}_{period}_{d_from}~{d_to}.xlsx"
-        st.download_button(label=f"💾  {fname} 저장",data=to_excel(sheets),
+        label = sel_emp.replace(" ","_") if sel_emp != "전체 인원" else "전체"
+        fname = f"VTM_{label}_{period}_{d_from}~{d_to}.xlsx"
+        st.download_button(
+            label=f"💾  {fname} 저장", data=to_excel(sheets),
             file_name=fname,
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            use_container_width=True)
+            use_container_width=True
+        )
         st.success("✅ 파일 준비 완료! 위 버튼을 눌러 저장하세요.")
 
 # ═══════════════════════════════════════════
@@ -1279,19 +1318,21 @@ def page_admin_excel():
 # ═══════════════════════════════════════════
 def page_admin_logs():
     topbar("🔍 시스템 로그")
-    conn=get_conn()
-    logs=pd.read_sql("SELECT created_at,action,actor,target,detail FROM logs"
-                     " ORDER BY created_at DESC LIMIT 300",conn)
+    conn = get_conn()
+    logs = pd.read_sql(
+        "SELECT created_at,action,actor,target,detail FROM logs"
+        " ORDER BY created_at DESC LIMIT 300", conn)
     conn.close()
-    if logs.empty: st.info("로그 없음")
+    if logs.empty:
+        st.info("로그 없음")
     else:
-        logs.columns=["시간","액션","실행자","대상","상세"]
-        st.dataframe(logs,use_container_width=True,hide_index=True)
+        logs.columns = ["시간","액션","실행자","대상","상세"]
+        st.dataframe(logs, use_container_width=True, hide_index=True)
 
 # ═══════════════════════════════════════════
 #  메인 라우터
 # ═══════════════════════════════════════════
-inject_all()   # CSS + JS 항상 먼저
+inject_all()
 
 if not st.session_state.logged_in:
     render_login()
@@ -1299,7 +1340,7 @@ else:
     render_sidebar()
 
     if st.session_state.is_admin:
-        pages={
+        pages = {
             "home":          page_admin_home,
             "admin_attend":  page_admin_attend,
             "admin_tasks":   page_admin_tasks,
@@ -1309,7 +1350,7 @@ else:
             "admin_logs":    page_admin_logs,
         }
     else:
-        pages={
+        pages = {
             "home":         page_emp_home,
             "emp_attend":   page_emp_attend,
             "emp_report":   page_emp_report,
@@ -1322,4 +1363,4 @@ else:
     <div style="text-align:center;padding:20px;color:#475569;
                 font-size:0.74rem;font-weight:700;position:relative;z-index:1;">
         © 2026 (주) 브이티엠 운영 대시보드 v1.0 &nbsp;|&nbsp; 개발자: 박동진 본부장
-    </div>""",unsafe_allow_html=True)
+    </div>""", unsafe_allow_html=True)
