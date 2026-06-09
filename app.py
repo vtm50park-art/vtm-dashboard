@@ -12,7 +12,7 @@ st.set_page_config(
     page_title="(주) 브이티엠 운영 대시보드",
     page_icon="🏢",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="collapsed"
 )
 
 KST = timezone(timedelta(hours=9))
@@ -133,14 +133,6 @@ def logo_svg(size=72):
     </svg>"""
 
 def inject_all():
-    # 모바일에서도 PC와 동일하게: 뷰포트 스케일 고정
-    st.markdown("""
-<meta name="viewport" content="width=1200, initial-scale=0.5, maximum-scale=5.0, user-scalable=yes">
-<style>
-/* 강제 최소폭: 항상 PC 레이아웃 유지 */
-html, body { min-width: 900px !important; }
-</style>
-""", unsafe_allow_html=True)
     st.markdown(f"""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&display=swap');
@@ -155,40 +147,28 @@ html,body,.stApp,
     font-family:'Noto Sans KR',sans-serif !important;
 }}
 
+/* 사이드바 완전 숨김 */
+[data-testid="stSidebar"],
 [data-testid="stSidebarCollapseButton"],
 [data-testid="collapsedControl"],
 button[kind="header"],
-.st-emotion-cache-ztfqz8,
-section[data-testid="stSidebar"] > div > div:first-child > div > div > button {{
+.st-emotion-cache-ztfqz8 {{
     display: none !important;
-    visibility: hidden !important;
-    opacity: 0 !important;
-    pointer-events: none !important;
     width: 0 !important;
-    height: 0 !important;
+    min-width: 0 !important;
+    max-width: 0 !important;
+    visibility: hidden !important;
+    overflow: hidden !important;
 }}
-[data-testid="stSidebar"] {{
-    background: linear-gradient(180deg,#0B1120 0%,#0F172A 100%) !important;
-    border-right: 2px solid #1E3A5F !important;
-    min-width: 235px !important;
-    max-width: 255px !important;
-    width: 245px !important;
-    transform: none !important;
-    visibility: visible !important;
-    display: block !important;
-    position: relative !important;
-    flex-shrink: 0 !important;
-    transition: none !important;
-}}
-[data-testid="stSidebar"][aria-expanded="false"] {{
-    transform: none !important;
+/* 메인 full-width */
+[data-testid="stMain"] {{
     margin-left: 0 !important;
-    min-width: 235px !important;
-    width: 245px !important;
-    visibility: visible !important;
+    padding-left: 8px !important;
+    width: 100% !important;
 }}
-[data-testid="stSidebar"] * {{ color: #F1F5F9 !important; }}
-[data-testid="stMain"] {{ margin-left: 0 !important; padding-left: 8px !important; }}
+[data-testid="stAppViewContainer"] {{
+    flex-direction: column !important;
+}}
 
 [data-testid="stSidebar"] .stButton > button {{
     background: linear-gradient(135deg,#F6D365 0%,#D4AF37 55%,#B8860B 100%) !important;
@@ -217,6 +197,18 @@ section[data-testid="stSidebar"] > div > div:first-child > div > div > button {{
     font-weight: 900 !important;
 }}
 
+/* 네비바 영역 Streamlit 버튼 숨김 (HTML 네비바로 대체) */
+[data-testid="stHorizontalBlock"] .stButton>button {{
+    visibility: hidden !important;
+    height: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: none !important;
+    overflow: hidden !important;
+    font-size: 0 !important;
+    position: absolute !important;
+}}
+/* 나머지 일반 버튼 */
 .stButton>button {{
     background: linear-gradient(135deg,#F6D365 0%,#D4AF37 55%,#B8860B 100%) !important;
     color: #000000 !important;
@@ -282,6 +274,75 @@ section[data-testid="stSidebar"] > div > div:first-child > div > div > button {{
 .tb-title {{ color:#D4AF37 !important; font-size:1.05rem; font-weight:900; }}
 .tb-info  {{ color:#94A3B8 !important; font-size:0.8rem; font-weight:700; }}
 
+/* ── 상단 네비바 ── */
+.vtm-navbar {{
+    background: linear-gradient(90deg,#0B1120 0%,#1E293B 100%);
+    border-bottom: 2px solid #D4AF37;
+    border-radius: 12px;
+    padding: 8px 10px;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    position: relative;
+    z-index: 10;
+}}
+.vtm-navbar-left {{
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    flex: 1;
+}}
+.vtm-nav-btn {{
+    background: linear-gradient(135deg,#1E293B,#0F172A);
+    border: 1px solid #334155;
+    border-radius: 8px;
+    color: #94A3B8 !important;
+    font-size: 0.78rem;
+    font-weight: 700;
+    padding: 6px 10px;
+    cursor: pointer;
+    font-family: 'Noto Sans KR', sans-serif;
+    transition: all 0.15s;
+    white-space: nowrap;
+    text-decoration: none;
+}}
+.vtm-nav-btn:hover {{
+    background: linear-gradient(135deg,#F6D365,#D4AF37);
+    color: #000 !important;
+    border-color: #D4AF37;
+}}
+.vtm-nav-btn.active {{
+    background: linear-gradient(135deg,#F6D365 0%,#D4AF37 55%,#B8860B 100%);
+    color: #000 !important;
+    border-color: #B8860B;
+    font-weight: 900;
+    box-shadow: 0 2px 8px rgba(212,175,55,0.45);
+}}
+.vtm-nav-user {{
+    color: #D4AF37 !important;
+    font-size: 0.76rem;
+    font-weight: 900;
+    white-space: nowrap;
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}}
+.vtm-nav-logout {{
+    background: linear-gradient(135deg,#FF6B6B,#EF4444);
+    border: none;
+    border-radius: 7px;
+    color: #fff !important;
+    font-size: 0.75rem;
+    font-weight: 900;
+    padding: 5px 10px;
+    cursor: pointer;
+    font-family: 'Noto Sans KR', sans-serif;
+}}
+
 .stTextInput>div>div>input,
 .stNumberInput>div>div>input {{
     background: #1E293B !important; color: #F1F5F9 !important;
@@ -332,7 +393,7 @@ label,.stTextInput label,.stSelectbox label,.stTextArea label,
 .tg-hold {{ display:block; background:#F59E0B; color:#fff!important; border-radius:3px; padding:1px 2px; font-size:0.6rem; margin:1px 0; font-weight:700; }}
 .tg-no  {{ display:block; background:#374151; color:#9CA3AF!important; border-radius:3px; padding:1px 2px; font-size:0.6rem; margin:1px 0; }}
 
-/* 모바일 반응형 없음 - PC와 동일 표시 */
+/* 반응형 없음 - PC 동일 표시 */
 
 #MainMenu, footer, header {{ visibility:hidden !important; }}
 [data-testid="stDecoration"]  {{ display:none !important; }}
@@ -457,29 +518,7 @@ label,.stTextInput label,.stSelectbox label,.stTextArea label,
 
 <script>
 (function(){{
-    function hideSidebarToggle(){{
-        var selectors=[
-            '[data-testid="stSidebarCollapseButton"]',
-            '[data-testid="collapsedControl"]',
-            'button[kind="header"]'
-        ];
-        selectors.forEach(function(sel){{
-            var els=document.querySelectorAll(sel);
-            els.forEach(function(el){{
-                el.style.cssText='display:none!important;visibility:hidden!important;'+
-                    'opacity:0!important;pointer-events:none!important;'+
-                    'width:0!important;height:0!important;';
-            }});
-        }});
-    }}
-    var obs=new MutationObserver(hideSidebarToggle);
-    function startObs(){{
-        obs.observe(document.body,{{childList:true,subtree:true}});
-        hideSidebarToggle();
-    }}
-    if(document.body) startObs();
-    else document.addEventListener('DOMContentLoaded',startObs);
-    setInterval(hideSidebarToggle,800);
+    /* 사이드바 없음 - JS 불필요 */
 
     function bootStars(){{
         var cv=document.getElementById('vtm-stars');
@@ -608,91 +647,94 @@ def render_login():
         </div>""", unsafe_allow_html=True)
 
 def render_sidebar():
-    with st.sidebar:
-        st.markdown(f"""
-        <div style="text-align:center;padding:14px 6px 6px;">
-          {logo_svg(38)}
-          <h2 style="color:#D4AF37;font-size:0.9rem;font-weight:900;margin:5px 0 1px;">
-              (주) 브이티엠</h2>
-          <p style="color:#64748B;font-size:0.66rem;font-weight:700;margin:0;">
-              VTM 운영 대시보드 v1.0</p>
-        </div>
-        <hr style="border-color:#1E3A5F;margin:7px 0;">
-        """, unsafe_allow_html=True)
+    """상단 네비바 (사이드바 대신 - PC/모바일 공통)"""
+    kst_now  = now_kst().strftime("%H:%M")
+    kst_date = now_kst().strftime("%m/%d")
+    role_txt = "🔴 관리자" if st.session_state.is_admin else "🟢 직원"
+    cur      = st.session_state.page
 
-        role_txt = "🔴 관리자" if st.session_state.is_admin else "🟢 직원"
-        kst_now = now_kst().strftime("%H:%M")
-        kst_date = now_kst().strftime("%m/%d")
-        st.markdown(f"""
-        <div style="background:#1E293B;border-radius:10px;padding:8px 12px;
-                    margin:4px;border-left:3px solid #D4AF37;">
-          <p style="color:#D4AF37;font-weight:900;font-size:0.8rem;margin:0;">
-              {role_txt}
-              <span class="kst-badge">🇰🇷 KST {kst_date} {kst_now}</span>
-          </p>
-          <p style="color:#F1F5F9;font-weight:700;font-size:0.92rem;margin:3px 0 0;">
-              {st.session_state.user_name}</p>
-        </div>""", unsafe_allow_html=True)
+    if st.session_state.is_admin:
+        menus = [
+            ("home",          "🏠 홈"),
+            ("admin_attend",  "📋 출퇴근"),
+            ("admin_tasks",   "📊 업무현황"),
+            ("admin_approve", "✅ 결과승인"),
+            ("admin_emp",     "👥 직원관리"),
+            ("admin_excel",   "📥 엑셀"),
+            ("admin_logs",    "🔍 로그"),
+        ]
+    else:
+        menus = [
+            ("home",         "🏠 홈"),
+            ("emp_attend",   "⏰ 출퇴근"),
+            ("emp_report",   "📝 업무보고"),
+            ("emp_calendar", "📅 달력"),
+        ]
 
-        st.markdown("<hr style='border-color:#1E3A5F;margin:7px 0;'>", unsafe_allow_html=True)
+    # 메뉴 버튼 HTML 생성
+    btns_html = ""
+    for key, label in menus:
+        active_cls = "active" if cur == key else ""
+        btns_html += f'<span class="vtm-nav-btn {active_cls}" data-page="{key}">{label}</span>'
 
-        if st.session_state.is_admin:
-            menus = [
-                ("home",          "🏠 대시보드 홈",   True),
-                ("admin_attend",  "📋 출퇴근 현황",   False),
-                ("admin_tasks",   "📊 업무 현황",     False),
-                ("admin_approve", "✅ 결과 승인",     False),
-                ("admin_emp",     "👥 직원 관리",     False),
-                ("admin_excel",   "📥 엑셀 다운로드", False),
-                ("admin_logs",    "🔍 시스템 로그",   False),
-            ]
-        else:
-            menus = [
-                ("home",         "🏠 내 대시보드",   True),
-                ("emp_attend",   "⏰ 출퇴근",        False),
-                ("emp_report",   "📝 업무 보고",     False),
-                ("emp_calendar", "📅 업무 달력",     False),
-            ]
+    st.markdown(f"""
+<div class="vtm-navbar">
+  <div style="display:flex;align-items:center;gap:6px;margin-right:10px;flex-shrink:0;">
+    {logo_svg(28)}
+    <span style="color:#D4AF37;font-weight:900;font-size:0.82rem;">(주) 브이티엠</span>
+  </div>
+  <div class="vtm-navbar-left" id="vtm-nav-btns">
+    {btns_html}
+  </div>
+  <div class="vtm-nav-user">
+    <span>{role_txt} {st.session_state.user_name}</span>
+    <span class="kst-badge">🇰🇷 KST {kst_date} {kst_now}</span>
+  </div>
+</div>
+<script>
+(function(){{
+  function bindNav(){{
+    var btns = document.querySelectorAll('.vtm-nav-btn[data-page]');
+    if(!btns.length){{ setTimeout(bindNav, 300); return; }}
+    btns.forEach(function(btn){{
+      btn.addEventListener('click', function(){{
+        var pg = btn.getAttribute('data-page');
+        var url = new URL(window.location.href);
+        url.searchParams.set('nav', pg);
+        window.history.pushState({{}}, '', url.toString());
+        // Streamlit rerun via query param change
+        window.dispatchEvent(new Event('popstate'));
+      }});
+    }});
+  }}
+  bindNav();
+}})();
+</script>
+""", unsafe_allow_html=True)
 
-        for key, label, is_home in menus:
-            is_active = (st.session_state.page == key)
-            if is_home:
-                if is_active:
-                    st.markdown(f"""
-                    <div class="home-active-badge">
-                      <div class="home-active-dot"></div>
-                      <span>{label}</span>
-                    </div>""", unsafe_allow_html=True)
-                else:
-                    st.markdown('<div class="sidebar-home-btn">', unsafe_allow_html=True)
-                    if st.button(label, key=f"nav_{key}", use_container_width=True):
-                        st.session_state.page = key; st.rerun()
-                    st.markdown('</div>', unsafe_allow_html=True)
-            else:
-                if is_active:
-                    st.markdown(f"""
-                    <div style="background:linear-gradient(135deg,#F6D365,#D4AF37);
-                        border-radius:10px;padding:10px 13px;margin:3px 4px;
-                        border-left:4px solid #B8860B;">
-                      <span style="color:#000!important;font-weight:900;font-size:0.86rem;">
-                          {label}
-                      </span>
-                    </div>""", unsafe_allow_html=True)
-                else:
-                    if st.button(label, key=f"nav_{key}", use_container_width=True):
-                        st.session_state.page = key; st.rerun()
+    # URL 파라미터로 페이지 전환
+    params = st.query_params
+    if "nav" in params:
+        new_page = params["nav"]
+        valid = [m[0] for m in menus]
+        if new_page in valid and new_page != st.session_state.page:
+            st.session_state.page = new_page
+            st.query_params.clear()
+            st.rerun()
 
-        st.markdown("<hr style='border-color:#1E3A5F;margin:12px 0 5px;'>", unsafe_allow_html=True)
-        st.markdown("""<p style="color:#475569;font-size:0.67rem;text-align:center;font-weight:700;">
-            개발자: 박동진 본부장</p>""", unsafe_allow_html=True)
-
-        st.markdown('<div class="sidebar-logout-btn">', unsafe_allow_html=True)
+    # Streamlit 버튼 (실제 동작) - 숨겨서 HTML 클릭 시 트리거
+    cols = st.columns(len(menus) + 1)
+    for i, (key, label) in enumerate(menus):
+        with cols[i]:
+            if st.button(label, key=f"nav_{key}", use_container_width=True):
+                st.session_state.page = key
+                st.rerun()
+    with cols[-1]:
         if st.button("🚪 로그아웃", key="btn_logout", use_container_width=True):
             wlog("LOGOUT", st.session_state.user_name)
-            for k in ["logged_in", "user_id", "user_name", "is_admin"]:
-                st.session_state[k] = False if k == "logged_in" else None
+            for k in ["logged_in","user_id","user_name","is_admin"]:
+                st.session_state[k] = False if k=="logged_in" else None
             st.session_state.page = "home"; st.rerun()
-        st.markdown('</div>', unsafe_allow_html=True)
 
 def topbar(title):
     kst = now_kst()
