@@ -559,51 +559,75 @@ def render_login():
         </div>""", unsafe_allow_html=True)
 
 def render_sidebar():
-    """사이드바 대신 메인 상단에 네비게이션 바 렌더링"""
+    """상단 로고 헤더 + 네비게이션 바"""
     role_txt = "🔴 관리자" if st.session_state.is_admin else "🟢 직원"
     kst_now  = now_kst().strftime("%H:%M")
     kst_date = now_kst().strftime("%m/%d")
 
+    # ── 로고 헤더 ──
+    st.markdown(f"""
+    <div style="display:flex;align-items:center;gap:14px;
+                background:linear-gradient(90deg,#0B1120,#1E293B);
+                border-bottom:2px solid #D4AF37;border-radius:12px 12px 0 0;
+                padding:10px 18px;margin-bottom:0;">
+      {logo_svg(44)}
+      <div>
+        <div style="color:#D4AF37;font-weight:900;font-size:1.05rem;line-height:1.2;">
+            (주) 브이티엠
+        </div>
+        <div style="color:#64748B;font-size:0.72rem;font-weight:700;">
+            VTM 운영 대시보드 v1.0
+        </div>
+      </div>
+      <div style="margin-left:auto;text-align:right;">
+        <div style="color:#D4AF37;font-size:0.75rem;font-weight:900;">{role_txt} {st.session_state.user_name}</div>
+        <div style="color:#64748B;font-size:0.68rem;font-weight:700;">🇰🇷 KST {kst_date} {kst_now}</div>
+      </div>
+    </div>
+    """, unsafe_allow_html=True)
+
     if st.session_state.is_admin:
         menus = [
-            ("home",          "🏠 홈"),
-            ("admin_attend",  "📋 출퇴근"),
-            ("admin_tasks",   "📊 업무현황"),
-            ("admin_approve", "✅ 결과승인"),
-            ("admin_emp",     "👥 직원관리"),
-            ("admin_excel",   "📥 엑셀"),
-            ("admin_logs",    "🔍 로그"),
+            ("home",          "🏠 홈",      True),
+            ("admin_attend",  "📋 출퇴근",  False),
+            ("admin_tasks",   "📊 업무현황",False),
+            ("admin_approve", "✅ 결과승인",False),
+            ("admin_emp",     "👥 직원관리",False),
+            ("admin_excel",   "📥 엑셀",    False),
+            ("admin_logs",    "🔍 로그",    False),
         ]
     else:
         menus = [
-            ("home",         "🏠 홈"),
-            ("emp_attend",   "⏰ 출퇴근"),
-            ("emp_report",   "📝 업무보고"),
-            ("emp_calendar", "📅 달력"),
+            ("home",         "🏠 홈",     True),
+            ("emp_attend",   "⏰ 출퇴근", False),
+            ("emp_report",   "📝 업무보고",False),
+            ("emp_calendar", "📅 달력",   False),
         ]
 
-    # 상단 네비바: Streamlit 버튼 한 줄
-    cols = st.columns([1] * len(menus) + [1, 1])
-    for i, (key, label) in enumerate(menus):
+    # ── 네비 버튼 한 줄 ──
+    cols = st.columns([1] * len(menus) + [1])
+    for i, (key, label, is_home) in enumerate(menus):
         with cols[i]:
             is_active = (st.session_state.page == key)
-            if is_active:
+            if is_active and is_home:
+                # 홈 활성 → 초록
                 st.markdown(
-                    f'<div style="background:linear-gradient(135deg,#F6D365,#D4AF37);'
-                    f'border-radius:8px;padding:8px 4px;text-align:center;'
-                    f'font-weight:900;font-size:0.78rem;color:#000;margin:2px 0;">'
+                    f'<div style="background:linear-gradient(135deg,#05F080,#10B981,#059669);'
+                    f'border-radius:10px;padding:9px 4px;text-align:center;'
+                    f'font-weight:900;font-size:0.8rem;color:#fff;'
+                    f'box-shadow:0 0 12px rgba(5,240,128,0.45);margin:2px 0;">'
+                    f'{label}</div>', unsafe_allow_html=True)
+            elif is_active:
+                # 일반 메뉴 활성 → 골드
+                st.markdown(
+                    f'<div style="background:linear-gradient(135deg,#F6D365,#D4AF37,#B8860B);'
+                    f'border-radius:10px;padding:9px 4px;text-align:center;'
+                    f'font-weight:900;font-size:0.8rem;color:#000;'
+                    f'box-shadow:0 0 10px rgba(212,175,55,0.45);margin:2px 0;">'
                     f'{label}</div>', unsafe_allow_html=True)
             else:
                 if st.button(label, key=f"nav_{key}", use_container_width=True):
                     st.session_state.page = key; st.rerun()
-
-    with cols[-2]:
-        st.markdown(
-            f'<div style="background:#1E293B;border:1px solid #D4AF37;border-radius:8px;'
-            f'padding:6px 4px;text-align:center;font-size:0.68rem;font-weight:700;color:#D4AF37;">'
-            f'{role_txt}<br>{st.session_state.user_name}<br>'
-            f'<span style="color:#64748B;font-size:0.6rem;">KST {kst_date} {kst_now}</span>'
-            f'</div>', unsafe_allow_html=True)
 
     with cols[-1]:
         if st.button("🚪 로그아웃", key="btn_logout", use_container_width=True):
