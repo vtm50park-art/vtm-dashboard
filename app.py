@@ -320,6 +320,8 @@ label,.stTextInput label,.stSelectbox label,.stTextArea label,
 .tg-att {{ display:block; background:#10B981; color:#fff!important; border-radius:3px; padding:1px 2px; font-size:0.6rem; margin:1px 0; font-weight:700; }}
 .tg-rep {{ display:block; background:#3B82F6; color:#fff!important; border-radius:3px; padding:1px 2px; font-size:0.6rem; margin:1px 0; font-weight:700; }}
 .tg-ok  {{ display:block; background:#10B981; color:#fff!important; border-radius:3px; padding:1px 2px; font-size:0.6rem; margin:1px 0; font-weight:700; }}
+.tg-rej {{ display:block; background:#EF4444; color:#fff!important; border-radius:3px; padding:1px 2px; font-size:0.6rem; margin:1px 0; font-weight:700; }}
+.tg-hold {{ display:block; background:#F59E0B; color:#fff!important; border-radius:3px; padding:1px 2px; font-size:0.6rem; margin:1px 0; font-weight:700; }}
 .tg-no  {{ display:block; background:#374151; color:#9CA3AF!important; border-radius:3px; padding:1px 2px; font-size:0.6rem; margin:1px 0; }}
 
 @media (max-width:768px) {{
@@ -971,10 +973,17 @@ def page_emp_calendar():
                 inner += (f'<span class="tg-att">✅{att_map[d]["att_type"]}</span>'
                           if d in att_map else '<span class="tg-no">미출근</span>')
                 if d in rep_map:
-                    r = rep_map[d]
-                    inner += (f'<span class="tg-ok">✅{r["pm_progress"]}%</span>'
-                              if r["status"] == "승인"
-                              else f'<span class="tg-rep">📋{r["status"]}</span>')
+                    r   = rep_map[d]
+                    rst = safe_str(r["status"]) or "대기중"
+                    prg = r["pm_progress"]
+                    if rst == "승인":
+                        inner += f'<span class="tg-ok">✅승인 {prg}%</span>'
+                    elif rst == "반려":
+                        inner += f'<span class="tg-rej">❌반려</span>'
+                    elif rst == "보류":
+                        inner += f'<span class="tg-hold">⏸보류</span>'
+                    else:
+                        inner += f'<span class="tg-rep">📋대기중 {prg}%</span>'
                 else:
                     inner += '<span class="tg-no">보고없음</span>'
                 html += f'<td class="{cls}">{inner}</td>'
