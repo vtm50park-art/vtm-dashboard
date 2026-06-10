@@ -227,7 +227,7 @@ button[kind="header"],
 }}
 .tb-title {{ color:#D4AF37 !important; font-size:1.05rem; font-weight:900; }}
 .tb-info  {{ color:#94A3B8 !important; font-size:0.8rem; font-weight:700; }}
-
+ 
 /* ─── 입력 필드: 아이보리 그라데이션 + 검정 글자 ─── */
 .stTextInput>div>div>input,
 .stNumberInput>div>div>input {{
@@ -319,9 +319,9 @@ label,.stTextInput label,.stSelectbox label,.stTextArea label,
     margin-left:6px;
     vertical-align:middle;
 }}
-
+ 
 /* ── 달력 투명 클릭 버튼 CSS는 page_emp_calendar() 안에서 별도 주입 ── */
-
+ 
 </style>
  
 <canvas id="vtm-stars" style="position:fixed;top:0;left:0;
@@ -773,14 +773,14 @@ def render_day_detail(uid, d_str):
     rep = pd.read_sql("SELECT * FROM reports WHERE emp_id=? AND work_date=? LIMIT 1",
                       conn, params=(uid, d_str))
     conn.close()
-
+ 
     try:
         dt_obj = datetime.strptime(d_str, "%Y-%m-%d")
         day_kr = ["월","화","수","목","금","토","일"][dt_obj.weekday()]
         d_label = f"{dt_obj.year}년 {dt_obj.month}월 {dt_obj.day}일 ({day_kr})"
     except Exception:
         d_label = d_str
-
+ 
     # 헤더 + 닫기 버튼
     hcol, xcol = st.columns([9, 1])
     with hcol:
@@ -794,7 +794,7 @@ def render_day_detail(uid, d_str):
         if st.button("✕ 닫기", key="cal_close", use_container_width=True):
             st.session_state.cal_selected = None
             st.rerun()
-
+ 
     # 출퇴근
     if not att.empty:
         a = att.iloc[0]
@@ -824,9 +824,9 @@ def render_day_detail(uid, d_str):
             'border-radius:10px;padding:10px;margin:4px 0;text-align:center;">'
             '<span style="color:#EF4444;font-weight:900;">❗ 출근 기록 없음</span></div>',
             unsafe_allow_html=True)
-
+ 
     st.markdown("<div style='height:4px'></div>", unsafe_allow_html=True)
-
+ 
     # 업무보고
     if not rep.empty:
         r = rep.iloc[0]
@@ -835,7 +835,7 @@ def render_day_detail(uid, d_str):
         s_emoji = {"승인":"✅","대기중":"⏳","반려":"❌","보류":"⏸"}.get(status,"📋")
         prg     = int(r["pm_progress"]) if safe_str(str(r["pm_progress"])) else 0
         bar_c   = "#10B981" if prg >= 80 else ("#F59E0B" if prg >= 40 else "#EF4444")
-
+ 
         am_tasks = safe_str(r["am_tasks"])    or "—"
         am_pri   = safe_str(r["am_priority"]) or "—"
         am_notes = safe_str(r["am_notes"])    or "—"
@@ -847,7 +847,7 @@ def render_day_detail(uid, d_str):
         appr_at  = safe_str(r["approved_at"])   or "—"
         dl_val   = safe_str(r["drive_link"])
         rl_val   = safe_str(r["result_link"])
-
+ 
         # 상단 헤더 카드
         st.markdown(
             f'<div class="vtm-card" style="padding:10px 16px;margin:4px 0 2px;">'
@@ -857,7 +857,7 @@ def render_day_detail(uid, d_str):
             f'font-weight:900;font-size:0.8rem;">{s_emoji} {status}</span>'
             f'</div></div>',
             unsafe_allow_html=True)
-
+ 
         # 오전 계획
         st.markdown(
             f'<div style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:10px;'
@@ -868,7 +868,7 @@ def render_day_detail(uid, d_str):
             f'<p style="font-size:0.76rem;color:#475569;margin:0;">'
             f'우선순위: {am_pri}&nbsp;&nbsp;|&nbsp;&nbsp;특이사항: {am_notes}</p></div>',
             unsafe_allow_html=True)
-
+ 
         # 퇴근 결과
         st.markdown(
             f'<div style="background:#F0FDF4;border:1px solid #BBF7D0;border-radius:10px;'
@@ -884,7 +884,7 @@ def render_day_detail(uid, d_str):
                if pm_rem and pm_rem != "—" else "")
             + '</div>',
             unsafe_allow_html=True)
-
+ 
         # 링크
         dl_a = (f'<a href="{dl_val}" target="_blank" style="color:#3B82F6;font-weight:700;">🔗 열기</a>'
                 if dl_val else '없음')
@@ -895,7 +895,7 @@ def render_day_detail(uid, d_str):
             f'padding:7px 14px;margin:3px 0;font-size:0.77rem;color:#475569;">'
             f'📁 Drive: {dl_a}&nbsp;&nbsp;&nbsp;🔗 결과물: {rl_a}</div>',
             unsafe_allow_html=True)
-
+ 
         # 관리자 코멘트
         if cmt:
             st.markdown(
@@ -906,7 +906,7 @@ def render_day_detail(uid, d_str):
                 f'<p style="font-size:0.9rem;font-weight:700;color:#1A1A1A;margin:0;'
                 f'line-height:1.5;">{cmt}</p></div>',
                 unsafe_allow_html=True)
-
+ 
         # 타임스탬프
         sub_disp  = sub_at[-17:-3]  if len(sub_at)  > 13 else sub_at
         appr_disp = appr_at[-17:-3] if len(appr_at) > 13 else appr_at
@@ -924,24 +924,24 @@ def render_day_detail(uid, d_str):
             '<p style="color:#64748B;font-weight:700;font-size:0.9rem;margin:0;">'
             '📭 이 날 업무 보고 내역이 없습니다.</p></div>',
             unsafe_allow_html=True)
-
+ 
     st.markdown("<hr style='border-color:#1E3A5F;margin:12px 0 4px;'>", unsafe_allow_html=True)
-
-
+ 
+ 
 def page_emp_calendar():
     topbar("📅 업무 달력")
     uid   = st.session_state.user_id
     today = now_kst().date()
-
+ 
     if "cal_selected" not in st.session_state:
         st.session_state.cal_selected = None
-
+ 
     # ── 연/월 선택 ──
     c1, c2, _ = st.columns([1, 1, 2])
     with c1: yr = st.number_input("연도", value=today.year,  min_value=2024, max_value=2030, key="cy")
     with c2: mo = st.number_input("월",   value=today.month, min_value=1,    max_value=12,   key="cm")
     yr = int(yr); mo = int(mo)
-
+ 
     # ── DB 조회 ──
     conn = get_conn()
     att_df = pd.read_sql(
@@ -951,13 +951,13 @@ def page_emp_calendar():
         "SELECT work_date,status,pm_progress FROM reports WHERE emp_id=? AND work_date LIKE ?",
         conn, params=(uid, f"{yr}-{mo:02d}-%"))
     conn.close()
-
+ 
     att_map = {r["work_date"]: r for _, r in att_df.iterrows()} if not att_df.empty else {}
     rep_map = {r["work_date"]: r for _, r in rep_df.iterrows()} if not rep_df.empty else {}
-
+ 
     cal_weeks = calendar.monthcalendar(yr, mo)
     sel = st.session_state.cal_selected
-
+ 
     # ── 달력 전용 CSS: 버튼을 달력 셀처럼 ──
     st.markdown("""<style>
 /* 요일 헤더 */
@@ -972,7 +972,7 @@ def page_emp_calendar():
 .cal-hwd  { background:#1E293B; color:#D4AF37; }
 .cal-hsat { background:#1a2d44; color:#93C5FD; }
 .cal-hsun { background:#2a1520; color:#FCA5A5; }
-
+ 
 /* 평일 셀 버튼 */
 div[class*="cal-cell-wd"] .stButton>button,
 div[class*="cal-cell-today"] .stButton>button,
@@ -1052,7 +1052,7 @@ div[class*="cal-cell-empty"] .stButton>button {
     margin-bottom: 6px;
 }
 </style>""", unsafe_allow_html=True)
-
+ 
     # ── 요일 헤더 ──
     st.markdown("""
     <div class="cal-header">
@@ -1064,16 +1064,16 @@ div[class*="cal-cell-empty"] .stButton>button {
       <div class="cal-hcell cal-hsat">토</div>
       <div class="cal-hcell cal-hsun">일</div>
     </div>""", unsafe_allow_html=True)
-
+ 
     # ── 주 단위 렌더 ──
     for week in cal_weeks:
         cols = st.columns([1, 1, 1, 1, 1, 0.7, 0.7])
-
+ 
         for i, day in enumerate(week):
             is_sat = (i == 5)
             is_sun = (i == 6)
             is_wk  = is_sat or is_sun
-
+ 
             # 셀 타입 결정
             if day == 0:
                 cell_type = "empty"
@@ -1088,42 +1088,42 @@ div[class*="cal-cell-empty"] .stButton>button {
                 if is_sel:   cell_type = "sel"
                 elif is_td:  cell_type = "today"
                 else:        cell_type = "wd"
-
+ 
             with cols[i]:
                 # div wrapper로 CSS 타겟팅
                 st.markdown(f'<div class="cal-cell-{cell_type}">', unsafe_allow_html=True)
-
+ 
                 if day == 0:
                     st.button(" ", key=f"cd_empty_{i}_{week[0]}", use_container_width=True,
                               disabled=True)
-
+ 
                 elif is_wk:
                     # 토/일: 날짜만 표시, 클릭 불가
                     st.button(str(day), key=f"cd_wk_{i}_{day}_{mo}",
                               use_container_width=True, disabled=True)
-
+ 
                 else:
                     d = f"{yr}-{mo:02d}-{day:02d}"
                     has_att = d in att_map
                     has_rep = d in rep_map
                     rep_st  = rep_map[d]["status"] if has_rep else None
                     rep_prg = rep_map[d]["pm_progress"] if has_rep else 0
-
+ 
                     # 버튼 라벨 — 날짜 + 뱃지 텍스트 (멀티라인)
                     is_td  = (d == today_str())
                     is_sel = (d == sel)
-
+ 
                     today_mark = " ★" if is_td else ""
                     sel_mark   = " ◀" if is_sel else ""
                     line1 = f"{day}{today_mark}{sel_mark}"
-
+ 
                     # 출근 상태
                     if has_att:
                         atp_s = (att_map[d]["att_type"] or "출근")[:4]
                         line2 = f"✅ {atp_s}"
                     else:
                         line2 = "○ 미출근"
-
+ 
                     # 보고 상태
                     if has_rep:
                         if rep_st == "승인":
@@ -1136,15 +1136,15 @@ div[class*="cal-cell-empty"] .stButton>button {
                             line3 = f"⏳ {rep_st}"
                     else:
                         line3 = "— 보고없음"
-
+ 
                     label = f"{line1}\n{line2}\n{line3}"
-
+ 
                     if st.button(label, key=f"cd_{d}", use_container_width=True):
                         st.session_state.cal_selected = None if is_sel else d
                         st.rerun()
-
+ 
                 st.markdown('</div>', unsafe_allow_html=True)
-
+ 
         # 선택된 날짜가 이 주에 있으면 바로 아래 상세 펼침
         week_dates = [
             f"{yr}-{mo:02d}-{day:02d}"
