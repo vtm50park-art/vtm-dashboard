@@ -936,6 +936,17 @@ def page_emp_calendar():
     if "cal_selected" not in st.session_state:
         st.session_state.cal_selected = None
 
+    # ── query_params로 날짜 클릭 처리 ──
+    qp = st.query_params
+    if "calday" in qp:
+        clicked_d = qp["calday"]
+        if st.session_state.cal_selected == clicked_d:
+            st.session_state.cal_selected = None
+        else:
+            st.session_state.cal_selected = clicked_d
+        st.query_params.clear()
+        st.rerun()
+
     # ── 연/월 선택 ──
     c1, c2, _ = st.columns([1, 1, 2])
     with c1: yr = st.number_input("연도", value=today.year,  min_value=2024, max_value=2030, key="cy")
@@ -1021,40 +1032,27 @@ def page_emp_calendar():
 .vtm-cal .b-hold { background:#EDE9FE; color:#4C1D95; }
 .vtm-cal .b-none { background:#F1F5F9; color:#94A3B8; }
 
-/* 승인 도장 */
+/* 승인 도장 — 빨간색 */
 .vtm-cal .stamp {
     position:absolute; top:5px; right:5px;
-    width:26px; height:26px; border-radius:50%;
-    border:2px solid #059669; display:flex;
-    align-items:center; justify-content:center;
-    font-size:0.5rem; font-weight:900; color:#059669;
-    background:rgba(5,150,105,0.1);
+    width:28px; height:28px; border-radius:50%;
+    border:2.5px solid #DC2626;
+    display:flex; align-items:center; justify-content:center;
+    font-size:0.5rem; font-weight:900; color:#DC2626;
+    background:rgba(220,38,38,0.08);
     transform:rotate(-15deg); line-height:1.1; text-align:center;
+    pointer-events:none;
 }
 
-/* ── 투명 클릭 버튼: 달력 셀 위에 겹치기 ── */
-.cal-btn-row {
-    margin-top: -88px !important;
-    position: relative;
-    z-index: 20;
-    pointer-events: none;
+/* 달력 셀 링크 스타일 */
+.vtm-cal td a.cal-link {
+    display:block; position:absolute;
+    top:0; left:0; width:100%; height:100%;
+    text-decoration:none; color:inherit;
+    border-radius:8px; z-index:5;
 }
-.cal-btn-row .stButton { pointer-events: all; }
-.cal-btn-row .stButton > button {
-    background: transparent !important;
-    border: none !important;
-    box-shadow: none !important;
-    color: transparent !important;
-    height: 85px !important;
-    min-height: 85px !important;
-    padding: 0 !important;
-    border-radius: 8px !important;
-    cursor: pointer !important;
-}
-.cal-btn-row .stButton > button:hover {
-    background: rgba(59,130,246,0.09) !important;
-    transform: none !important;
-    box-shadow: none !important;
+.vtm-cal td a.cal-link:hover {
+    background:rgba(59,130,246,0.08);
 }
 </style>""", unsafe_allow_html=True)
 
@@ -1112,28 +1110,15 @@ def page_emp_calendar():
             if has_rep and rep_st == "승인" and not is_wk:
                 stamp = '<div class="stamp">승<br>인</div>'
 
-            html += (f'<td class="{cell_cls}">{stamp}'
+            # 평일 셀에 클릭 링크 추가
+            link_open  = f'<a href="?calday={d}" class="cal-link"></a>' if not is_wk else ""
+
+            html += (f'<td class="{cell_cls}">{stamp}{link_open}'
                      f'<span class="daynum">{day}</span>{badges}</td>')
         html += '</tr></tbody></table>'
         st.markdown(html, unsafe_allow_html=True)
 
-        # 2) 투명 버튼 행 — st.columns 7칸, 평일만 버튼
-        st.markdown('<div class="cal-btn-row">', unsafe_allow_html=True)
-        cols = st.columns([1,1,1,1,1,0.6,0.6])
-        for i, day in enumerate(week):
-            with cols[i]:
-                if day == 0 or i >= 5:
-                    st.markdown("<div style='height:4px'></div>", unsafe_allow_html=True)
-                    continue
-                d = f"{yr}-{mo:02d}-{day:02d}"
-                is_sel = (d == sel)
-                # 투명 버튼 — 라벨은 공백(시각적으로 안 보임)
-                if st.button(" ", key=f"cd_{d}", use_container_width=True):
-                    st.session_state.cal_selected = None if is_sel else d
-                    st.rerun()
-        st.markdown('</div>', unsafe_allow_html=True)
-
-        # 3) 선택된 날짜 있으면 상세 펼침
+        # 선택된 날짜 있으면 상세 펼침
         week_dates = [
             f"{yr}-{mo:02d}-{day:02d}"
             for i, day in enumerate(week)
