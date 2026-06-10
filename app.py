@@ -320,22 +320,8 @@ label,.stTextInput label,.stSelectbox label,.stTextArea label,
     vertical-align:middle;
 }}
 
-/* ── 달력 날짜 클릭 버튼 (↗ / ✕) — 작고 투명하게 ── */
-[data-testid="stButton"][id^="cd_"] > button,
-button[kind="secondary"] {{
-    padding: 2px 4px !important;
-    font-size: 0.65rem !important;
-    font-weight: 700 !important;
-    min-height: 20px !important;
-    height: 20px !important;
-    background: rgba(212,175,55,0.18) !important;
-    color: #D4AF37 !important;
-    border: 1px solid rgba(212,175,55,0.35) !important;
-    border-radius: 4px !important;
-    box-shadow: none !important;
-    width: 100% !important;
-    margin-top: 2px !important;
-}}
+/* ── 달력 날짜 클릭 버튼 (↗ / ✕) — 골드 소형 ── */
+
 </style>
  
 <canvas id="vtm-stars" style="position:fixed;top:0;left:0;
@@ -973,75 +959,82 @@ def page_emp_calendar():
 
     # ── 달력 헤더 ──
     st.markdown(
-        '<table class="cal-tbl"><thead><tr>'
-        '<th>월</th><th>화</th><th>수</th><th>목</th><th>금</th>'
-        '<th class="wk">토</th><th class="wk">일</th>'
-        '</tr></thead></table>',
+        '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:3px;">'
+        '<div style="background:#1E293B;border-radius:6px;padding:6px 0;text-align:center;'
+        'color:#D4AF37;font-weight:900;font-size:0.82rem;">월</div>'
+        '<div style="background:#1E293B;border-radius:6px;padding:6px 0;text-align:center;'
+        'color:#D4AF37;font-weight:900;font-size:0.82rem;">화</div>'
+        '<div style="background:#1E293B;border-radius:6px;padding:6px 0;text-align:center;'
+        'color:#D4AF37;font-weight:900;font-size:0.82rem;">수</div>'
+        '<div style="background:#1E293B;border-radius:6px;padding:6px 0;text-align:center;'
+        'color:#D4AF37;font-weight:900;font-size:0.82rem;">목</div>'
+        '<div style="background:#1E293B;border-radius:6px;padding:6px 0;text-align:center;'
+        'color:#D4AF37;font-weight:900;font-size:0.82rem;">금</div>'
+        '<div style="background:#0B1120;border-radius:6px;padding:6px 0;text-align:center;'
+        'color:#475569;font-weight:700;font-size:0.75rem;">토</div>'
+        '<div style="background:#0B1120;border-radius:6px;padding:6px 0;text-align:center;'
+        'color:#475569;font-weight:700;font-size:0.75rem;">일</div>'
+        '</div>',
         unsafe_allow_html=True)
 
-    # ── 주 단위 렌더: HTML 행 대신 st.columns 7칸으로 그대로 달력처럼 출력 ──
+    # ── 주 단위 렌더 ──
     for week in cal_weeks:
-        cols = st.columns([1,1,1,1,1,0.5,0.5])
+        cols = st.columns([1,1,1,1,1,0.6,0.6])
         for i, day in enumerate(week):
             with cols[i]:
                 if day == 0:
-                    # 빈 칸
-                    st.markdown("<div style='min-height:58px'></div>", unsafe_allow_html=True)
+                    st.markdown("<div style='min-height:10px'></div>", unsafe_allow_html=True)
                     continue
 
-                d      = f"{yr}-{mo:02d}-{day:02d}"
-                is_wk  = (i >= 5)
-                is_td  = (d == today_str())
-                is_sel = (d == sel)
+                d       = f"{yr}-{mo:02d}-{day:02d}"
+                is_wk   = (i >= 5)
+                is_td   = (d == today_str())
+                is_sel  = (d == sel)
                 has_att = d in att_map
                 has_rep = d in rep_map
                 rep_st  = rep_map[d]["status"] if has_rep else None
                 rep_prg = rep_map[d]["pm_progress"] if has_rep else 0
 
-                # 날짜 셀 배경색 결정
-                if is_sel:
-                    bg = "background:linear-gradient(135deg,#1E3A8A,#1E40AF);" \
-                         "border:2px solid #60A5FA !important;"
-                elif is_td:
-                    bg = "background:#1E3A5F;border:2px solid #D4AF37 !important;"
-                elif is_wk:
-                    bg = "background:#0B1120;"
+                if is_wk:
+                    # 주말: 작은 텍스트만
+                    wk_color = "#475569"
+                    st.markdown(
+                        f'<div style="background:#0B1120;border-radius:6px;padding:6px 2px;'
+                        f'text-align:center;min-height:62px;">'
+                        f'<span style="color:{wk_color};font-size:0.75rem;font-weight:700;">'
+                        f'{day}</span></div>',
+                        unsafe_allow_html=True)
                 else:
-                    bg = "background:#1E293B;"
-
-                # 태그 뱃지들 (HTML 문자열로 조립 — f-string 조건문 없음)
-                badges = ""
-                if not is_wk:
-                    if has_att:
-                        atp_short = (att_map[d]["att_type"] or "출근")[:4]
-                        badges += f'<span class="tg-att">✅{atp_short}</span>'
+                    # 평일: 버튼으로 표시
+                    # 버튼 라벨 — 날짜 + 상태 아이콘
+                    if is_sel:
+                        status_icon = "▼"
+                    elif rep_st == "승인":
+                        status_icon = "✅"
+                    elif has_rep:
+                        status_icon = "📋"
+                    elif has_att:
+                        status_icon = "🟢"
                     else:
-                        badges += '<span class="tg-no">미출근</span>'
-                    if has_rep:
-                        if rep_st == "승인":
-                            badges += f'<span class="tg-ok">✅{rep_prg}%</span>'
-                        else:
-                            badges += f'<span class="tg-rep">📋{rep_st}</span>'
-                    else:
-                        badges += '<span class="tg-no">보고없음</span>'
+                        status_icon = "○"
 
-                day_color = "#94A3B8" if is_wk else ("#D4AF37" if is_td else "#F1F5F9")
-                day_fw    = "900" if (is_td or is_sel) else "700"
+                    # 오늘 표시
+                    today_mark = " ★" if is_td else ""
 
-                cell_html = (
-                    f'<div style="{bg}border-radius:6px;padding:4px 3px 3px;'
-                    f'min-height:58px;text-align:center;margin:1px;">'
-                    f'<strong style="color:{day_color};font-size:0.82rem;font-weight:{day_fw};">'
-                    f'{day}</strong><br>{badges}</div>'
-                )
-                st.markdown(cell_html, unsafe_allow_html=True)
+                    btn_label = f"{status_icon} {day}{today_mark}"
 
-                # 평일만 클릭 버튼 (투명 오버레이 느낌 — 매우 작게)
-                if not is_wk:
-                    btn_label = "✕" if is_sel else "↗"
                     if st.button(btn_label, key=f"cd_{d}", use_container_width=True):
                         st.session_state.cal_selected = None if is_sel else d
                         st.rerun()
+
+                    # 선택된 날 아래 작은 부가정보
+                    if is_sel:
+                        st.markdown(
+                            '<div style="background:rgba(96,165,250,0.2);border:1px solid #60A5FA;'
+                            'border-radius:4px;padding:1px 3px;text-align:center;margin-top:2px;">'
+                            '<span style="color:#60A5FA;font-size:0.6rem;font-weight:900;">선택됨</span>'
+                            '</div>',
+                            unsafe_allow_html=True)
 
         # ── 이 주(week)에 선택된 날짜가 있으면 바로 아래에 상세 펼침 ──
         week_dates = [
