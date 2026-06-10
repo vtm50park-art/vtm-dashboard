@@ -953,12 +953,12 @@ def page_emp_calendar():
 
     COLG = '<colgroup><col style="width:16.8%"><col style="width:16.8%"><col style="width:16.8%"><col style="width:16.8%"><col style="width:16.8%"><col style="width:8%"><col style="width:8%"></colgroup>'
 
+    # ── CSS ──
     st.markdown("""<style>
-table.vtm-cal, table.vtm-btn {
+table.vtm-cal {
     width:100%; border-collapse:separate; border-spacing:3px;
     table-layout:fixed; margin:0 !important;
 }
-table.vtm-btn { margin-bottom:5px !important; }
 table.vtm-cal th {
     padding:8px 4px; text-align:center; font-weight:900;
     font-size:0.86rem; border-radius:7px;
@@ -1004,32 +1004,42 @@ table.vtm-cal .stamp {
     background:rgba(220,38,38,0.08); transform:rotate(-15deg);
     line-height:1.1; text-align:center;
 }
-table.vtm-btn td { padding:0; border:none; background:transparent; }
-.cbtn, .cbtn-sel {
-    display:block; width:100%; padding:5px 2px;
-    border:none; border-radius:0 0 8px 8px;
-    font-size:0.62rem; font-weight:700; letter-spacing:0.02em;
-    cursor:pointer; text-align:center;
-}
-.cbtn     { background:#334155; color:#CBD5E1; }
-.cbtn:hover { background:#1E40AF; color:#BFDBFE; }
-.cbtn-sel { background:#1E40AF; color:#BFDBFE; }
-.cbtn-sel:hover { background:#1e3a8a; }
 
-/* 트리거 버튼 숨김: .cal-trig-start 마커 이후 등장하는 stButton 컨테이너 */
-div:has(> .cal-trig-start) ~ div:has([data-testid="stButton"]) {
-    position:fixed !important; left:-9999px !important; top:-9999px !important;
-    width:1px !important; height:1px !important;
-    overflow:hidden !important; opacity:0 !important;
+/* ── 핵심: .cmark 마커 바로 다음 div의 버튼을 슬레이트 색으로 ── */
+/* 골드 그라데이션(.stButton>button)보다 높은 specificity로 override */
+div:has(> .cmark) + div .stButton > button {
+    background: #334155 !important;
+    color: #CBD5E1 !important;
+    height: 28px !important;
+    min-height: 28px !important;
+    border-radius: 0 0 8px 8px !important;
+    font-size: 0.62rem !important;
+    font-weight: 700 !important;
+    padding: 5px 2px !important;
+    transform: none !important;
+    box-shadow: none !important;
+    border: none !important;
+    letter-spacing: 0.02em !important;
+    width: 100% !important;
 }
-div:has(> .cal-trig-start) ~ div:has([data-testid="stTextInput"]) {
-    position:fixed !important; left:-9999px !important; top:-9999px !important;
-    width:1px !important; height:1px !important;
-    overflow:hidden !important; opacity:0 !important;
+div:has(> .cmark) + div .stButton > button:hover {
+    background: #1E40AF !important;
+    color: #BFDBFE !important;
+    transform: none !important;
+    box-shadow: none !important;
+}
+/* 컬럼 간격을 HTML 테이블 border-spacing:3px 에 맞춤 */
+div:has(> .cmark) + div [data-testid="stHorizontalBlock"] {
+    gap: 3px !important;
+    margin-top: -1px !important;
+}
+div:has(> .cmark) + div [data-testid="stColumn"] {
+    padding: 0 !important;
+    min-width: 0 !important;
 }
 </style>""", unsafe_allow_html=True)
 
-    # 헤더
+    # ── 헤더 ──
     st.markdown(
         f'<table class="vtm-cal">{COLG}'
         '<thead><tr>'
@@ -1040,8 +1050,9 @@ div:has(> .cal-trig-start) ~ div:has([data-testid="stTextInput"]) {
         '</tr></thead></table>',
         unsafe_allow_html=True)
 
+    # ── 주 단위 렌더 ──
     for wi, week in enumerate(cal_weeks):
-        # ① 달력 셀 (colgroup으로 너비 고정 → 마지막 주도 동일 비율)
+        # ① HTML 셀 (시각 전용)
         cells = f'<table class="vtm-cal">{COLG}<tbody><tr>'
         for i, day in enumerate(week):
             is_sat=(i==5); is_sun=(i==6); is_wk=is_sat or is_sun
@@ -1072,76 +1083,27 @@ div:has(> .cal-trig-start) ~ div:has([data-testid="stTextInput"]) {
         cells += '</tr></tbody></table>'
         st.markdown(cells, unsafe_allow_html=True)
 
-        # ② 버튼 행 (동일한 colgroup → 셀과 완벽 정렬)
-        btns = f'<table class="vtm-btn">{COLG}<tbody><tr>'
-        for i, day in enumerate(week):
-            is_wk = (i >= 5)
-            if day == 0:
-                btns += '<td></td>'; continue
-            d = f"{yr}-{mo:02d}-{day:02d}"
-            if is_wk:
-                btns += '<td></td>'
-            else:
-                is_sel = (d == sel)
-                bcls = "cbtn-sel" if is_sel else "cbtn"
-                lbl  = "▲ 닫기" if is_sel else "상세내역 확인"
-                btns += f'<td><button class="{bcls}" data-d="{d}" onclick="vtmCalClick(this)">{lbl}</button></td>'
-        btns += '</tr></tbody></table>'
-        st.markdown(btns, unsafe_allow_html=True)
+        # ② CSS 타겟 마커 (이 바로 다음 div = 버튼 행)
+        st.markdown('<div class="cmark"></div>', unsafe_allow_html=True)
 
-        # ③ 상세 카드
+        # ③ Streamlit 버튼 (마커 덕분에 슬레이트 색으로 오버라이드됨)
+        cols = st.columns([1, 1, 1, 1, 1, 0.48, 0.48])
+        for i, day in enumerate(week):
+            with cols[i]:
+                if day == 0 or i >= 5:
+                    st.markdown("<div style='height:28px'></div>", unsafe_allow_html=True)
+                else:
+                    d = f"{yr}-{mo:02d}-{day:02d}"
+                    is_sel = (d == sel)
+                    lbl = "▲ 닫기" if is_sel else "상세내역 확인"
+                    if st.button(lbl, key=f"cbtn_{d}", use_container_width=True):
+                        st.session_state.cal_selected = None if is_sel else d
+                        st.rerun()
+
+        # ④ 상세 카드
         week_dates = [f"{yr}-{mo:02d}-{day:02d}" for i,day in enumerate(week) if day!=0 and i<5]
         if sel in week_dates:
             render_day_detail(uid, sel)
-
-    # JS: document와 window.parent.document 모두 시도
-    st.markdown("""<script>
-function vtmCalClick(btn) {
-    var d = btn.getAttribute('data-d');
-    // 현재 document와 parent document 모두 탐색
-    var docs = [document];
-    try { if (window.parent && window.parent.document !== document) docs.push(window.parent.document); } catch(e) {}
-    for (var di = 0; di < docs.length; di++) {
-        var all = docs[di].querySelectorAll('button');
-        for (var i = 0; i < all.length; i++) {
-            var txt = (all[i].innerText || all[i].textContent || '').trim();
-            if (txt === d) {
-                all[i].click();
-                return;
-            }
-        }
-    }
-    // fallback: input 이벤트로 시도
-    var inputs = document.querySelectorAll('input[type="text"]');
-    for (var j = 0; j < inputs.length; j++) {
-        try {
-            var nv = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
-            nv.call(inputs[j], 'CALSEL:' + d);
-            inputs[j].dispatchEvent(new Event('input', {bubbles: true}));
-            inputs[j].dispatchEvent(new Event('change', {bubbles: true}));
-        } catch(e2) {}
-    }
-}
-</script>""", unsafe_allow_html=True)
-
-    # 마커 → 이후 Streamlit 버튼들을 CSS가 화면 밖으로 숨김
-    st.markdown('<div class="cal-trig-start"></div>', unsafe_allow_html=True)
-
-    # fallback: text_input으로 CALSEL 수신
-    _cal_inp = st.text_input("", key="_cal_inp", label_visibility="collapsed")
-    if _cal_inp and _cal_inp.startswith("CALSEL:"):
-        _d = _cal_inp[7:].strip()
-        st.session_state.cal_selected = None if _d == sel else _d
-        st.rerun()
-
-    # Streamlit 트리거 버튼 (날짜 텍스트 = 식별자)
-    all_wd = [f"{yr}-{mo:02d}-{day:02d}"
-              for week in cal_weeks for i,day in enumerate(week)
-              if day != 0 and i < 5]
-    for d in all_wd:
-        if st.button(d, key=f"hb_{d}"):
-            st.session_state.cal_selected = None if d == sel else d
-            st.rerun()
 
 
 # ═══════════════════════════════════════════
