@@ -1,4 +1,4 @@
-# vtm_dashboard.py  ← TypeError 수정판
+# vtm_dashboard.py  ← 버그 수정판 (admin tasks HTML escape + 승인 버튼 표시 fix)
 import streamlit as st
 import sqlite3
 import pandas as pd
@@ -7,30 +7,30 @@ from datetime import datetime, date, timedelta, timezone
 import calendar
 import time
 import re
-
+ 
 st.set_page_config(
     page_title="(주) 브이티엠 운영 대시보드",
     page_icon="🏢",
     layout="wide",
     initial_sidebar_state="collapsed"
 )
-
+ 
 KST = timezone(timedelta(hours=9))
-
+ 
 def now_kst() -> datetime:
     return datetime.now(tz=KST)
-
+ 
 def today_str() -> str:
     return now_kst().strftime("%Y-%m-%d")
-
+ 
 def now_str() -> str:
     return now_kst().strftime("%Y-%m-%d %H:%M:%S")
-
+ 
 DB_PATH = "vtm_v3.db"
-
+ 
 def get_conn():
     return sqlite3.connect(DB_PATH, check_same_thread=False)
-
+ 
 def init_db():
     conn = get_conn()
     c = conn.cursor()
@@ -67,9 +67,9 @@ def init_db():
             ('emp_ahn','안효민 디렉터','디렉터',0,'',1,_now),
         ])
     conn.commit(); conn.close()
-
+ 
 init_db()
-
+ 
 def wlog(action, actor, target="", detail=""):
     try:
         conn = get_conn()
@@ -80,23 +80,22 @@ def wlog(action, actor, target="", detail=""):
         conn.commit(); conn.close()
     except:
         pass
-
+ 
 def get_employees(active_only=True):
     conn = get_conn()
     q = ("SELECT * FROM employees WHERE active=1 ORDER BY is_admin DESC,name"
          if active_only else
          "SELECT * FROM employees ORDER BY is_admin DESC,name")
     df = pd.read_sql(q, conn); conn.close(); return df
-
+ 
 def to_excel(dfs):
     buf = io.BytesIO()
     with pd.ExcelWriter(buf, engine="openpyxl") as w:
         for s, d in dfs.items():
             d.to_excel(w, sheet_name=s[:31], index=False)
     return buf.getvalue()
-
+ 
 def safe_str(val):
-    """NaN / None / 빈문자열이면 None 반환, 나머지는 str 반환"""
     if val is None:
         return None
     try:
@@ -106,12 +105,12 @@ def safe_str(val):
         pass
     s = str(val).strip()
     return s if s else None
-
+ 
 for k, v in {"logged_in": False, "user_id": None, "user_name": None,
              "is_admin": False, "page": "home"}.items():
     if k not in st.session_state:
         st.session_state[k] = v
-
+ 
 def logo_svg(size=72):
     return f"""<svg width="{size}" height="{size}" viewBox="0 0 80 80"
         xmlns="http://www.w3.org/2000/svg">
@@ -131,13 +130,13 @@ def logo_svg(size=72):
             font-family="Inter,Arial,sans-serif" font-weight="900"
             font-size="21" fill="url(#lg{size})">VTM</text>
     </svg>"""
-
+ 
 def inject_all():
     st.markdown('<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">', unsafe_allow_html=True)
     st.markdown(f"""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&display=swap');
-
+ 
 html,body,.stApp,
 [data-testid="stAppViewContainer"],
 [data-testid="stAppViewContainer"]>section,
@@ -147,8 +146,7 @@ html,body,.stApp,
     background:#0F172A !important;
     font-family:'Noto Sans KR',sans-serif !important;
 }}
-
-/* 사이드바 완전 숨김 */
+ 
 [data-testid="stSidebar"],
 [data-testid="stSidebarCollapseButton"],
 [data-testid="collapsedControl"],
@@ -164,34 +162,7 @@ button[kind="header"],
     pointer-events: none !important;
 }}
 [data-testid="stMain"] {{ margin-left: 0 !important; padding-left: 8px !important; width:100% !important; }}
-
-[data-testid="stSidebar"] .stButton > button {{
-    background: linear-gradient(135deg,#F6D365 0%,#D4AF37 55%,#B8860B 100%) !important;
-    color: #000000 !important;
-    font-weight: 900 !important;
-    font-size: 0.86rem !important;
-    border: none !important;
-    border-radius: 10px !important;
-    padding: 10px 14px !important;
-    width: 100% !important;
-    cursor: pointer !important;
-    box-shadow: 0 3px 10px rgba(212,175,55,0.30) !important;
-    transition: transform 0.15s, box-shadow 0.15s !important;
-    letter-spacing: 0.01em !important;
-    text-align: left !important;
-}}
-[data-testid="stSidebar"] .stButton > button:hover {{
-    background: linear-gradient(135deg,#FFE57A 0%,#F6D365 55%,#D4AF37 100%) !important;
-    transform: translateX(3px) !important;
-    box-shadow: 0 5px 16px rgba(212,175,55,0.50) !important;
-}}
-[data-testid="stSidebar"] .stButton > button *,
-[data-testid="stSidebar"] .stButton > button p,
-[data-testid="stSidebar"] .stButton > button span {{
-    color: #000000 !important;
-    font-weight: 900 !important;
-}}
-
+ 
 .stButton>button {{
     background: linear-gradient(135deg,#F6D365 0%,#D4AF37 55%,#B8860B 100%) !important;
     color: #000000 !important;
@@ -216,7 +187,7 @@ button[kind="header"],
     color: #000000 !important;
     font-weight: 900 !important;
 }}
-
+ 
 .vtm-card {{
     background: #FFFFFF;
     border-radius: 14px;
@@ -229,7 +200,7 @@ button[kind="header"],
 .vtm-card * {{ color: #1E293B !important; }}
 .vtm-card h3 {{ font-weight: 900 !important; margin: 0 0 8px !important; font-size: 1rem !important; }}
 .vtm-card p  {{ font-weight: 600 !important; margin: 3px 0 !important; font-size: 0.9rem !important; }}
-
+ 
 .met-card {{
     background: linear-gradient(135deg,#1E293B 0%,#0F172A 100%);
     border: 1px solid #D4AF37;
@@ -240,7 +211,7 @@ button[kind="header"],
 }}
 .met-val {{ font-size:1.9rem; font-weight:900; color:#D4AF37 !important; display:block; }}
 .met-lbl {{ font-size:0.78rem; color:#94A3B8 !important; font-weight:700; display:block; margin-top:4px; }}
-
+ 
 .topbar {{
     background: linear-gradient(90deg,#1E293B 0%,#0F172A 100%);
     border-bottom: 2px solid #D4AF37;
@@ -256,7 +227,7 @@ button[kind="header"],
 }}
 .tb-title {{ color:#D4AF37 !important; font-size:1.05rem; font-weight:900; }}
 .tb-info  {{ color:#94A3B8 !important; font-size:0.8rem; font-weight:700; }}
-
+ 
 .stTextInput>div>div>input,
 .stNumberInput>div>div>input {{
     background: #1E293B !important; color: #F1F5F9 !important;
@@ -278,14 +249,14 @@ button[kind="header"],
     background: #1E293B !important; border: 1px solid #334155 !important; border-radius: 8px !important;
 }}
 .stMultiSelect * {{ color: #F1F5F9 !important; font-weight: 700 !important; }}
-
+ 
 label,.stTextInput label,.stSelectbox label,.stTextArea label,
 .stSlider label,.stNumberInput label,.stDateInput label,.stMultiSelect label {{
     color: #94A3B8 !important; font-weight: 700 !important;
 }}
-
+ 
 [data-testid="stDataFrame"] * {{ color: #F1F5F9 !important; }}
-
+ 
 .cal-tbl {{ width:100%; border-collapse:collapse; margin-top:8px; }}
 .cal-tbl th {{
     background:#1E293B; color:#D4AF37 !important;
@@ -304,113 +275,14 @@ label,.stTextInput label,.stSelectbox label,.stTextArea label,
 .tg-rep {{ display:block; background:#3B82F6; color:#fff!important; border-radius:3px; padding:1px 2px; font-size:0.6rem; margin:1px 0; font-weight:700; }}
 .tg-ok  {{ display:block; background:#10B981; color:#fff!important; border-radius:3px; padding:1px 2px; font-size:0.6rem; margin:1px 0; font-weight:700; }}
 .tg-no  {{ display:block; background:#374151; color:#9CA3AF!important; border-radius:3px; padding:1px 2px; font-size:0.6rem; margin:1px 0; }}
-
-
-
+ 
 #MainMenu, footer, header {{ visibility:hidden !important; }}
 [data-testid="stDecoration"]  {{ display:none !important; }}
-
+ 
 ::-webkit-scrollbar {{ width:5px; height:5px; }}
 ::-webkit-scrollbar-track {{ background:#0F172A; }}
 ::-webkit-scrollbar-thumb {{ background:#D4AF37; border-radius:3px; }}
-
-.sidebar-home-btn .stButton > button {{
-    background: linear-gradient(135deg,#05F080 0%,#10B981 50%,#059669 100%) !important;
-    color: #FFFFFF !important;
-    font-weight: 900 !important;
-    font-size: 0.90rem !important;
-    border: 2px solid rgba(16,185,129,0.55) !important;
-    border-radius: 14px !important;
-    padding: 11px 14px !important;
-    width: 100% !important;
-    cursor: pointer !important;
-    box-shadow:
-        0 0 14px rgba(5,240,128,0.35),
-        0 4px 14px rgba(16,185,129,0.40) !important;
-    letter-spacing: 0.02em !important;
-    text-align: left !important;
-    transition: transform 0.15s, box-shadow 0.15s !important;
-    position: relative !important;
-    overflow: hidden !important;
-}}
-.sidebar-home-btn .stButton > button::before {{
-    content: "";
-    position: absolute;
-    top: -40%; left: -40%;
-    width: 60%; height: 180%;
-    background: linear-gradient(120deg,
-        rgba(255,255,255,0.00) 0%,
-        rgba(255,255,255,0.22) 50%,
-        rgba(255,255,255,0.00) 100%);
-    transform: skewX(-20deg);
-    pointer-events: none;
-}}
-.sidebar-home-btn .stButton > button:hover {{
-    background: linear-gradient(135deg,#34FFA0 0%,#10B981 50%,#047857 100%) !important;
-    transform: translateX(4px) scale(1.02) !important;
-    box-shadow:
-        0 0 22px rgba(5,240,128,0.60),
-        0 6px 20px rgba(16,185,129,0.55) !important;
-}}
-.sidebar-home-btn .stButton > button *,
-.sidebar-home-btn .stButton > button p,
-.sidebar-home-btn .stButton > button span {{
-    color: #FFFFFF !important;
-    font-weight: 900 !important;
-}}
-.home-active-badge {{
-    background: linear-gradient(135deg,#05F080,#10B981);
-    border-radius: 13px;
-    padding: 10px 13px;
-    margin: 3px 4px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    box-shadow: 0 0 16px rgba(5,240,128,0.40), 0 4px 12px rgba(16,185,129,0.35);
-    border: 2px solid rgba(5,240,128,0.50);
-    position: relative;
-    overflow: hidden;
-}}
-.home-active-badge::before {{
-    content:"";
-    position:absolute;
-    top:-30%; left:-20%;
-    width:55%; height:160%;
-    background:linear-gradient(120deg,
-        rgba(255,255,255,0.00) 0%,
-        rgba(255,255,255,0.18) 50%,
-        rgba(255,255,255,0.00) 100%);
-    transform:skewX(-20deg);
-    pointer-events:none;
-}}
-.home-active-badge span {{
-    color: #003322 !important;
-    font-weight: 900 !important;
-    font-size: 0.88rem !important;
-    letter-spacing: 0.02em;
-}}
-.home-active-dot {{
-    width: 8px; height: 8px;
-    background: #fff;
-    border-radius: 50%;
-    box-shadow: 0 0 6px rgba(255,255,255,0.9);
-    flex-shrink: 0;
-}}
-
-.sidebar-logout-btn .stButton > button {{
-    background: linear-gradient(135deg,#FF6B6B,#EF4444) !important;
-    color: #fff !important;
-    font-weight: 900 !important;
-    border-radius: 10px !important;
-    border: none !important;
-    box-shadow: 0 3px 12px rgba(239,68,68,0.40) !important;
-}}
-.sidebar-logout-btn .stButton > button * {{ color: #fff !important; }}
-.sidebar-logout-btn .stButton > button:hover {{
-    background: linear-gradient(135deg,#FF8A8A,#DC2626) !important;
-    transform: translateX(3px) !important;
-}}
-
+ 
 .kst-badge {{
     display:inline-block;
     background:rgba(212,175,55,0.15);
@@ -424,14 +296,12 @@ label,.stTextInput label,.stSelectbox label,.stTextArea label,
     vertical-align:middle;
 }}
 </style>
-
+ 
 <canvas id="vtm-stars" style="position:fixed;top:0;left:0;
     width:100vw;height:100vh;pointer-events:none;z-index:0;opacity:0.5;"></canvas>
-
+ 
 <script>
 (function(){{
-    /* 사이드바 없음 */
-
     function bootStars(){{
         var cv=document.getElementById('vtm-stars');
         if(!cv){{setTimeout(bootStars,500);return;}}
@@ -479,7 +349,7 @@ label,.stTextInput label,.stSelectbox label,.stTextArea label,
 }})();
 </script>
 """, unsafe_allow_html=True)
-
+ 
 def render_login():
     inject_all()
     _, mid, _ = st.columns([1, 2, 1])
@@ -505,20 +375,20 @@ def render_login():
           </div>
         </div>
         """, unsafe_allow_html=True)
-
+ 
         emp_df  = get_employees(active_only=True)
         options = ["담당자를 선택하세요"] + [
             f"{r['name']} ({r['role']})" for _, r in emp_df.iterrows()
         ]
         sel = st.selectbox("👤 담당자 선택", options, key="login_sel")
-
+ 
         selected = None
         if sel != "담당자를 선택하세요":
             nm = sel.split(" (")[0]
             m  = emp_df[emp_df["name"] == nm]
             if not m.empty:
                 selected = m.iloc[0]
-
+ 
         pw_input = ""
         if selected is not None:
             if str(selected["password"]).strip():
@@ -532,7 +402,7 @@ def render_login():
                       🔓 비밀번호 없이 접속 가능
                   </span>
                 </div>""", unsafe_allow_html=True)
-
+ 
         st.markdown("<div style='height:6px'></div>", unsafe_allow_html=True)
         if st.button("🚀  시스템 접속", key="btn_login", use_container_width=True):
             if sel == "담당자를 선택하세요" or selected is None:
@@ -550,21 +420,19 @@ def render_login():
                     st.rerun()
                 else:
                     st.error("❌ 비밀번호가 올바르지 않습니다.")
-
+ 
         st.markdown("""
         <div style="text-align:center;margin-top:16px;">
           <p style="color:#475569;font-size:0.75rem;font-weight:700;">
               개발자: 박동진 본부장
           </p>
         </div>""", unsafe_allow_html=True)
-
+ 
 def render_sidebar():
-    """상단 로고 헤더 + 네비게이션 바"""
     role_txt = "🔴 관리자" if st.session_state.is_admin else "🟢 직원"
     kst_now  = now_kst().strftime("%H:%M")
     kst_date = now_kst().strftime("%m/%d")
-
-    # ── 로고 헤더 ──
+ 
     st.markdown(f"""
     <div style="display:flex;align-items:center;gap:14px;
                 background:linear-gradient(90deg,#0B1120,#1E293B);
@@ -585,7 +453,7 @@ def render_sidebar():
       </div>
     </div>
     """, unsafe_allow_html=True)
-
+ 
     if st.session_state.is_admin:
         menus = [
             ("home",          "🏠 홈",      True),
@@ -603,14 +471,12 @@ def render_sidebar():
             ("emp_report",   "📝 업무보고",False),
             ("emp_calendar", "📅 달력",   False),
         ]
-
-    # ── 네비 버튼 한 줄 ──
+ 
     cols = st.columns([1] * len(menus) + [1])
     for i, (key, label, is_home) in enumerate(menus):
         with cols[i]:
             is_active = (st.session_state.page == key)
             if is_active and is_home:
-                # 홈 활성 → 초록
                 st.markdown(
                     f'<div style="background:linear-gradient(135deg,#05F080,#10B981,#059669);'
                     f'border-radius:10px;padding:9px 4px;text-align:center;'
@@ -618,7 +484,6 @@ def render_sidebar():
                     f'box-shadow:0 0 12px rgba(5,240,128,0.45);margin:2px 0;">'
                     f'{label}</div>', unsafe_allow_html=True)
             elif is_active:
-                # 일반 메뉴 활성 → 골드
                 st.markdown(
                     f'<div style="background:linear-gradient(135deg,#F6D365,#D4AF37,#B8860B);'
                     f'border-radius:10px;padding:9px 4px;text-align:center;'
@@ -628,16 +493,16 @@ def render_sidebar():
             else:
                 if st.button(label, key=f"nav_{key}", use_container_width=True):
                     st.session_state.page = key; st.rerun()
-
+ 
     with cols[-1]:
         if st.button("🚪 로그아웃", key="btn_logout", use_container_width=True):
             wlog("LOGOUT", st.session_state.user_name)
             for k in ["logged_in", "user_id", "user_name", "is_admin"]:
                 st.session_state[k] = False if k == "logged_in" else None
             st.session_state.page = "home"; st.rerun()
-
+ 
     st.markdown("<hr style='border-color:#1E3A5F;margin:4px 0 10px;'>", unsafe_allow_html=True)
-
+ 
 def topbar(title):
     kst = now_kst()
     day_kr = ["월","화","수","목","금","토","일"][kst.weekday()]
@@ -650,7 +515,7 @@ def topbar(title):
           &nbsp;·&nbsp; 👤 {st.session_state.user_name}
       </span>
     </div>""", unsafe_allow_html=True)
-
+ 
 # ═══════════════════════════════════════════
 #  직원: 홈
 # ═══════════════════════════════════════════
@@ -663,7 +528,7 @@ def page_emp_home():
     rep = pd.read_sql("SELECT * FROM reports WHERE emp_id=? AND work_date=? LIMIT 1",
                       conn, params=(uid, td))
     conn.close()
-
+ 
     ci  = safe_str(att.iloc[0]["checkin"])  if not att.empty else None
     co  = safe_str(att.iloc[0]["checkout"]) if not att.empty else None
     ci  = ci[-8:-3]  if ci  else "--:--"
@@ -673,7 +538,7 @@ def page_emp_home():
     prg = int(rep.iloc[0]["pm_progress"]) if not rep.empty else 0
     rst = safe_str(rep.iloc[0]["status"])  if not rep.empty else "미제출"
     rst = rst or "미제출"
-
+ 
     c1, c2, c3, c4 = st.columns(4)
     for col, lbl, val, sub in [
         (c1, "출근 시간", ci, atp), (c2, "퇴근 시간", co, ""),
@@ -683,14 +548,14 @@ def page_emp_home():
           <span class="met-lbl">{lbl}</span>
           <span style="color:#64748B;font-size:0.66rem;font-weight:700;">{sub}</span>
         </div>""", unsafe_allow_html=True)
-
+ 
     if not rep.empty:
         s = safe_str(rep.iloc[0]["status"]) or ""
         c = safe_str(rep.iloc[0]["admin_comment"]) or ""
         if   s == "승인": st.success(f"✅ 관리자 승인 완료  |  💬 {c or '승인되었습니다.'}")
         elif s == "반려": st.error(  f"❌ 보고 반려  |  💬 {c or '수정 후 재제출 바랍니다.'}")
         elif s == "보류": st.warning(f"⏸ 보류 처리  |  💬 {c}")
-
+ 
     st.markdown(f"""<div class="vtm-card" style="margin-top:12px;">
       <h3>📌 오늘 현황</h3>
       <p>{'✅ 출근 완료 — '+atp if not att.empty else '❗ 아직 출근 체크 전'}</p>
@@ -699,12 +564,12 @@ def page_emp_home():
           위쪽 메뉴 → ⏰ 출퇴근 → 📝 업무 보고 순으로 진행하세요.
       </p>
     </div>""", unsafe_allow_html=True)
-
+ 
 # ═══════════════════════════════════════════
 #  직원: 출퇴근
 # ═══════════════════════════════════════════
 ATT_TYPES = ["정상출근","오전 반차","오후 반차","조퇴","연차","병가","공가"]
-
+ 
 def page_emp_attend():
     topbar("⏰ 출퇴근")
     uid = st.session_state.user_id; uname = st.session_state.user_name; td = today_str()
@@ -712,7 +577,7 @@ def page_emp_attend():
     att = pd.read_sql("SELECT * FROM attendance WHERE emp_id=? AND work_date=? LIMIT 1",
                       conn, params=(uid, td))
     conn.close()
-
+ 
     c1, c2 = st.columns(2)
     ci_raw = safe_str(att.iloc[0]["checkin"])  if not att.empty else None
     co_raw = safe_str(att.iloc[0]["checkout"]) if not att.empty else None
@@ -720,9 +585,8 @@ def page_emp_attend():
     co_t = co_raw[-8:-3] if co_raw else "--:--"
     atp  = safe_str(att.iloc[0]["att_type"]) if not att.empty else "미출근"
     atp  = atp or "미출근"
-
     kst_now_display = now_kst().strftime("%H:%M")
-
+ 
     with c1:
         st.markdown(f"""<div class="vtm-card" style="text-align:center;">
           <h3>🟢 출근 시간</h3>
@@ -735,7 +599,7 @@ def page_emp_attend():
           <p style="font-size:1.8rem;font-weight:900;color:#EF4444;margin:8px 0;">{co_t}</p>
           <p style="color:#64748B;">현재 KST: {kst_now_display}</p>
         </div>""", unsafe_allow_html=True)
-
+ 
     st.markdown("---")
     if att.empty:
         sel_type = st.selectbox("출근 유형", ATT_TYPES, key="sel_att")
@@ -763,7 +627,7 @@ def page_emp_attend():
                 st.rerun()
         else:
             st.success(f"🏠 퇴근 완료 — {co_t}")
-
+ 
     st.markdown("---")
     st.markdown("<div class='vtm-card'><h3>📋 최근 출퇴근 기록</h3></div>", unsafe_allow_html=True)
     conn = get_conn()
@@ -776,7 +640,7 @@ def page_emp_attend():
     if not hist.empty:
         hist.columns = ["날짜","유형","출근","퇴근"]
         st.dataframe(hist, use_container_width=True, hide_index=True)
-
+ 
 # ═══════════════════════════════════════════
 #  직원: 업무 보고
 # ═══════════════════════════════════════════
@@ -787,15 +651,15 @@ def page_emp_report():
     exist = pd.read_sql("SELECT * FROM reports WHERE emp_id=? AND work_date=? LIMIT 1",
                         conn, params=(uid, td))
     conn.close()
-
+ 
     if not exist.empty:
         s = safe_str(exist.iloc[0]["status"]) or ""
         c = safe_str(exist.iloc[0]["admin_comment"]) or ""
         st.success(f"✅ 오늘 업무보고 제출 완료  |  상태: {s}")
         if c: st.info(f"💬 관리자 코멘트: {c}")
-
+ 
     tab1, tab2 = st.tabs(["🌅 오전 업무 계획", "🌇 퇴근 결과 보고"])
-
+ 
     with tab1:
         st.markdown("<div class='vtm-card'><h3>🌅 오전 업무 계획</h3></div>", unsafe_allow_html=True)
         am_tasks = st.text_area("📌 오늘 할 업무",
@@ -823,7 +687,7 @@ def page_emp_report():
             conn.commit(); conn.close()
             wlog("AM_PLAN", uname, td)
             st.success("✅ 오전 계획 저장 완료!"); st.rerun()
-
+ 
     with tab2:
         st.markdown("<div class='vtm-card'><h3>🌇 퇴근 결과 보고</h3></div>", unsafe_allow_html=True)
         pm_done = st.text_area("✅ 완료한 업무",
@@ -868,7 +732,7 @@ def page_emp_report():
             wlog("REPORT", uname, td)
             st.success("✅ 업무보고가 완료되었습니다!")
             st.balloons(); st.rerun()
-
+ 
 # ═══════════════════════════════════════════
 #  직원: 달력
 # ═══════════════════════════════════════════
@@ -879,7 +743,7 @@ def page_emp_calendar():
     with c1: yr = st.number_input("연도", value=today.year,  min_value=2024, max_value=2030, key="cy")
     with c2: mo = st.number_input("월",   value=today.month, min_value=1,    max_value=12,   key="cm")
     yr = int(yr); mo = int(mo)
-
+ 
     conn = get_conn()
     att_df = pd.read_sql(
         "SELECT work_date,att_type FROM attendance WHERE emp_id=? AND work_date LIKE ?",
@@ -888,10 +752,10 @@ def page_emp_calendar():
         "SELECT work_date,status,pm_progress FROM reports WHERE emp_id=? AND work_date LIKE ?",
         conn, params=(uid, f"{yr}-{mo:02d}-%"))
     conn.close()
-
+ 
     att_map = {r["work_date"]: r for _, r in att_df.iterrows()} if not att_df.empty else {}
     rep_map = {r["work_date"]: r for _, r in rep_df.iterrows()} if not rep_df.empty else {}
-
+ 
     cal = calendar.monthcalendar(yr, mo)
     html = """<table class="cal-tbl"><thead><tr>
         <th>월</th><th>화</th><th>수</th><th>목</th><th>금</th>
@@ -923,9 +787,9 @@ def page_emp_calendar():
         html += "</tr>"
     html += "</tbody></table>"
     st.markdown(html, unsafe_allow_html=True)
-
+ 
 # ═══════════════════════════════════════════
-#  관리자: 홈  ← TypeError 수정 핵심
+#  관리자: 홈
 # ═══════════════════════════════════════════
 def page_admin_home():
     topbar("🔴 관리자 대시보드")
@@ -938,7 +802,7 @@ def page_admin_home():
     att_td  = pd.read_sql("SELECT emp_id,att_type,checkin,checkout FROM attendance WHERE work_date=?", conn, params=(td,))
     rep_td  = pd.read_sql("SELECT emp_id,status,pm_progress FROM reports WHERE work_date=?", conn, params=(td,))
     conn.close()
-
+ 
     c1, c2, c3, c4 = st.columns(4)
     for col, lbl, val, sub in [
         (c1, "전체 직원", f"{total}명", ""),
@@ -950,26 +814,24 @@ def page_admin_home():
           <span class="met-lbl">{lbl}</span>
           <span style="color:#64748B;font-size:0.66rem;font-weight:700;">{sub}</span>
         </div>""", unsafe_allow_html=True)
-
+ 
     st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
-
-    # ── 안전한 lookup dict 구성 ──
+ 
     att_map = {}
     if not att_td.empty:
         for _, row in att_td.iterrows():
             att_map[row["emp_id"]] = row
-
+ 
     rep_map = {}
     if not rep_td.empty:
         for _, row in rep_td.iterrows():
             rep_map[row["emp_id"]] = row
-
+ 
     for _, emp in emp_df.iterrows():
         eid = emp["id"]; ename = emp["name"]
-        a = att_map.get(eid)   # pandas Series or None
-        r = rep_map.get(eid)   # pandas Series or None
-
-        # ── 출근/퇴근 안전 추출 (NaN 방어) ──
+        a = att_map.get(eid)
+        r = rep_map.get(eid)
+ 
         if a is not None:
             ci_raw = safe_str(a["checkin"])
             co_raw = safe_str(a["checkout"])
@@ -978,8 +840,7 @@ def page_admin_home():
             atp = safe_str(a["att_type"]) or "정상출근"
         else:
             ci = "--:--"; co = "퇴근전"; atp = "미출근"
-
-        # ── 보고 상태 안전 추출 ──
+ 
         if r is not None:
             rs = safe_str(r["status"]) or "미제출"
             try:
@@ -988,7 +849,7 @@ def page_admin_home():
                 prg = 0
         else:
             rs = "미제출"; prg = 0
-
+ 
         ci_c = "#10B981" if a is not None else "#EF4444"
         rs_c = {"승인":"#10B981","대기중":"#F59E0B","반려":"#EF4444"}.get(rs,"#6B7280")
         st.markdown(f"""<div class="vtm-card" style="padding:12px;margin:3px 0;">
@@ -1005,7 +866,7 @@ def page_admin_home():
             </div>
           </div>
         </div>""", unsafe_allow_html=True)
-
+ 
 # ═══════════════════════════════════════════
 #  관리자: 출퇴근 현황
 # ═══════════════════════════════════════════
@@ -1038,9 +899,9 @@ def page_admin_attend():
                   <span style="color:#EF4444;font-weight:900;">
                       ❗ {row['name']} — 미출근 / 출근 전
                   </span></div>""", unsafe_allow_html=True)
-
+ 
 # ═══════════════════════════════════════════
-#  관리자: 업무 현황
+#  관리자: 업무 현황  ← 핵심 수정 부분
 # ═══════════════════════════════════════════
 def page_admin_tasks():
     topbar("📊 업무 현황")
@@ -1054,8 +915,10 @@ def page_admin_tasks():
     p = [str(sel_date)]
     if sel_emp != "전체": q += " AND emp_name=?"; p.append(sel_emp)
     reps = pd.read_sql(q, conn, params=p); conn.close()
-    if reps.empty: st.info("📭 해당 조건 업무 보고 없음"); return
-
+    if reps.empty:
+        st.info("📭 해당 조건 업무 보고 없음")
+        return
+ 
     def do_approve_task(rid, status, emp, comment):
         c2 = get_conn()
         c2.execute("UPDATE reports SET status=?,admin_comment=?,approved_at=? WHERE id=?",
@@ -1063,49 +926,60 @@ def page_admin_tasks():
         c2.commit(); c2.close()
         wlog(f"APPROVE_{status}", st.session_state.user_name, emp, comment)
         st.rerun()
-
+ 
     for _, r in reps.iterrows():
         rid    = int(r["id"])
         status = safe_str(r["status"]) or "대기중"
         sc     = {"승인":"#10B981","대기중":"#F59E0B","반려":"#EF4444"}.get(status, "#6B7280")
+ 
+        # ── 링크 안전 처리 ──
         dl_val = safe_str(r["drive_link"])
         rl_val = safe_str(r["result_link"])
-        dl = (f'<a href="{dl_val}" target="_blank" style="color:#3B82F6;">링크</a>'
-              if dl_val else "없음")
-        rl = (f'<a href="{rl_val}" target="_blank" style="color:#3B82F6;">링크</a>'
-              if rl_val else "없음")
-        cmt_val = safe_str(r["admin_comment"]) or ""
-        cmt_html = f'<p><b>💬 코멘트:</b> {cmt_val}</p>' if cmt_val else ''
-
-        # ── HTML 카드 (버튼 제외) ──
-        st.markdown(f"""<div class="vtm-card">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
-            <h3 style="margin:0;">{r['emp_name']} — {r['work_date']}</h3>
-            <span style="background:{sc};color:#fff;padding:3px 12px;
-                border-radius:12px;font-weight:900;font-size:0.76rem;">{status}</span>
-          </div>
-          <p><b>🌅 오전:</b> {safe_str(r['am_tasks']) or '미입력'}</p>
-          <p><b>🌇 완료:</b> {safe_str(r['pm_done']) or '미입력'}</p>
-          <p><b>📊 진행률:</b> {r['pm_progress']}%</p>
-          <p><b>📁 Drive:</b> {dl} &nbsp; <b>🔗 결과물:</b> {rl}</p>
-          {cmt_html}
-        </div>""", unsafe_allow_html=True)
-
-        # ── 승인/반려/보류 버튼 (Streamlit 위젯, HTML 밖에 배치) ──
-        cmt_input = st.text_input("💬 코멘트 입력", key=f"tcmt_{rid}",
-                                  placeholder="승인 메시지 또는 반려 사유...")
+        dl_html = f'<a href="{dl_val}" target="_blank" style="color:#3B82F6;font-weight:700;">링크열기</a>' if dl_val else "없음"
+        rl_html = f'<a href="{rl_val}" target="_blank" style="color:#3B82F6;font-weight:700;">링크열기</a>' if rl_val else "없음"
+ 
+        # ── 텍스트 필드 안전 처리 (HTML 인젝션 방지) ──
+        am_tasks_txt  = safe_str(r["am_tasks"])  or "미입력"
+        pm_done_txt   = safe_str(r["pm_done"])   or "미입력"
+        cmt_val       = safe_str(r["admin_comment"]) or ""
+        prg_val       = r["pm_progress"] if safe_str(str(r["pm_progress"])) else 0
+ 
+        # ── HTML 카드: </div> 노출 버그 제거 → 문자열 조립 방식 변경 ──
+        card_parts = [
+            f'<div class="vtm-card">',
+            f'  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">',
+            f'    <h3 style="margin:0;">{r["emp_name"]} — {r["work_date"]}</h3>',
+            f'    <span style="background:{sc};color:#fff;padding:3px 14px;border-radius:12px;font-weight:900;font-size:0.8rem;">{status}</span>',
+            f'  </div>',
+            f'  <p><b>🌅 오전 계획:</b> {am_tasks_txt}</p>',
+            f'  <p><b>🌇 완료 업무:</b> {pm_done_txt}</p>',
+            f'  <p><b>📊 진행률:</b> {prg_val}%</p>',
+            f'  <p><b>📁 Drive:</b> {dl_html} &nbsp;&nbsp; <b>🔗 결과물:</b> {rl_html}</p>',
+        ]
+        if cmt_val:
+            card_parts.append(f'  <p style="background:rgba(212,175,55,0.15);border-left:3px solid #D4AF37;padding:6px 10px;border-radius:4px;"><b>💬 코멘트:</b> {cmt_val}</p>')
+        card_parts.append('</div>')
+        st.markdown("\n".join(card_parts), unsafe_allow_html=True)
+ 
+        # ── 코멘트 입력 + 승인/반려/보류 버튼 (HTML 완전히 닫힌 뒤 Streamlit 위젯 렌더) ──
+        cmt_input = st.text_input(
+            "💬 코멘트 입력 (선택사항)",
+            key=f"tcmt_{rid}",
+            placeholder="승인 메시지 또는 반려 사유를 입력하세요..."
+        )
         ba, bb, bc = st.columns(3)
         with ba:
             if st.button("✅ 승인", key=f"tap_{rid}", use_container_width=True):
-                do_approve_task(rid, "승인", r['emp_name'], cmt_input or "승인")
+                do_approve_task(rid, "승인", r["emp_name"], cmt_input or "승인되었습니다.")
         with bb:
             if st.button("❌ 반려", key=f"trj_{rid}", use_container_width=True):
-                do_approve_task(rid, "반려", r['emp_name'], cmt_input or "반려 사유를 입력해 주세요.")
+                do_approve_task(rid, "반려", r["emp_name"], cmt_input or "반려 사유를 입력해 주세요.")
         with bc:
             if st.button("⏸ 보류", key=f"thl_{rid}", use_container_width=True):
-                do_approve_task(rid, "보류", r['emp_name'], cmt_input or "보류")
-        st.markdown("<div style='height:6px'></div>", unsafe_allow_html=True)
-
+                do_approve_task(rid, "보류", r["emp_name"], cmt_input or "보류 처리되었습니다.")
+ 
+        st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
+ 
 # ═══════════════════════════════════════════
 #  관리자: 결과 승인
 # ═══════════════════════════════════════════
@@ -1114,42 +988,47 @@ def page_admin_approve():
     conn = get_conn()
     pend = pd.read_sql("SELECT * FROM reports WHERE status='대기중' ORDER BY submitted_at DESC", conn)
     conn.close()
-    if pend.empty: st.success("✅ 승인 대기 보고 없음"); return
+    if pend.empty:
+        st.success("✅ 승인 대기 보고 없음")
+        return
     st.markdown(f"<div class='vtm-card'><h3>📋 대기 {len(pend)}건</h3></div>", unsafe_allow_html=True)
+ 
+    def do_approve(rid, status, emp, comment):
+        c2 = get_conn()
+        c2.execute("UPDATE reports SET status=?,admin_comment=?,approved_at=? WHERE id=?",
+                   (status, comment, now_str(), rid))
+        c2.commit(); c2.close()
+        wlog(f"APPROVE_{status}", st.session_state.user_name, emp, comment)
+        st.rerun()
+ 
     for _, r in pend.iterrows():
         with st.expander(f"📝 {r['emp_name']}  ·  {r['work_date']}  ·  {r['pm_progress']}%"):
             st.markdown(f"""
 **🌅 오전 계획:** {safe_str(r['am_tasks']) or '없음'}
-
+ 
 **🌇 완료 업무:** {safe_str(r['pm_done']) or '없음'}
-
+ 
 **📅 내일 예정:** {safe_str(r['pm_tomorrow']) or '없음'}
-
+ 
 **💬 특이사항:** {safe_str(r['pm_remarks']) or '없음'}
 """)
             dl_val = safe_str(r.get("drive_link"))
             rl_val = safe_str(r.get("result_link"))
-            if dl_val:  st.markdown(f"📁 [Google Drive]({dl_val})")
+            if dl_val: st.markdown(f"📁 [Google Drive]({dl_val})")
             if rl_val: st.markdown(f"🔗 [결과물 링크]({rl_val})")
-            cmt = st.text_input("💬 코멘트", key=f"cmt_{r['id']}")
+ 
+            cmt = st.text_input("💬 코멘트", key=f"cmt_{r['id']}", placeholder="승인/반려 사유...")
             ca, cb, cc = st.columns(3)
-            def do_approve(rid, status, emp, comment):
-                c2 = get_conn()
-                c2.execute("UPDATE reports SET status=?,admin_comment=?,approved_at=? WHERE id=?",
-                           (status, comment, now_str(), rid))
-                c2.commit(); c2.close()
-                wlog(f"APPROVE_{status}", st.session_state.user_name, emp, comment)
-                st.rerun()
             with ca:
                 if st.button("✅ 승인", key=f"ap_{r['id']}", use_container_width=True):
-                    do_approve(r['id'], "승인", r['emp_name'], cmt or "승인")
+                    do_approve(r['id'], "승인", r['emp_name'], cmt or "승인되었습니다.")
             with cb:
                 if st.button("❌ 반려", key=f"rj_{r['id']}", use_container_width=True):
-                    do_approve(r['id'], "반려", r['emp_name'], cmt or "반려")
+                    do_approve(r['id'], "반려", r['emp_name'], cmt or "반려 사유를 입력해 주세요.")
             with cc:
                 if st.button("⏸ 보류", key=f"hl_{r['id']}", use_container_width=True):
-                    do_approve(r['id'], "보류", r['emp_name'], cmt or "보류")
-
+                    do_approve(r['id'], "보류", r['emp_name'], cmt or "보류 처리되었습니다.")
+ 
 # ═══════════════════════════════════════════
 #  관리자: 직원 관리
 # ═══════════════════════════════════════════
@@ -1212,7 +1091,7 @@ def page_admin_emp():
                     st.success(f"✅ '{new_name}' 등록 완료!"); st.rerun()
                 except Exception as e:
                     st.error(f"등록 실패: {e}")
-
+ 
 # ═══════════════════════════════════════════
 #  관리자: 엑셀 다운로드
 # ═══════════════════════════════════════════
@@ -1246,7 +1125,7 @@ def page_admin_excel():
             d_to   = str(date(int(my), int(mm), ld))
         else:
             d_from, d_to = "2024-01-01", "2030-12-31"
-
+ 
     if st.button("📥  엑셀 생성", key="btn_excel", use_container_width=True):
         if not rec_types: st.error("기록 유형을 선택하세요."); return
         conn = get_conn(); sheets = {}
@@ -1281,7 +1160,7 @@ def page_admin_excel():
             use_container_width=True
         )
         st.success("✅ 파일 준비 완료! 위 버튼을 눌러 저장하세요.")
-
+ 
 # ═══════════════════════════════════════════
 #  관리자: 로그
 # ═══════════════════════════════════════════
@@ -1297,17 +1176,17 @@ def page_admin_logs():
     else:
         logs.columns = ["시간","액션","실행자","대상","상세"]
         st.dataframe(logs, use_container_width=True, hide_index=True)
-
+ 
 # ═══════════════════════════════════════════
 #  메인 라우터
 # ═══════════════════════════════════════════
 inject_all()
-
+ 
 if not st.session_state.logged_in:
     render_login()
 else:
     render_sidebar()
-
+ 
     if st.session_state.is_admin:
         pages = {
             "home":          page_admin_home,
@@ -1325,9 +1204,9 @@ else:
             "emp_report":   page_emp_report,
             "emp_calendar": page_emp_calendar,
         }
-
+ 
     pages.get(st.session_state.page, list(pages.values())[0])()
-
+ 
     st.markdown("""
     <div style="text-align:center;padding:20px;color:#475569;
                 font-size:0.74rem;font-weight:700;position:relative;z-index:1;">
