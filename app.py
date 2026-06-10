@@ -1029,20 +1029,28 @@ table.vtm-cal .stamp {
     position: relative !important;
     z-index: 20 !important;
 }
-/* 버튼 투명화 */
+/* 버튼 기본 스타일 — 달력 셀 크기에 맞춘 반투명 버튼 */
 [data-testid="stMarkdownContainer"]:has(table.vtm-cal)
   + [data-testid="stHorizontalBlock"] .stButton > button {
-    background: transparent !important;
+    background: rgba(15, 23, 42, 0.45) !important;
     border: none !important;
     box-shadow: none !important;
-    color: transparent !important;
+    color: rgba(148, 163, 184, 0.75) !important;
     height: 89px !important;
     min-height: 89px !important;
-    padding: 0 !important;
+    padding: 0 4px !important;
     border-radius: 8px !important;
     transform: none !important;
-    letter-spacing: 0 !important;
-    font-size: 0 !important;
+    font-size: 0.6rem !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.04em !important;
+    white-space: normal !important;
+    line-height: 1.3 !important;
+    text-align: center !important;
+    display: flex !important;
+    align-items: flex-end !important;
+    justify-content: center !important;
+    padding-bottom: 6px !important;
 }
 /* 비활성(주말/빈칸) 버튼 */
 [data-testid="stMarkdownContainer"]:has(table.vtm-cal)
@@ -1050,12 +1058,17 @@ table.vtm-cal .stamp {
     cursor: default !important;
     pointer-events: none !important;
     opacity: 1 !important;
+    color: transparent !important;
+    background: transparent !important;
 }
-/* 평일 버튼 hover 효과 */
+/* 평일 버튼 hover */
 [data-testid="stMarkdownContainer"]:has(table.vtm-cal)
   + [data-testid="stHorizontalBlock"] .stButton > button:not(:disabled):hover {
-    background: rgba(96,165,250,0.12) !important;
+    background: rgba(59, 130, 246, 0.18) !important;
+    color: #93C5FD !important;
     cursor: pointer !important;
+    border: 1.5px solid rgba(96,165,250,0.5) !important;
+    box-shadow: 0 2px 12px rgba(59,130,246,0.2) !important;
 }
 </style>""", unsafe_allow_html=True)
 
@@ -1127,7 +1140,7 @@ table.vtm-cal .stamp {
                 else:
                     d = f"{yr}-{mo:02d}-{day:02d}"
                     is_sel = (d == sel)
-                    if st.button(" ", key=f"cd_{d}", use_container_width=True):
+                    if st.button("상세내역\n확인", key=f"cd_{d}", use_container_width=True):
                         st.session_state.cal_selected = None if is_sel else d
                         st.rerun()
 
@@ -1561,4 +1574,5 @@ else:
                 font-size:0.74rem;font-weight:700;position:relative;z-index:1;">
         © 2026 (주) 브이티엠 운영 대시보드 v1.0 &nbsp;|&nbsp; 개발자: 박동진 본부장
     </div>""", unsafe_allow_html=True)
+
 
