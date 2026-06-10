@@ -1026,80 +1026,78 @@ table.vtm-cal .stamp {
     transform:rotate(-15deg); line-height:1.1; text-align:center;
 }
 
-/* ── 버튼 행: 달력 셀 바로 아래에 딱 붙는 탭 ── */
-/* margin-top 으로 위로 당기는 대신, 버튼 자체를 셀 하단 탭처럼 스타일링 */
-[data-testid="stMarkdownContainer"]:has(table.vtm-cal)
-  + [data-testid="stHorizontalBlock"] {
-    margin-top: -4px !important;
-    position: relative !important;
-    z-index: 5 !important;
-    gap: 3px !important;
+/* 셀 안 "상세내역 확인" 버튼 */
+table.vtm-cal .cal-btn, table.vtm-cal .cal-btn-sel {
+    display: block;
+    width: calc(100% + 14px);
+    margin: 6px -7px -5px -7px;
+    padding: 5px 4px;
+    border: none;
+    border-top: 1px solid #CBD5E1;
+    border-radius: 0 0 6px 6px;
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    cursor: pointer;
+    text-align: center;
+    transition: background 0.15s, color 0.15s;
 }
-/* 모든 버튼 공통 기반 */
-[data-testid="stMarkdownContainer"]:has(table.vtm-cal)
-  + [data-testid="stHorizontalBlock"] .stButton > button {
-    /* 아래 모서리만 라운드 — 셀과 한 세트 */
-    border-radius: 0 0 8px 8px !important;
-    height: 28px !important;
-    min-height: 28px !important;
-    padding: 0 4px !important;
-    font-size: 0.58rem !important;
-    font-weight: 700 !important;
-    letter-spacing: 0.03em !important;
-    line-height: 1 !important;
-    text-align: center !important;
-    transform: none !important;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.12) !important;
-    width: 100% !important;
-    /* 기본: 평일 — 슬레이트 그레이 */
-    background: #475569 !important;
-    color: #E2E8F0 !important;
-    border: 1.5px solid #CBD5E1 !important;
-    border-top: none !important;
+table.vtm-cal .cal-btn {
+    background: #475569;
+    color: #E2E8F0;
 }
-/* 평일 hover */
-[data-testid="stMarkdownContainer"]:has(table.vtm-cal)
-  + [data-testid="stHorizontalBlock"] .stButton > button:not(:disabled):hover {
-    background: #1E40AF !important;
-    color: #BFDBFE !important;
-    border-color: #3B82F6 !important;
-    box-shadow: 0 3px 10px rgba(59,130,246,0.3) !important;
-    cursor: pointer !important;
-    transform: none !important;
+table.vtm-cal .cal-btn:hover {
+    background: #1E40AF;
+    color: #BFDBFE;
+    border-top-color: #3B82F6;
 }
-/* 비활성(주말·빈칸) */
-[data-testid="stMarkdownContainer"]:has(table.vtm-cal)
-  + [data-testid="stHorizontalBlock"] .stButton > button:disabled {
-    background: transparent !important;
-    border: none !important;
-    box-shadow: none !important;
-    color: transparent !important;
-    cursor: default !important;
-    pointer-events: none !important;
-    opacity: 1 !important;
+table.vtm-cal .cal-btn-sel {
+    background: #1E40AF;
+    color: #BFDBFE;
+    border-top-color: #3B82F6;
 }
+table.vtm-cal .cal-btn-sel:hover {
+    background: #1e3a8a;
+    color: #93C5FD;
+}
+/* 토요일·일요일 셀 버튼 없음 */
+table.vtm-cal td.sat .cal-btn,
+table.vtm-cal td.sun .cal-btn { display:none; }
+
+/* st.columns 오버레이 제거 — 이제 HTML 버튼 직접 사용 */
+[data-testid="stMarkdownContainer"]:has(table.vtm-cal)
+  + [data-testid="stHorizontalBlock"] { display: none !important; }
 </style>""", unsafe_allow_html=True)
 
-    # ── 달력 헤더 ──
-    st.markdown("""<table class="vtm-cal"><thead><tr>
-        <th class="hwd">월</th><th class="hwd">화</th>
-        <th class="hwd">수</th><th class="hwd">목</th>
-        <th class="hwd">금</th>
-        <th class="hsat">토</th><th class="hsun">일</th>
-    </tr></thead></table>""", unsafe_allow_html=True)
+    # ── 달력 전체를 하나의 HTML 테이블로 + sendPrompt 클릭 처리 ──
+    # 클릭 수신용 숨김 text_input
+    _raw = st.text_input("", key="_cal_inp", label_visibility="collapsed")
+    if _raw and _raw.startswith("CALSEL:"):
+        clicked = _raw[7:]
+        st.session_state.cal_selected = None if clicked == sel else clicked
+        st.rerun()
 
-    # ── 주 단위: HTML 시각 테이블 + 투명 버튼 오버레이 ──
+    # 전체 달력 HTML 한 번에 빌드
+    rows_html = ""
+    detail_after = {}   # week_idx → sel 날짜 (상세카드 삽입 위치)
+
     for wi, week in enumerate(cal_weeks):
+        week_dates = [
+            f"{yr}-{mo:02d}-{day:02d}"
+            for i, day in enumerate(week)
+            if day != 0 and i < 5
+        ]
+        if sel in week_dates:
+            detail_after[wi] = sel
 
-        # 1) HTML 시각 테이블 행
-        html = '<table class="vtm-cal"><tbody><tr>'
+        rows_html += '<tr class="cal-row">'
         for i, day in enumerate(week):
             is_sat = (i == 5); is_sun = (i == 6); is_wk = is_sat or is_sun
             if day == 0:
-                html += '<td class="empty"></td>'; continue
+                rows_html += '<td class="empty"></td>'; continue
 
             d = f"{yr}-{mo:02d}-{day:02d}"
-            is_td = (d == today_str()); is_sel = (d == sel)
+            is_td  = (d == today_str()); is_sel = (d == sel)
             has_att = d in att_map; has_rep = d in rep_map
             rep_st  = rep_map[d]["status"]      if has_rep else None
             rep_prg = rep_map[d]["pm_progress"] if has_rep else 0
@@ -1107,6 +1105,7 @@ table.vtm-cal .stamp {
             base = "sun" if is_sun else ("sat" if is_sat else "wd")
             cell_cls = base + (" sel" if is_sel else (" today" if is_td else ""))
 
+            # 정보 뱃지
             badges = ""
             if not is_wk:
                 if has_att:
@@ -1126,40 +1125,63 @@ table.vtm-cal .stamp {
                 else:
                     badges += '<span class="badge b-none">보고없음</span>'
 
+            # 승인 도장
             stamp = ""
             if has_rep and rep_st == "승인" and not is_wk:
                 stamp = '<div class="stamp">승<br>인</div>'
 
-            html += (f'<td class="{cell_cls}">{stamp}'
-                     f'<span class="daynum">{day}</span>{badges}</td>')
-        html += '</tr></tbody></table>'
-        st.markdown(html, unsafe_allow_html=True)
+            # 셀 내부 — 평일은 클릭 버튼 포함
+            if not is_wk:
+                btn_cls = "cal-btn-sel" if is_sel else "cal-btn"
+                cell_inner = (
+                    f'{stamp}<span class="daynum">{day}</span>{badges}'
+                    f'<button class="{btn_cls}" '
+                    f'onclick="calClick(\'{d}\')">'
+                    f'{"▲ 닫기" if is_sel else "상세내역 확인"}</button>'
+                )
+            else:
+                cell_inner = f'<span class="daynum">{day}</span>'
 
-        # 2) 투명 버튼 오버레이 — HTML 테이블 바로 뒤 st.columns (CSS로 위로 겹침)
-        cols = st.columns([1, 1, 1, 1, 1, 0.7, 0.7])
-        for i, day in enumerate(week):
-            with cols[i]:
-                if day == 0:
-                    st.button(" ", key=f"cd_empty_{wi}_{i}",
-                              use_container_width=True, disabled=True)
-                elif i >= 5:
-                    st.button(" ", key=f"cd_wk_{wi}_{i}",
-                              use_container_width=True, disabled=True)
-                else:
-                    d = f"{yr}-{mo:02d}-{day:02d}"
-                    is_sel = (d == sel)
-                    if st.button("상세내역\n확인", key=f"cd_{d}", use_container_width=True):
-                        st.session_state.cal_selected = None if is_sel else d
-                        st.rerun()
+            rows_html += f'<td class="{cell_cls}">{cell_inner}</td>'
+        rows_html += '</tr>'
 
-        # 3) 선택된 날짜가 이 주에 있으면 바로 아래 상세 펼침
-        week_dates = [
-            f"{yr}-{mo:02d}-{day:02d}"
-            for i, day in enumerate(week)
-            if day != 0 and i < 5
-        ]
-        if sel in week_dates:
-            render_day_detail(uid, sel)
+    full_html = f"""
+<table class="vtm-cal">
+  <thead><tr>
+    <th class="hwd">월</th><th class="hwd">화</th>
+    <th class="hwd">수</th><th class="hwd">목</th>
+    <th class="hwd">금</th>
+    <th class="hsat">토</th><th class="hsun">일</th>
+  </tr></thead>
+  <tbody>{rows_html}</tbody>
+</table>
+<script>
+function calClick(d) {{
+  var inp = window.parent.document.querySelectorAll('input[type="text"]');
+  for (var i = 0; i < inp.length; i++) {{
+    if (inp[i].closest('[data-testid="stTextInput"]')) {{
+      var setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype,'value').set;
+      setter.call(inp[i], 'CALSEL:' + d);
+      inp[i].dispatchEvent(new Event('input', {{bubbles:true}}));
+      break;
+    }}
+  }}
+}}
+</script>
+"""
+    st.markdown(full_html, unsafe_allow_html=True)
+
+    # 상세 카드는 선택된 날짜 주(week) 아래에
+    if sel:
+        for wi, week in enumerate(cal_weeks):
+            week_dates = [
+                f"{yr}-{mo:02d}-{day:02d}"
+                for i, day in enumerate(week)
+                if day != 0 and i < 5
+            ]
+            if sel in week_dates:
+                render_day_detail(uid, sel)
+                break
 
 
 # ═══════════════════════════════════════════
@@ -1582,4 +1604,3 @@ else:
                 font-size:0.74rem;font-weight:700;position:relative;z-index:1;">
         © 2026 (주) 브이티엠 운영 대시보드 v1.0 &nbsp;|&nbsp; 개발자: 박동진 본부장
     </div>""", unsafe_allow_html=True)
-
