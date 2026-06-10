@@ -1022,6 +1022,11 @@ div:has(> .cal-trig-start) ~ div:has([data-testid="stButton"]) {
     width:1px !important; height:1px !important;
     overflow:hidden !important; opacity:0 !important;
 }
+div:has(> .cal-trig-start) ~ div:has([data-testid="stTextInput"]) {
+    position:fixed !important; left:-9999px !important; top:-9999px !important;
+    width:1px !important; height:1px !important;
+    overflow:hidden !important; opacity:0 !important;
+}
 </style>""", unsafe_allow_html=True)
 
     # 헤더
@@ -1089,21 +1094,45 @@ div:has(> .cal-trig-start) ~ div:has([data-testid="stButton"]) {
         if sel in week_dates:
             render_day_detail(uid, sel)
 
-    # JS: 현재 document에서 날짜 텍스트로 Streamlit 버튼 찾아 클릭
+    # JS: document와 window.parent.document 모두 시도
     st.markdown("""<script>
 function vtmCalClick(btn) {
     var d = btn.getAttribute('data-d');
-    var all = document.querySelectorAll('button');
-    for (var i = 0; i < all.length; i++) {
-        if (all[i].textContent.trim() === d) {
-            all[i].click(); return;
+    // 현재 document와 parent document 모두 탐색
+    var docs = [document];
+    try { if (window.parent && window.parent.document !== document) docs.push(window.parent.document); } catch(e) {}
+    for (var di = 0; di < docs.length; di++) {
+        var all = docs[di].querySelectorAll('button');
+        for (var i = 0; i < all.length; i++) {
+            var txt = (all[i].innerText || all[i].textContent || '').trim();
+            if (txt === d) {
+                all[i].click();
+                return;
+            }
         }
+    }
+    // fallback: input 이벤트로 시도
+    var inputs = document.querySelectorAll('input[type="text"]');
+    for (var j = 0; j < inputs.length; j++) {
+        try {
+            var nv = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+            nv.call(inputs[j], 'CALSEL:' + d);
+            inputs[j].dispatchEvent(new Event('input', {bubbles: true}));
+            inputs[j].dispatchEvent(new Event('change', {bubbles: true}));
+        } catch(e2) {}
     }
 }
 </script>""", unsafe_allow_html=True)
 
     # 마커 → 이후 Streamlit 버튼들을 CSS가 화면 밖으로 숨김
     st.markdown('<div class="cal-trig-start"></div>', unsafe_allow_html=True)
+
+    # fallback: text_input으로 CALSEL 수신
+    _cal_inp = st.text_input("", key="_cal_inp", label_visibility="collapsed")
+    if _cal_inp and _cal_inp.startswith("CALSEL:"):
+        _d = _cal_inp[7:].strip()
+        st.session_state.cal_selected = None if _d == sel else _d
+        st.rerun()
 
     # Streamlit 트리거 버튼 (날짜 텍스트 = 식별자)
     all_wd = [f"{yr}-{mo:02d}-{day:02d}"
