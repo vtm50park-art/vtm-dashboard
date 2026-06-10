@@ -319,6 +319,27 @@ label,.stTextInput label,.stSelectbox label,.stTextArea label,
     margin-left:6px;
     vertical-align:middle;
 }}
+
+/* ── 달력 날짜 버튼 — 골드 그라데이션 덮어쓰기 ── */
+[data-testid="stButton"] button[data-baseweb="button"][kind="secondary"],
+div[data-testid="column"] .stButton>button {{
+    padding: 5px 2px !important;
+    font-size: 0.78rem !important;
+    font-weight: 800 !important;
+    min-height: 32px !important;
+}}
+/* calday_ 키로 시작하는 버튼만 compact 스타일 */
+.cal-btn-grid .stButton>button {{
+    background: rgba(30,41,59,0.85) !important;
+    color: #CBD5E1 !important;
+    border: 1px solid #334155 !important;
+    border-radius: 6px !important;
+    padding: 4px 2px !important;
+    font-size: 0.75rem !important;
+    font-weight: 800 !important;
+    min-height: 30px !important;
+    box-shadow: none !important;
+}}
 </style>
  
 <canvas id="vtm-stars" style="position:fixed;top:0;left:0;
@@ -762,14 +783,163 @@ def page_emp_report():
 # ═══════════════════════════════════════════
 #  직원: 달력
 # ═══════════════════════════════════════════
+def render_day_detail(uid, d_str):
+    """선택한 날짜의 상세 업무보고 + 승인내역 카드"""
+    conn = get_conn()
+    att = pd.read_sql("SELECT * FROM attendance WHERE emp_id=? AND work_date=? LIMIT 1",
+                      conn, params=(uid, d_str))
+    rep = pd.read_sql("SELECT * FROM reports WHERE emp_id=? AND work_date=? LIMIT 1",
+                      conn, params=(uid, d_str))
+    conn.close()
+
+    # 날짜 표시 (한국식)
+    try:
+        dt_obj = datetime.strptime(d_str, "%Y-%m-%d")
+        day_kr = ["월","화","수","목","금","토","일"][dt_obj.weekday()]
+        d_label = f"{dt_obj.year}년 {dt_obj.month}월 {dt_obj.day}일 ({day_kr})"
+    except:
+        d_label = d_str
+
+    # ── 헤더 ──
+    hcol, xcol = st.columns([8, 1])
+    with hcol:
+        st.markdown(f"""
+        <div style="background:linear-gradient(90deg,#1E293B,#0F172A);
+            border:2px solid #D4AF37;border-radius:14px;padding:14px 20px;margin:8px 0 4px;">
+          <span style="color:#D4AF37;font-size:1.05rem;font-weight:900;">
+              📅 {d_label} — 상세 보기
+          </span>
+        </div>""", unsafe_allow_html=True)
+    with xcol:
+        if st.button("✕ 닫기", key="cal_close", use_container_width=True):
+            st.session_state.cal_selected = None
+            st.rerun()
+
+    # ── 출퇴근 블록 ──
+    if not att.empty:
+        a = att.iloc[0]
+        ci_raw = safe_str(a["checkin"])
+        co_raw = safe_str(a["checkout"])
+        ci_t = ci_raw[-8:-3] if ci_raw else "--:--"
+        co_t = co_raw[-8:-3] if co_raw else "미퇴근"
+        atp  = safe_str(a["att_type"]) or "정상출근"
+        ac1, ac2 = st.columns(2)
+        with ac1:
+            st.markdown(f"""<div class="vtm-card" style="text-align:center;padding:12px;">
+              <h3 style="font-size:0.85rem;">🟢 출근</h3>
+              <p style="font-size:1.5rem;font-weight:900;color:#10B981;margin:4px 0;">{ci_t}</p>
+              <p style="font-size:0.8rem;color:#64748B;">{atp}</p>
+            </div>""", unsafe_allow_html=True)
+        with ac2:
+            st.markdown(f"""<div class="vtm-card" style="text-align:center;padding:12px;">
+              <h3 style="font-size:0.85rem;">🔴 퇴근</h3>
+              <p style="font-size:1.5rem;font-weight:900;color:#EF4444;margin:4px 0;">{co_t}</p>
+              <p style="font-size:0.8rem;color:#64748B;">&nbsp;</p>
+            </div>""", unsafe_allow_html=True)
+    else:
+        st.markdown("""<div style="background:rgba(239,68,68,0.1);border:1px solid #EF4444;
+            border-radius:10px;padding:10px;margin:4px 0;text-align:center;">
+          <span style="color:#EF4444;font-weight:900;">❗ 출근 기록 없음</span>
+        </div>""", unsafe_allow_html=True)
+
+    st.markdown("<div style='height:6px'></div>", unsafe_allow_html=True)
+
+    # ── 업무보고 블록 ──
+    if not rep.empty:
+        r = rep.iloc[0]
+        status   = safe_str(r["status"]) or "대기중"
+        sc       = {"승인":"#10B981","대기중":"#F59E0B","반려":"#EF4444","보류":"#8B5CF6"}.get(status,"#6B7280")
+        s_emoji  = {"승인":"✅","대기중":"⏳","반려":"❌","보류":"⏸"}.get(status,"📋")
+        prg      = int(r["pm_progress"]) if safe_str(str(r["pm_progress"])) else 0
+        am_tasks = safe_str(r["am_tasks"])    or "—"
+        am_pri   = safe_str(r["am_priority"]) or "—"
+        am_notes = safe_str(r["am_notes"])    or "—"
+        pm_done  = safe_str(r["pm_done"])     or "—"
+        pm_tom   = safe_str(r["pm_tomorrow"]) or "—"
+        pm_rem   = safe_str(r["pm_remarks"])  or "—"
+        dl_val   = safe_str(r["drive_link"])
+        rl_val   = safe_str(r["result_link"])
+        cmt      = safe_str(r["admin_comment"]) or ""
+        sub_at   = safe_str(r["submitted_at"])  or "—"
+        appr_at  = safe_str(r["approved_at"])   or "—"
+        dl_html  = f'<a href="{dl_val}" target="_blank" style="color:#3B82F6;font-weight:700;">🔗 열기</a>' if dl_val else "없음"
+        rl_html  = f'<a href="{rl_val}" target="_blank" style="color:#3B82F6;font-weight:700;">🔗 열기</a>' if rl_val else "없음"
+
+        # 진행률 바 HTML
+        bar_w = prg
+        bar_c = "#10B981" if prg >= 80 else ("#F59E0B" if prg >= 40 else "#EF4444")
+
+        st.markdown(f"""
+        <div class="vtm-card" style="margin-top:4px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+            <span style="font-size:1rem;font-weight:900;color:#1E293B;">📝 업무 보고서</span>
+            <span style="background:{sc};color:#fff;padding:4px 16px;border-radius:20px;
+                font-weight:900;font-size:0.82rem;">{s_emoji} {status}</span>
+          </div>
+
+          <div style="background:#F8FAFC;border-radius:10px;padding:12px 16px;margin-bottom:8px;">
+            <p style="font-size:0.72rem;color:#64748B;font-weight:700;margin:0 0 6px;">🌅 오전 업무 계획</p>
+            <p style="font-size:0.88rem;font-weight:700;color:#1E293B;margin:0 0 4px;white-space:pre-wrap;">{am_tasks}</p>
+            <p style="font-size:0.78rem;color:#475569;margin:0;">우선순위: {am_pri} &nbsp;|&nbsp; 특이사항: {am_notes}</p>
+          </div>
+
+          <div style="background:#F0FDF4;border-radius:10px;padding:12px 16px;margin-bottom:8px;">
+            <p style="font-size:0.72rem;color:#64748B;font-weight:700;margin:0 0 6px;">🌇 퇴근 결과 보고</p>
+            <p style="font-size:0.88rem;font-weight:700;color:#1E293B;margin:0 0 6px;white-space:pre-wrap;">{pm_done}</p>
+            <div style="background:#E2E8F0;border-radius:6px;height:8px;margin:4px 0 6px;">
+              <div style="background:{bar_c};width:{bar_w}%;height:8px;border-radius:6px;
+                  transition:width 0.4s;"></div>
+            </div>
+            <p style="font-size:0.75rem;color:#475569;margin:0;">진행률 {prg}% &nbsp;|&nbsp; 내일예정: {pm_tom}</p>
+            {"<p style='font-size:0.78rem;color:#475569;margin:4px 0 0;'>💬 특이사항: "+pm_rem+"</p>" if pm_rem != "—" else ""}
+          </div>
+
+          <div style="background:#F8F9FA;border-radius:8px;padding:8px 12px;margin-bottom:8px;
+              font-size:0.78rem;color:#475569;">
+            📁 Drive: {dl_html} &nbsp;&nbsp; 🔗 결과물: {rl_html}
+          </div>
+
+          {"<div style='background:rgba(212,175,55,0.12);border:1.5px solid #D4AF37;border-radius:10px;padding:10px 14px;margin-bottom:6px;'><p style='font-size:0.72rem;color:#D4AF37;font-weight:900;margin:0 0 4px;'>💬 관리자 코멘트</p><p style='font-size:0.88rem;font-weight:700;color:#1A1A1A;margin:0;'>"+cmt+"</p></div>" if cmt else ""}
+
+          <div style="font-size:0.7rem;color:#94A3B8;text-align:right;margin-top:4px;">
+            제출: {sub_at[-17:-3] if len(sub_at)>13 else sub_at}
+            {"&nbsp;·&nbsp; 승인: "+appr_at[-17:-3] if appr_at != "—" and len(appr_at)>13 else ""}
+          </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    else:
+        st.markdown(f"""
+        <div style="background:rgba(100,116,139,0.12);border:1px solid #334155;
+            border-radius:12px;padding:20px;text-align:center;margin:4px 0;">
+          <p style="color:#64748B;font-weight:700;font-size:0.9rem;margin:0;">
+              📭 이 날 업무 보고 내역이 없습니다.
+          </p>
+        </div>""", unsafe_allow_html=True)
+
+    st.markdown("<hr style='border-color:#1E3A5F;margin:14px 0 4px;'>", unsafe_allow_html=True)
+
+
 def page_emp_calendar():
     topbar("📅 업무 달력")
     uid = st.session_state.user_id; today = now_kst().date()
+
+    # session_state 초기화
+    if "cal_selected" not in st.session_state:
+        st.session_state.cal_selected = None
+    if "cal_yr" not in st.session_state:
+        st.session_state.cal_yr = today.year
+    if "cal_mo" not in st.session_state:
+        st.session_state.cal_mo = today.month
+
+    # ── 연/월 선택 ──
     c1, c2, _ = st.columns([1, 1, 2])
-    with c1: yr = st.number_input("연도", value=today.year,  min_value=2024, max_value=2030, key="cy")
-    with c2: mo = st.number_input("월",   value=today.month, min_value=1,    max_value=12,   key="cm")
+    with c1: yr = st.number_input("연도", value=st.session_state.cal_yr, min_value=2024, max_value=2030, key="cy")
+    with c2: mo = st.number_input("월",   value=st.session_state.cal_mo, min_value=1,    max_value=12,   key="cm")
     yr = int(yr); mo = int(mo)
- 
+    st.session_state.cal_yr = yr; st.session_state.cal_mo = mo
+
+    # ── DB 조회 ──
     conn = get_conn()
     att_df = pd.read_sql(
         "SELECT work_date,att_type FROM attendance WHERE emp_id=? AND work_date LIKE ?",
@@ -778,16 +948,21 @@ def page_emp_calendar():
         "SELECT work_date,status,pm_progress FROM reports WHERE emp_id=? AND work_date LIKE ?",
         conn, params=(uid, f"{yr}-{mo:02d}-%"))
     conn.close()
- 
+
     att_map = {r["work_date"]: r for _, r in att_df.iterrows()} if not att_df.empty else {}
     rep_map = {r["work_date"]: r for _, r in rep_df.iterrows()} if not rep_df.empty else {}
- 
-    cal = calendar.monthcalendar(yr, mo)
+
+    # ── 달력 HTML + 날짜별 클릭 버튼 ──
+    # 달력을 먼저 HTML로, 날짜 셀 내부에 실제 Streamlit 버튼을 올릴 수 없으므로
+    # HTML 달력(표시용) + 버튼 그리드(클릭용) 두 레이어로 구성
+    cal_weeks = calendar.monthcalendar(yr, mo)
+
+    # HTML 달력 (표시용 — 기존 스타일 유지)
     html = """<table class="cal-tbl"><thead><tr>
         <th>월</th><th>화</th><th>수</th><th>목</th><th>금</th>
         <th class="wk">토</th><th class="wk">일</th>
     </tr></thead><tbody>"""
-    for week in cal:
+    for week in cal_weeks:
         html += "<tr>"
         for i, day in enumerate(week):
             is_wk = (i == 5 or i == 6)
@@ -796,10 +971,11 @@ def page_emp_calendar():
             d = f"{yr}-{mo:02d}-{day:02d}"
             cls = "wk" if is_wk else ""
             if d == today_str(): cls += " tday"
+            sel_border = " border:2.5px solid #60A5FA !important;" if d == st.session_state.cal_selected else ""
             if is_wk:
                 html += f'<td class="{cls}"><span style="font-size:0.58rem">{day}</span></td>'
             else:
-                inner = f'<strong>{day}</strong>'
+                inner = f'<strong style="{sel_border}">{day}</strong>'
                 inner += (f'<span class="tg-att">✅{att_map[d]["att_type"]}</span>'
                           if d in att_map else '<span class="tg-no">미출근</span>')
                 if d in rep_map:
@@ -809,10 +985,66 @@ def page_emp_calendar():
                               else f'<span class="tg-rep">📋{r["status"]}</span>')
                 else:
                     inner += '<span class="tg-no">보고없음</span>'
-                html += f'<td class="{cls}">{inner}</td>'
+                html += f'<td class="{cls}" style="{sel_border}">{inner}</td>'
         html += "</tr>"
     html += "</tbody></table>"
     st.markdown(html, unsafe_allow_html=True)
+
+    # ── 날짜 클릭 버튼 그리드 ──
+    st.markdown("""
+    <div style="background:rgba(212,175,55,0.08);border:1px solid rgba(212,175,55,0.25);
+        border-radius:10px;padding:8px 10px;margin:8px 0 4px;">
+      <span style="color:#D4AF37;font-size:0.78rem;font-weight:700;">
+          👆 날짜를 클릭하면 해당일 업무보고 상세를 확인할 수 있습니다
+      </span>
+    </div>""", unsafe_allow_html=True)
+
+    # 평일만 날짜 버튼 표시 (주말 제외 — 보고 대상 아님)
+    # 5열 그리드로 주 단위 배치
+    for week in cal_weeks:
+        weekdays = [week[i] for i in range(5)]  # 월~금
+        if all(d == 0 for d in weekdays):
+            continue
+        cols = st.columns(7)
+        for i, day in enumerate(week):
+            with cols[i]:
+                if day == 0:
+                    st.markdown("<div style='height:32px'></div>", unsafe_allow_html=True)
+                    continue
+                d = f"{yr}-{mo:02d}-{day:02d}"
+                is_wk = (i >= 5)
+                has_rep = d in rep_map
+                has_att = d in att_map
+
+                if is_wk:
+                    st.markdown(f"<div style='height:32px;text-align:center;color:#374151;"
+                                f"font-size:0.72rem;padding-top:7px;'>{day}</div>",
+                                unsafe_allow_html=True)
+                else:
+                    is_sel = (d == st.session_state.cal_selected)
+                    btn_style = ""
+                    if is_sel:
+                        btn_label = f"◉ {day}"
+                    elif has_rep and rep_map[d]["status"] == "승인":
+                        btn_label = f"✅{day}"
+                    elif has_rep:
+                        btn_label = f"📋{day}"
+                    elif has_att:
+                        btn_label = f"🟢{day}"
+                    else:
+                        btn_label = f"{day}"
+
+                    if st.button(btn_label, key=f"calday_{d}", use_container_width=True):
+                        if st.session_state.cal_selected == d:
+                            st.session_state.cal_selected = None
+                        else:
+                            st.session_state.cal_selected = d
+                        st.rerun()
+
+    # ── 선택된 날짜 상세 ──
+    if st.session_state.cal_selected:
+        st.markdown("<div style='height:10px'></div>", unsafe_allow_html=True)
+        render_day_detail(uid, st.session_state.cal_selected)
  
 # ═══════════════════════════════════════════
 #  관리자: 홈
