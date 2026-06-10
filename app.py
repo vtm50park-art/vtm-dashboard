@@ -951,18 +951,21 @@ def page_emp_calendar():
     cal_weeks = calendar.monthcalendar(yr, mo)
     sel = st.session_state.cal_selected
 
+    COLG = '<colgroup><col style="width:16.8%"><col style="width:16.8%"><col style="width:16.8%"><col style="width:16.8%"><col style="width:16.8%"><col style="width:8%"><col style="width:8%"></colgroup>'
+
     st.markdown("""<style>
-table.vtm-cal {
+table.vtm-cal, table.vtm-btn {
     width:100%; border-collapse:separate; border-spacing:3px;
     table-layout:fixed; margin:0 !important;
 }
+table.vtm-btn { margin-bottom:5px !important; }
 table.vtm-cal th {
     padding:8px 4px; text-align:center; font-weight:900;
     font-size:0.86rem; border-radius:7px;
 }
 table.vtm-cal th.hwd  { background:#1E293B; color:#D4AF37; }
-table.vtm-cal th.hsat { background:#1a2d44; color:#93C5FD; width:8%; }
-table.vtm-cal th.hsun { background:#2a1520; color:#FCA5A5; width:8%; }
+table.vtm-cal th.hsat { background:#1a2d44; color:#93C5FD; }
+table.vtm-cal th.hsun { background:#2a1520; color:#FCA5A5; }
 table.vtm-cal td {
     border-radius:8px 8px 0 0; vertical-align:top;
     padding:7px 7px 5px; height:82px;
@@ -970,8 +973,8 @@ table.vtm-cal td {
     position:relative;
 }
 table.vtm-cal td.wd    { background:#FFFFFF; border-color:#CBD5E1; }
-table.vtm-cal td.sat   { background:#EFF6FF; border-color:#BFDBFE; width:8%; }
-table.vtm-cal td.sun   { background:#FFF1F2; border-color:#FECDD3; width:8%; }
+table.vtm-cal td.sat   { background:#EFF6FF; border-color:#BFDBFE; }
+table.vtm-cal td.sun   { background:#FFF1F2; border-color:#FECDD3; }
 table.vtm-cal td.today { background:#FFFBEB !important; border:2px solid #D4AF37 !important; border-bottom:none !important; }
 table.vtm-cal td.sel   { background:#EFF6FF !important; border:2px solid #3B82F6 !important; border-bottom:none !important; }
 table.vtm-cal td.empty { background:transparent !important; border:none !important; }
@@ -1001,53 +1004,40 @@ table.vtm-cal .stamp {
     background:rgba(220,38,38,0.08); transform:rotate(-15deg);
     line-height:1.1; text-align:center;
 }
-/* 버튼 행 테이블 */
-table.vtm-btn {
-    width:100%; border-collapse:separate; border-spacing:3px;
-    table-layout:fixed; margin:0 0 5px 0 !important;
-}
-table.vtm-btn td      { padding:0; border:none; background:transparent; }
-table.vtm-btn td.wkc  { width:8%; }
-table.vtm-btn .cbtn {
+table.vtm-btn td { padding:0; border:none; background:transparent; }
+.cbtn, .cbtn-sel {
     display:block; width:100%; padding:5px 2px;
-    background:#334155; color:#CBD5E1;
     border:none; border-radius:0 0 8px 8px;
     font-size:0.62rem; font-weight:700; letter-spacing:0.02em;
     cursor:pointer; text-align:center;
-    transition:background 0.15s, color 0.15s;
 }
-table.vtm-btn .cbtn:hover { background:#1E40AF; color:#BFDBFE; }
-table.vtm-btn .cbtn-sel   { background:#1E40AF; color:#BFDBFE;
-    border:none; border-radius:0 0 8px 8px;
-    display:block; width:100%; padding:5px 2px;
-    font-size:0.62rem; font-weight:700; cursor:pointer; text-align:center; }
-table.vtm-btn .cbtn-sel:hover { background:#1e3a8a; }
+.cbtn     { background:#334155; color:#CBD5E1; }
+.cbtn:hover { background:#1E40AF; color:#BFDBFE; }
+.cbtn-sel { background:#1E40AF; color:#BFDBFE; }
+.cbtn-sel:hover { background:#1e3a8a; }
 
-/* Streamlit 트리거 버튼: 화면 밖으로 (display:none 쓰지 않아야 JS .click() 작동) */
-[data-testid="stMarkdownContainer"]:has(table.vtm-btn)
-  ~ div:has([data-testid="stButton"]) {
-    position: fixed !important;
-    left: -9999px !important;
-    top: -9999px !important;
-    width: 1px !important;
-    height: 1px !important;
-    overflow: hidden !important;
-    opacity: 0 !important;
+/* 트리거 버튼 숨김: .cal-trig-start 마커 이후 등장하는 stButton 컨테이너 */
+div:has(> .cal-trig-start) ~ div:has([data-testid="stButton"]) {
+    position:fixed !important; left:-9999px !important; top:-9999px !important;
+    width:1px !important; height:1px !important;
+    overflow:hidden !important; opacity:0 !important;
 }
 </style>""", unsafe_allow_html=True)
 
-    # 달력 헤더
-    st.markdown("""<table class="vtm-cal"><thead><tr>
-        <th class="hwd">월</th><th class="hwd">화</th>
-        <th class="hwd">수</th><th class="hwd">목</th>
-        <th class="hwd">금</th>
-        <th class="hsat">토</th><th class="hsun">일</th>
-    </tr></thead></table>""", unsafe_allow_html=True)
+    # 헤더
+    st.markdown(
+        f'<table class="vtm-cal">{COLG}'
+        '<thead><tr>'
+        '<th class="hwd">월</th><th class="hwd">화</th>'
+        '<th class="hwd">수</th><th class="hwd">목</th>'
+        '<th class="hwd">금</th>'
+        '<th class="hsat">토</th><th class="hsun">일</th>'
+        '</tr></thead></table>',
+        unsafe_allow_html=True)
 
-    # 주 단위 렌더
     for wi, week in enumerate(cal_weeks):
-        # ① 달력 셀 행
-        cells = '<table class="vtm-cal"><tbody><tr>'
+        # ① 달력 셀 (colgroup으로 너비 고정 → 마지막 주도 동일 비율)
+        cells = f'<table class="vtm-cal">{COLG}<tbody><tr>'
         for i, day in enumerate(week):
             is_sat=(i==5); is_sun=(i==6); is_wk=is_sat or is_sun
             if day == 0:
@@ -1062,8 +1052,7 @@ table.vtm-btn .cbtn-sel:hover { background:#1e3a8a; }
             badges = ""
             if not is_wk:
                 if has_att:
-                    atp_s = (att_map[d]["att_type"] or "출근")[:4]
-                    badges += f'<span class="badge b-att">✅ {atp_s}</span><br>'
+                    badges += f'<span class="badge b-att">✅ {(att_map[d]["att_type"] or "출근")[:4]}</span><br>'
                 else:
                     badges += '<span class="badge b-none">미출근</span><br>'
                 if has_rep:
@@ -1078,15 +1067,15 @@ table.vtm-btn .cbtn-sel:hover { background:#1e3a8a; }
         cells += '</tr></tbody></table>'
         st.markdown(cells, unsafe_allow_html=True)
 
-        # ② 버튼 행 (HTML, vtm-btn 테이블)
-        btns = '<table class="vtm-btn"><tbody><tr>'
+        # ② 버튼 행 (동일한 colgroup → 셀과 완벽 정렬)
+        btns = f'<table class="vtm-btn">{COLG}<tbody><tr>'
         for i, day in enumerate(week):
             is_wk = (i >= 5)
             if day == 0:
-                btns += '<td class="wkc"></td>' if is_wk else '<td></td>'; continue
+                btns += '<td></td>'; continue
             d = f"{yr}-{mo:02d}-{day:02d}"
             if is_wk:
-                btns += '<td class="wkc"></td>'
+                btns += '<td></td>'
             else:
                 is_sel = (d == sel)
                 bcls = "cbtn-sel" if is_sel else "cbtn"
@@ -1100,21 +1089,23 @@ table.vtm-btn .cbtn-sel:hover { background:#1e3a8a; }
         if sel in week_dates:
             render_day_detail(uid, sel)
 
-    # JS 클릭 핸들러
+    # JS: 현재 document에서 날짜 텍스트로 Streamlit 버튼 찾아 클릭
     st.markdown("""<script>
 function vtmCalClick(btn) {
     var d = btn.getAttribute('data-d');
-    var all = window.parent.document.querySelectorAll('button');
+    var all = document.querySelectorAll('button');
     for (var i = 0; i < all.length; i++) {
         if (all[i].textContent.trim() === d) {
-            all[i].click();
-            return;
+            all[i].click(); return;
         }
     }
 }
 </script>""", unsafe_allow_html=True)
 
-    # Streamlit 트리거 버튼 (CSS로 화면 밖 배치, JS가 클릭)
+    # 마커 → 이후 Streamlit 버튼들을 CSS가 화면 밖으로 숨김
+    st.markdown('<div class="cal-trig-start"></div>', unsafe_allow_html=True)
+
+    # Streamlit 트리거 버튼 (날짜 텍스트 = 식별자)
     all_wd = [f"{yr}-{mo:02d}-{day:02d}"
               for week in cal_weeks for i,day in enumerate(week)
               if day != 0 and i < 5]
