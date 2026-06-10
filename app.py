@@ -1069,12 +1069,23 @@ table.vtm-cal td.sun .cal-btn { display:none; }
   + [data-testid="stHorizontalBlock"] { display: none !important; }
 </style>""", unsafe_allow_html=True)
 
-    # ── 달력 전체를 하나의 HTML 테이블로 + sendPrompt 클릭 처리 ──
-    # 클릭 수신용 숨김 text_input
-    _raw = st.text_input("", key="_cal_inp", label_visibility="collapsed")
-    if _raw and _raw.startswith("CALSEL:"):
-        clicked = _raw[7:]
-        st.session_state.cal_selected = None if clicked == sel else clicked
+    # ── 날짜별 숨겨진 st.button (JS가 클릭) ──
+    # 버튼을 화면 밖에 숨기되 DOM에는 존재 → JS가 클릭 트리거
+    st.markdown('<div style="position:absolute;left:-9999px;top:0;width:1px;overflow:hidden;" id="cal-hidden-btns">', unsafe_allow_html=True)
+    clicked_date = None
+    all_weekdays = [
+        f"{yr}-{mo:02d}-{day:02d}"
+        for week in cal_weeks
+        for i, day in enumerate(week)
+        if day != 0 and i < 5
+    ]
+    for d in all_weekdays:
+        if st.button(d, key=f"hbtn_{d}"):
+            clicked_date = d
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    if clicked_date:
+        st.session_state.cal_selected = None if clicked_date == sel else clicked_date
         st.rerun()
 
     # 전체 달력 HTML 한 번에 빌드
@@ -1151,19 +1162,32 @@ table.vtm-cal td.sun .cal-btn { display:none; }
     <th class="hwd">월</th><th class="hwd">화</th>
     <th class="hwd">수</th><th class="hwd">목</th>
     <th class="hwd">금</th>
-    <th class="hsat">토</th><th class="hsun">일</th>
+    <th class="hsat" style="width:8%">토</th>
+    <th class="hsun" style="width:8%">일</th>
   </tr></thead>
   <tbody>{rows_html}</tbody>
 </table>
 <script>
 function calClick(d) {{
-  var inp = window.parent.document.querySelectorAll('input[type="text"]');
-  for (var i = 0; i < inp.length; i++) {{
-    if (inp[i].closest('[data-testid="stTextInput"]')) {{
-      var setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype,'value').set;
-      setter.call(inp[i], 'CALSEL:' + d);
-      inp[i].dispatchEvent(new Event('input', {{bubbles:true}}));
-      break;
+  // id="cal-hidden-btns" 안에서 라벨이 d인 버튼 찾아서 클릭
+  var container = document.getElementById('cal-hidden-btns');
+  if (!container) {{
+    // 컨테이너가 렌더링 전일 수 있으므로 부모 DOM에서 전체 탐색
+    container = document.body;
+  }}
+  var btns = container.querySelectorAll('button');
+  for (var i = 0; i < btns.length; i++) {{
+    if (btns[i].innerText.trim() === d) {{
+      btns[i].click();
+      return;
+    }}
+  }}
+  // fallback: 전체 document에서 탐색
+  var allBtns = document.querySelectorAll('button');
+  for (var j = 0; j < allBtns.length; j++) {{
+    if (allBtns[j].innerText.trim() === d) {{
+      allBtns[j].click();
+      return;
     }}
   }}
 }}
