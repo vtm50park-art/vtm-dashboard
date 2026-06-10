@@ -899,11 +899,12 @@ def render_day_detail(uid, d_str):
         # 관리자 코멘트
         if cmt:
             st.markdown(
-                f'<div style="background:rgba(212,175,55,0.12);border:1.5px solid #D4AF37;'
-                f'border-radius:10px;padding:9px 14px;margin:3px 0;">'
-                f'<p style="font-size:0.7rem;color:#D4AF37;font-weight:900;margin:0 0 3px;">'
+                f'<div style="background:linear-gradient(135deg,#FFF8E7,#FFF3CD);'
+                f'border:2px solid #D4AF37;border-radius:10px;padding:10px 16px;margin:4px 0;">'
+                f'<p style="font-size:0.72rem;color:#92610A;font-weight:900;margin:0 0 4px;">'
                 f'💬 관리자 코멘트</p>'
-                f'<p style="font-size:0.87rem;font-weight:700;color:#1A1A1A;margin:0;">{cmt}</p></div>',
+                f'<p style="font-size:0.9rem;font-weight:700;color:#1A1A1A;margin:0;'
+                f'line-height:1.5;">{cmt}</p></div>',
                 unsafe_allow_html=True)
 
         # 타임스탬프
@@ -955,88 +956,145 @@ def page_emp_calendar():
     rep_map = {r["work_date"]: r for _, r in rep_df.iterrows()} if not rep_df.empty else {}
 
     cal_weeks = calendar.monthcalendar(yr, mo)
-    sel = st.session_state.cal_selected  # 현재 선택된 날짜
+    sel = st.session_state.cal_selected
 
-    # ── 달력 헤더 ──
-    st.markdown(
-        '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:3px;">'
-        '<div style="background:#1E293B;border-radius:6px;padding:6px 0;text-align:center;'
-        'color:#D4AF37;font-weight:900;font-size:0.82rem;">월</div>'
-        '<div style="background:#1E293B;border-radius:6px;padding:6px 0;text-align:center;'
-        'color:#D4AF37;font-weight:900;font-size:0.82rem;">화</div>'
-        '<div style="background:#1E293B;border-radius:6px;padding:6px 0;text-align:center;'
-        'color:#D4AF37;font-weight:900;font-size:0.82rem;">수</div>'
-        '<div style="background:#1E293B;border-radius:6px;padding:6px 0;text-align:center;'
-        'color:#D4AF37;font-weight:900;font-size:0.82rem;">목</div>'
-        '<div style="background:#1E293B;border-radius:6px;padding:6px 0;text-align:center;'
-        'color:#D4AF37;font-weight:900;font-size:0.82rem;">금</div>'
-        '<div style="background:#0B1120;border-radius:6px;padding:6px 0;text-align:center;'
-        'color:#475569;font-weight:700;font-size:0.75rem;">토</div>'
-        '<div style="background:#0B1120;border-radius:6px;padding:6px 0;text-align:center;'
-        'color:#475569;font-weight:700;font-size:0.75rem;">일</div>'
-        '</div>',
-        unsafe_allow_html=True)
+    # ── 달력 CSS ──
+    st.markdown("""
+<style>
+.vtm-cal { width:100%; border-collapse:separate; border-spacing:3px; margin-bottom:4px; }
+.vtm-cal th {
+    background:#1E293B; color:#D4AF37;
+    padding:8px 4px; text-align:center; font-weight:900;
+    font-size:0.85rem; border-radius:6px;
+}
+.vtm-cal th.wkend { background:#0B1120; color:#475569; font-size:0.78rem; }
+.vtm-cal td {
+    background:#1E293B; border-radius:8px;
+    vertical-align:top; padding:6px 5px 5px;
+    border:1.5px solid #253347;
+    min-width:0; width:14.28%;
+    height:72px;
+}
+.vtm-cal td.wkend  { background:#0D1628; border-color:#1a2538; }
+.vtm-cal td.today  { border:2px solid #D4AF37 !important; background:#1a2f50; }
+.vtm-cal td.sel    { border:2px solid #60A5FA !important; background:#1a2f60; }
+.vtm-cal td.empty  { background:transparent; border-color:transparent; }
+.vtm-cal .daynum {
+    font-size:1rem; font-weight:900; display:block;
+    margin-bottom:3px; line-height:1;
+}
+.vtm-cal .daynum.wd   { color:#F1F5F9; }
+.vtm-cal .daynum.td   { color:#D4AF37; }
+.vtm-cal .daynum.wk   { color:#4B5563; font-size:0.82rem; }
+.vtm-cal .daynum.sel  { color:#93C5FD; }
+.vtm-cal .badge {
+    display:inline-block; border-radius:3px;
+    padding:1px 4px; font-size:0.6rem;
+    font-weight:700; margin:1px 0; line-height:1.4;
+    white-space:nowrap;
+}
+.vtm-cal .b-att  { background:#059669; color:#fff; }
+.vtm-cal .b-appr { background:#0EA5E9; color:#fff; }
+.vtm-cal .b-pend { background:#D97706; color:#fff; }
+.vtm-cal .b-none { background:#374151; color:#9CA3AF; }
+.vtm-cal .b-sel  { background:#1D4ED8; color:#BFDBFE; }
+.vtm-cal td.today .daynum.td::after { content:" ★"; font-size:0.65rem; }
+</style>
+""", unsafe_allow_html=True)
 
-    # ── 주 단위 렌더 ──
+    # ── 달력 HTML 테이블 전체 조립 ──
+    html = '<table class="vtm-cal"><thead><tr>'
+    for h, cls in [("월",""),("화",""),("수",""),("목",""),("금",""),("토","wkend"),("일","wkend")]:
+        html += f'<th class="{cls}">{h}</th>'
+    html += '</tr></thead><tbody>'
+
     for week in cal_weeks:
-        cols = st.columns([1,1,1,1,1,0.6,0.6])
+        html += '<tr>'
+        for i, day in enumerate(week):
+            is_wk = (i >= 5)
+            if day == 0:
+                cls = "empty wkend" if is_wk else "empty"
+                html += f'<td class="{cls}"></td>'
+                continue
+            d = f"{yr}-{mo:02d}-{day:02d}"
+            is_td  = (d == today_str())
+            is_sel = (d == sel)
+            has_att = d in att_map
+            has_rep = d in rep_map
+            rep_st  = rep_map[d]["status"] if has_rep else None
+            rep_prg = rep_map[d]["pm_progress"] if has_rep else 0
+
+            # 셀 클래스
+            cell_cls = "wkend" if is_wk else ""
+            if is_sel:  cell_cls += " sel"
+            elif is_td: cell_cls += " today"
+
+            # 날짜 숫자 클래스
+            if is_sel:   num_cls = "sel"
+            elif is_td:  num_cls = "td"
+            elif is_wk:  num_cls = "wk"
+            else:        num_cls = "wd"
+
+            # 뱃지 조립 (평일만)
+            badges = ""
+            if not is_wk:
+                if has_att:
+                    atp_s = (att_map[d]["att_type"] or "출근")[:4]
+                    badges += f'<span class="badge b-att">✅ {atp_s}</span><br>'
+                else:
+                    badges += '<span class="badge b-none">미출근</span><br>'
+                if has_rep:
+                    if rep_st == "승인":
+                        badges += f'<span class="badge b-appr">✅ {rep_prg}%</span>'
+                    else:
+                        badges += f'<span class="badge b-pend">📋 {rep_st}</span>'
+                else:
+                    badges += '<span class="badge b-none">보고없음</span>'
+                if is_sel:
+                    badges += '<br><span class="badge b-sel">▼ 상세보기</span>'
+
+            html += (f'<td class="{cell_cls}">'
+                     f'<span class="daynum {num_cls}">{day}</span>'
+                     f'{badges}</td>')
+        html += '</tr>'
+    html += '</tbody></table>'
+    st.markdown(html, unsafe_allow_html=True)
+
+    # ── 날짜 클릭 버튼 그리드 (달력 위에 겹쳐지는 느낌) ──
+    st.markdown("""
+    <div style="background:rgba(212,175,55,0.07);border:1px solid rgba(212,175,55,0.2);
+        border-radius:8px;padding:6px 10px;margin:2px 0 6px;">
+      <span style="color:#D4AF37;font-size:0.75rem;font-weight:700;">
+          👆 아래 날짜 버튼을 눌러 상세 업무보고를 확인하세요
+      </span>
+    </div>""", unsafe_allow_html=True)
+
+    for week in cal_weeks:
+        cols = st.columns([1,1,1,1,1,0.55,0.55])
         for i, day in enumerate(week):
             with cols[i]:
-                if day == 0:
-                    st.markdown("<div style='min-height:10px'></div>", unsafe_allow_html=True)
+                if day == 0 or i >= 5:
+                    st.markdown("<div style='height:2px'></div>", unsafe_allow_html=True)
                     continue
-
-                d       = f"{yr}-{mo:02d}-{day:02d}"
-                is_wk   = (i >= 5)
-                is_td   = (d == today_str())
-                is_sel  = (d == sel)
-                has_att = d in att_map
+                d      = f"{yr}-{mo:02d}-{day:02d}"
+                is_sel = (d == sel)
+                is_td  = (d == today_str())
                 has_rep = d in rep_map
+                has_att = d in att_map
                 rep_st  = rep_map[d]["status"] if has_rep else None
-                rep_prg = rep_map[d]["pm_progress"] if has_rep else 0
 
-                if is_wk:
-                    # 주말: 작은 텍스트만
-                    wk_color = "#475569"
-                    st.markdown(
-                        f'<div style="background:#0B1120;border-radius:6px;padding:6px 2px;'
-                        f'text-align:center;min-height:62px;">'
-                        f'<span style="color:{wk_color};font-size:0.75rem;font-weight:700;">'
-                        f'{day}</span></div>',
-                        unsafe_allow_html=True)
-                else:
-                    # 평일: 버튼으로 표시
-                    # 버튼 라벨 — 날짜 + 상태 아이콘
-                    if is_sel:
-                        status_icon = "▼"
-                    elif rep_st == "승인":
-                        status_icon = "✅"
-                    elif has_rep:
-                        status_icon = "📋"
-                    elif has_att:
-                        status_icon = "🟢"
-                    else:
-                        status_icon = "○"
+                # 버튼 라벨: 간결하게
+                if is_sel:    lbl = f"▼ {day}"
+                elif rep_st == "승인": lbl = f"✅ {day}"
+                elif has_rep: lbl = f"📋 {day}"
+                elif has_att: lbl = f"🟢 {day}"
+                else:         lbl = f"   {day}"
 
-                    # 오늘 표시
-                    today_mark = " ★" if is_td else ""
+                if st.button(lbl, key=f"cd_{d}", use_container_width=True):
+                    st.session_state.cal_selected = None if is_sel else d
+                    st.rerun()
 
-                    btn_label = f"{status_icon} {day}{today_mark}"
-
-                    if st.button(btn_label, key=f"cd_{d}", use_container_width=True):
-                        st.session_state.cal_selected = None if is_sel else d
-                        st.rerun()
-
-                    # 선택된 날 아래 작은 부가정보
-                    if is_sel:
-                        st.markdown(
-                            '<div style="background:rgba(96,165,250,0.2);border:1px solid #60A5FA;'
-                            'border-radius:4px;padding:1px 3px;text-align:center;margin-top:2px;">'
-                            '<span style="color:#60A5FA;font-size:0.6rem;font-weight:900;">선택됨</span>'
-                            '</div>',
-                            unsafe_allow_html=True)
-
-        # ── 이 주(week)에 선택된 날짜가 있으면 바로 아래에 상세 펼침 ──
+        # ── 선택된 날짜가 이 주에 있으면 바로 아래에 상세 펼침 ──
         week_dates = [
             f"{yr}-{mo:02d}-{day:02d}"
             for i, day in enumerate(week)
