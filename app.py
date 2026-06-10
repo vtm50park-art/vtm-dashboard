@@ -782,19 +782,14 @@ def render_day_detail(uid, d_str):
     except Exception:
         d_label = d_str
 
-    # 헤더 + 닫기 버튼
-    hcol, xcol = st.columns([9, 1])
-    with hcol:
-        st.markdown(
-            f'<div style="background:linear-gradient(90deg,#1E293B,#0F172A);'
-            f'border:2px solid #D4AF37;border-radius:14px;padding:12px 20px;margin:6px 0 2px;">'
-            f'<span style="color:#D4AF37;font-size:1rem;font-weight:900;">'
-            f'📅 {d_label} — 상세 보기</span></div>',
-            unsafe_allow_html=True)
-    with xcol:
-        if st.button("✕ 닫기", key="cal_close", use_container_width=True):
-            st.session_state.cal_selected = None
-            st.rerun()
+    # 헤더
+    st.markdown(
+        f'<div style="background:linear-gradient(90deg,#1E293B,#0F172A);'
+        f'border:2px solid #D4AF37;border-radius:14px;padding:12px 20px;margin:6px 0 2px;">'
+        f'<span style="color:#D4AF37;font-size:1rem;font-weight:900;">'
+        f'📅 {d_label} — 상세 보기 &nbsp;<span style="font-size:0.75rem;color:#94A3B8;">'
+        f'(같은 날짜 버튼을 다시 누르면 닫힙니다)</span></span></div>',
+        unsafe_allow_html=True)
 
     # 출퇴근
     if not att.empty:
@@ -956,7 +951,6 @@ def page_emp_calendar():
     cal_weeks = calendar.monthcalendar(yr, mo)
     sel = st.session_state.cal_selected
 
-    # ── CSS ──
     st.markdown("""<style>
 table.vtm-cal {
     width:100%; border-collapse:separate; border-spacing:3px;
@@ -970,18 +964,18 @@ table.vtm-cal th.hwd  { background:#1E293B; color:#D4AF37; }
 table.vtm-cal th.hsat { background:#1a2d44; color:#93C5FD; width:8%; }
 table.vtm-cal th.hsun { background:#2a1520; color:#FCA5A5; width:8%; }
 table.vtm-cal td {
-    border-radius:8px 8px 0 0;
-    vertical-align:top; padding:7px 7px 5px; height:82px;
+    border-radius:8px 8px 0 0; vertical-align:top;
+    padding:7px 7px 5px; height:82px;
     border:1.5px solid transparent; border-bottom:none !important;
     position:relative;
 }
-table.vtm-cal td.wd  { background:#FFFFFF; border-color:#CBD5E1; }
-table.vtm-cal td.sat { background:#EFF6FF; border-color:#BFDBFE; width:8%; }
-table.vtm-cal td.sun { background:#FFF1F2; border-color:#FECDD3; width:8%; }
+table.vtm-cal td.wd    { background:#FFFFFF; border-color:#CBD5E1; }
+table.vtm-cal td.sat   { background:#EFF6FF; border-color:#BFDBFE; width:8%; }
+table.vtm-cal td.sun   { background:#FFF1F2; border-color:#FECDD3; width:8%; }
 table.vtm-cal td.today { background:#FFFBEB !important; border:2px solid #D4AF37 !important; border-bottom:none !important; }
 table.vtm-cal td.sel   { background:#EFF6FF !important; border:2px solid #3B82F6 !important; border-bottom:none !important; }
 table.vtm-cal td.empty { background:transparent !important; border:none !important; }
-table.vtm-cal .daynum { font-size:1rem; font-weight:900; display:block; margin-bottom:3px; line-height:1; }
+table.vtm-cal .daynum  { font-size:1rem; font-weight:900; display:block; margin-bottom:3px; line-height:1; }
 table.vtm-cal td.wd    .daynum { color:#1E293B; }
 table.vtm-cal td.sat   .daynum { color:#1D4ED8; }
 table.vtm-cal td.sun   .daynum { color:#BE123C; }
@@ -1007,27 +1001,42 @@ table.vtm-cal .stamp {
     background:rgba(220,38,38,0.08); transform:rotate(-15deg);
     line-height:1.1; text-align:center;
 }
-/* 버튼행: 셀 바로 아래 딱 붙이기 */
+/* 버튼 행 테이블 */
 table.vtm-btn {
     width:100%; border-collapse:separate; border-spacing:3px;
-    table-layout:fixed; margin:0 0 4px 0 !important;
+    table-layout:fixed; margin:0 0 5px 0 !important;
 }
-table.vtm-btn td { padding:0; border:none; background:transparent; }
-table.vtm-btn td.wk-btn { width:8%; }
+table.vtm-btn td      { padding:0; border:none; background:transparent; }
+table.vtm-btn td.wkc  { width:8%; }
 table.vtm-btn .cbtn {
     display:block; width:100%; padding:5px 2px;
     background:#334155; color:#CBD5E1;
     border:none; border-radius:0 0 8px 8px;
-    font-size:0.6rem; font-weight:700; letter-spacing:0.02em;
+    font-size:0.62rem; font-weight:700; letter-spacing:0.02em;
     cursor:pointer; text-align:center;
     transition:background 0.15s, color 0.15s;
 }
 table.vtm-btn .cbtn:hover { background:#1E40AF; color:#BFDBFE; }
-table.vtm-btn .cbtn-sel { background:#1E40AF; color:#BFDBFE; }
+table.vtm-btn .cbtn-sel   { background:#1E40AF; color:#BFDBFE;
+    border:none; border-radius:0 0 8px 8px;
+    display:block; width:100%; padding:5px 2px;
+    font-size:0.62rem; font-weight:700; cursor:pointer; text-align:center; }
 table.vtm-btn .cbtn-sel:hover { background:#1e3a8a; }
+
+/* Streamlit 트리거 버튼: 화면 밖으로 (display:none 쓰지 않아야 JS .click() 작동) */
+[data-testid="stMarkdownContainer"]:has(table.vtm-btn)
+  ~ div:has([data-testid="stButton"]) {
+    position: fixed !important;
+    left: -9999px !important;
+    top: -9999px !important;
+    width: 1px !important;
+    height: 1px !important;
+    overflow: hidden !important;
+    opacity: 0 !important;
+}
 </style>""", unsafe_allow_html=True)
 
-    # ── 달력 + 버튼을 주 단위로 렌더 ──
+    # 달력 헤더
     st.markdown("""<table class="vtm-cal"><thead><tr>
         <th class="hwd">월</th><th class="hwd">화</th>
         <th class="hwd">수</th><th class="hwd">목</th>
@@ -1035,83 +1044,83 @@ table.vtm-btn .cbtn-sel:hover { background:#1e3a8a; }
         <th class="hsat">토</th><th class="hsun">일</th>
     </tr></thead></table>""", unsafe_allow_html=True)
 
+    # 주 단위 렌더
     for wi, week in enumerate(cal_weeks):
-        # 달력 셀 행
-        html = '<table class="vtm-cal"><tbody><tr>'
+        # ① 달력 셀 행
+        cells = '<table class="vtm-cal"><tbody><tr>'
         for i, day in enumerate(week):
-            is_sat = (i==5); is_sun = (i==6); is_wk = is_sat or is_sun
+            is_sat=(i==5); is_sun=(i==6); is_wk=is_sat or is_sun
             if day == 0:
-                html += '<td class="empty"></td>'; continue
+                cells += '<td class="empty"></td>'; continue
             d = f"{yr}-{mo:02d}-{day:02d}"
-            is_td = (d == today_str()); is_sel = (d == sel)
-            has_att = d in att_map; has_rep = d in rep_map
+            is_td=(d==today_str()); is_sel=(d==sel)
+            has_att=d in att_map; has_rep=d in rep_map
             rep_st  = rep_map[d]["status"]      if has_rep else None
             rep_prg = rep_map[d]["pm_progress"] if has_rep else 0
             base = "sun" if is_sun else ("sat" if is_sat else "wd")
             cls  = base + (" sel" if is_sel else (" today" if is_td else ""))
             badges = ""
             if not is_wk:
-                badges += (f'<span class="badge b-att">✅ {(att_map[d]["att_type"] or "출근")[:4]}</span><br>' if has_att
-                           else '<span class="badge b-none">미출근</span><br>')
+                if has_att:
+                    atp_s = (att_map[d]["att_type"] or "출근")[:4]
+                    badges += f'<span class="badge b-att">✅ {atp_s}</span><br>'
+                else:
+                    badges += '<span class="badge b-none">미출근</span><br>'
                 if has_rep:
-                    if rep_st == "승인":   badges += f'<span class="badge b-ok">📋 {rep_prg}%</span>'
-                    elif rep_st == "반려": badges += '<span class="badge b-rjct">❌ 반려</span>'
-                    elif rep_st == "보류": badges += '<span class="badge b-hold">⏸ 보류</span>'
-                    else:                  badges += f'<span class="badge b-pend">⏳ {rep_st}</span>'
+                    if rep_st=="승인":   badges += f'<span class="badge b-ok">📋 {rep_prg}%</span>'
+                    elif rep_st=="반려": badges += '<span class="badge b-rjct">❌ 반려</span>'
+                    elif rep_st=="보류": badges += '<span class="badge b-hold">⏸ 보류</span>'
+                    else:               badges += f'<span class="badge b-pend">⏳ {rep_st}</span>'
                 else:
                     badges += '<span class="badge b-none">보고없음</span>'
-            stamp = ('<div class="stamp">승<br>인</div>' if has_rep and rep_st=="승인" and not is_wk else "")
-            html += f'<td class="{cls}">{stamp}<span class="daynum">{day}</span>{badges}</td>'
-        html += "</tr></tbody></table>"
-        st.markdown(html, unsafe_allow_html=True)
+            stamp = '<div class="stamp">승<br>인</div>' if (has_rep and rep_st=="승인" and not is_wk) else ""
+            cells += f'<td class="{cls}">{stamp}<span class="daynum">{day}</span>{badges}</td>'
+        cells += '</tr></tbody></table>'
+        st.markdown(cells, unsafe_allow_html=True)
 
-        # 버튼 행 (별도 테이블, 셀과 동일한 border-spacing으로 완벽 정렬)
-        btn_html = '<table class="vtm-btn"><tbody><tr>'
+        # ② 버튼 행 (HTML, vtm-btn 테이블)
+        btns = '<table class="vtm-btn"><tbody><tr>'
         for i, day in enumerate(week):
             is_wk = (i >= 5)
             if day == 0:
-                btn_html += '<td></td>' if not is_wk else '<td class="wk-btn"></td>'
-                continue
+                btns += '<td class="wkc"></td>' if is_wk else '<td></td>'; continue
             d = f"{yr}-{mo:02d}-{day:02d}"
             if is_wk:
-                btn_html += '<td class="wk-btn"></td>'
+                btns += '<td class="wkc"></td>'
             else:
                 is_sel = (d == sel)
                 bcls = "cbtn-sel" if is_sel else "cbtn"
                 lbl  = "▲ 닫기" if is_sel else "상세내역 확인"
-                btn_html += f'<td><button class="{bcls}" data-d="{d}" onclick="vtmCalClick(this)">{lbl}</button></td>'
-        btn_html += "</tr></tbody></table>"
-        st.markdown(btn_html, unsafe_allow_html=True)
+                btns += f'<td><button class="{bcls}" data-d="{d}" onclick="vtmCalClick(this)">{lbl}</button></td>'
+        btns += '</tr></tbody></table>'
+        st.markdown(btns, unsafe_allow_html=True)
 
-        # 선택된 날짜 상세
+        # ③ 상세 카드
         week_dates = [f"{yr}-{mo:02d}-{day:02d}" for i,day in enumerate(week) if day!=0 and i<5]
         if sel in week_dates:
             render_day_detail(uid, sel)
 
-    # JS: HTML 버튼 클릭 → 숨겨진 Streamlit 버튼 트리거
+    # JS 클릭 핸들러
     st.markdown("""<script>
 function vtmCalClick(btn) {
-  var d = btn.getAttribute('data-d');
-  var all = window.parent.document.querySelectorAll('button');
-  for (var i=0; i<all.length; i++) {
-    var t = all[i].innerText.trim();
-    if (t === d) { all[i].click(); return; }
-  }
+    var d = btn.getAttribute('data-d');
+    var all = window.parent.document.querySelectorAll('button');
+    for (var i = 0; i < all.length; i++) {
+        if (all[i].textContent.trim() === d) {
+            all[i].click();
+            return;
+        }
+    }
 }
 </script>""", unsafe_allow_html=True)
 
-    # 숨겨진 Streamlit 버튼 (CSS로 완전히 숨김, 크기 0)
-    st.markdown("""<style>
-div[data-testid="stVerticalBlock"] > div[data-testid="stVerticalBlock"]:last-child
-    .stButton > button { display:none !important; }
-</style>""", unsafe_allow_html=True)
-
+    # Streamlit 트리거 버튼 (CSS로 화면 밖 배치, JS가 클릭)
     all_wd = [f"{yr}-{mo:02d}-{day:02d}"
               for week in cal_weeks for i,day in enumerate(week)
-              if day!=0 and i<5]
+              if day != 0 and i < 5]
     for d in all_wd:
         if st.button(d, key=f"hb_{d}"):
-            st.session_state.cal_selected = None if d==sel else d
+            st.session_state.cal_selected = None if d == sel else d
             st.rerun()
 
 
