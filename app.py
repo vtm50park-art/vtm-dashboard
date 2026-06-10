@@ -320,30 +320,8 @@ label,.stTextInput label,.stSelectbox label,.stTextArea label,
     vertical-align:middle;
 }}
 
-/* ── 달력 투명 클릭 버튼: HTML 셀 바로 위에 올리기 ── */
-div[data-testid="stHorizontalBlock"]:has(button[key^="cd_"]) {
-    margin-top: -88px !important;
-    position: relative;
-    z-index: 20;
-}
-div[data-testid="stHorizontalBlock"]:has(button[key^="cd_"])
-    .stButton > button {
-    background: transparent !important;
-    border: none !important;
-    box-shadow: none !important;
-    color: transparent !important;
-    height: 85px !important;
-    min-height: 85px !important;
-    padding: 0 !important;
-    border-radius: 8px !important;
-    cursor: pointer !important;
-}
-div[data-testid="stHorizontalBlock"]:has(button[key^="cd_"])
-    .stButton > button:hover {
-    background: rgba(59,130,246,0.10) !important;
-    transform: none !important;
-    box-shadow: none !important;
-}
+/* ── 달력 투명 클릭 버튼 CSS는 page_emp_calendar() 안에서 별도 주입 ── */
+
 </style>
  
 <canvas id="vtm-stars" style="position:fixed;top:0;left:0;
@@ -1054,28 +1032,29 @@ def page_emp_calendar():
     transform:rotate(-15deg); line-height:1.1; text-align:center;
 }
 
-/* ── 클릭 버튼: 셀 위에 완전 투명하게 덮기 ── */
-.cal-btn-wrap {
-    position:relative; margin-bottom:0;
+/* ── 투명 클릭 버튼: 달력 셀 위에 겹치기 ── */
+.cal-btn-row {
+    margin-top: -88px !important;
+    position: relative;
+    z-index: 20;
+    pointer-events: none;
 }
-.cal-btn-wrap .stButton {
-    position:absolute; top:0; left:0;
-    width:100%; height:100%; z-index:10;
+.cal-btn-row .stButton { pointer-events: all; }
+.cal-btn-row .stButton > button {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    color: transparent !important;
+    height: 85px !important;
+    min-height: 85px !important;
+    padding: 0 !important;
+    border-radius: 8px !important;
+    cursor: pointer !important;
 }
-.cal-btn-wrap .stButton>button {
-    background:transparent !important;
-    border:none !important;
-    box-shadow:none !important;
-    color:transparent !important;
-    width:100% !important; height:82px !important;
-    padding:0 !important;
-    cursor:pointer !important;
-    border-radius:8px !important;
-}
-.cal-btn-wrap .stButton>button:hover {
-    background:rgba(59,130,246,0.08) !important;
-    transform:none !important;
-    box-shadow:none !important;
+.cal-btn-row .stButton > button:hover {
+    background: rgba(59,130,246,0.09) !important;
+    transform: none !important;
+    box-shadow: none !important;
 }
 </style>""", unsafe_allow_html=True)
 
@@ -1139,6 +1118,7 @@ def page_emp_calendar():
         st.markdown(html, unsafe_allow_html=True)
 
         # 2) 투명 버튼 행 — st.columns 7칸, 평일만 버튼
+        st.markdown('<div class="cal-btn-row">', unsafe_allow_html=True)
         cols = st.columns([1,1,1,1,1,0.6,0.6])
         for i, day in enumerate(week):
             with cols[i]:
@@ -1151,6 +1131,7 @@ def page_emp_calendar():
                 if st.button(" ", key=f"cd_{d}", use_container_width=True):
                     st.session_state.cal_selected = None if is_sel else d
                     st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
 
         # 3) 선택된 날짜 있으면 상세 펼침
         week_dates = [
