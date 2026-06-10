@@ -1,4 +1,4 @@
-# vtm_dashboard.py  ← 버그 수정판 (admin tasks HTML escape + 승인 버튼 표시 fix)
+# vtm_dashboard.py  ← 버그 수정판 v2 (input box ivory gradient + 글자 검정)
 import streamlit as st
 import sqlite3
 import pandas as pd
@@ -227,28 +227,52 @@ button[kind="header"],
 }}
 .tb-title {{ color:#D4AF37 !important; font-size:1.05rem; font-weight:900; }}
 .tb-info  {{ color:#94A3B8 !important; font-size:0.8rem; font-weight:700; }}
- 
+
+/* ─── 입력 필드: 아이보리 그라데이션 + 검정 글자 ─── */
 .stTextInput>div>div>input,
 .stNumberInput>div>div>input {{
-    background: #1E293B !important; color: #F1F5F9 !important;
-    border: 1px solid #334155 !important; border-radius: 8px !important; font-weight: 700 !important;
+    background: linear-gradient(135deg,#FFFFF0 0%,#FFF8E7 50%,#FAEBD7 100%) !important;
+    color: #111111 !important;
+    border: 1.5px solid #C8A84B !important;
+    border-radius: 8px !important;
+    font-weight: 700 !important;
+}}
+.stTextInput>div>div>input::placeholder,
+.stNumberInput>div>div>input::placeholder {{
+    color: #7A6030 !important;
+    font-weight: 500 !important;
+    opacity: 1 !important;
 }}
 .stTextArea textarea {{
-    background: #1E293B !important; color: #F1F5F9 !important;
-    border: 1px solid #334155 !important; border-radius: 8px !important; font-weight: 600 !important;
+    background: linear-gradient(135deg,#FFFFF0 0%,#FFF8E7 50%,#FAEBD7 100%) !important;
+    color: #111111 !important;
+    border: 1.5px solid #C8A84B !important;
+    border-radius: 8px !important;
+    font-weight: 600 !important;
+}}
+.stTextArea textarea::placeholder {{
+    color: #7A6030 !important;
+    font-weight: 500 !important;
+    opacity: 1 !important;
 }}
 .stSelectbox>div>div {{
-    background: #1E293B !important; border: 1px solid #334155 !important; border-radius: 8px !important;
+    background: linear-gradient(135deg,#FFFFF0 0%,#FFF8E7 100%) !important;
+    border: 1.5px solid #C8A84B !important;
+    border-radius: 8px !important;
 }}
-.stSelectbox * {{ color: #F1F5F9 !important; font-weight: 700 !important; }}
+.stSelectbox * {{ color: #111111 !important; font-weight: 700 !important; }}
 .stDateInput>div>div>input {{
-    background: #1E293B !important; color: #F1F5F9 !important;
-    border: 1px solid #334155 !important; border-radius: 8px !important;
+    background: linear-gradient(135deg,#FFFFF0 0%,#FAEBD7 100%) !important;
+    color: #111111 !important;
+    border: 1.5px solid #C8A84B !important;
+    border-radius: 8px !important;
 }}
 .stMultiSelect>div>div {{
-    background: #1E293B !important; border: 1px solid #334155 !important; border-radius: 8px !important;
+    background: linear-gradient(135deg,#FFFFF0 0%,#FFF8E7 100%) !important;
+    border: 1.5px solid #C8A84B !important;
+    border-radius: 8px !important;
 }}
-.stMultiSelect * {{ color: #F1F5F9 !important; font-weight: 700 !important; }}
+.stMultiSelect * {{ color: #111111 !important; font-weight: 700 !important; }}
  
 label,.stTextInput label,.stSelectbox label,.stTextArea label,
 .stSlider label,.stNumberInput label,.stDateInput label,.stMultiSelect label {{
@@ -692,13 +716,15 @@ def page_emp_report():
         st.markdown("<div class='vtm-card'><h3>🌇 퇴근 결과 보고</h3></div>", unsafe_allow_html=True)
         pm_done = st.text_area("✅ 완료한 업무",
             value=safe_str(exist.iloc[0]["pm_done"]) or "" if not exist.empty else "",
-            height=100, placeholder="오늘 완료한 업무 상세히...")
+            height=100, placeholder="오늘 완료한 업무를 상세히 입력하세요...")
         pm_progress = st.slider("📊 전체 진행률 (%)", 0, 100,
             value=int(exist.iloc[0]["pm_progress"]) if not exist.empty else 0, step=5)
         pm_tomorrow = st.text_area("📅 내일 예정",
-            value=safe_str(exist.iloc[0]["pm_tomorrow"]) or "" if not exist.empty else "", height=75)
+            value=safe_str(exist.iloc[0]["pm_tomorrow"]) or "" if not exist.empty else "",
+            height=75, placeholder="내일 진행할 업무를 입력하세요...")
         pm_remarks = st.text_area("💬 특이사항",
-            value=safe_str(exist.iloc[0]["pm_remarks"]) or "" if not exist.empty else "", height=75)
+            value=safe_str(exist.iloc[0]["pm_remarks"]) or "" if not exist.empty else "",
+            height=75, placeholder="이슈, 공유사항 등을 입력하세요...")
         st.markdown("""<div class='vtm-card'>
           <h3>🔗 산출물 링크</h3>
           <p style="font-size:0.8rem;color:#64748B;">
@@ -901,7 +927,7 @@ def page_admin_attend():
                   </span></div>""", unsafe_allow_html=True)
  
 # ═══════════════════════════════════════════
-#  관리자: 업무 현황  ← 핵심 수정 부분
+#  관리자: 업무 현황
 # ═══════════════════════════════════════════
 def page_admin_tasks():
     topbar("📊 업무 현황")
@@ -932,19 +958,16 @@ def page_admin_tasks():
         status = safe_str(r["status"]) or "대기중"
         sc     = {"승인":"#10B981","대기중":"#F59E0B","반려":"#EF4444"}.get(status, "#6B7280")
  
-        # ── 링크 안전 처리 ──
         dl_val = safe_str(r["drive_link"])
         rl_val = safe_str(r["result_link"])
         dl_html = f'<a href="{dl_val}" target="_blank" style="color:#3B82F6;font-weight:700;">링크열기</a>' if dl_val else "없음"
         rl_html = f'<a href="{rl_val}" target="_blank" style="color:#3B82F6;font-weight:700;">링크열기</a>' if rl_val else "없음"
  
-        # ── 텍스트 필드 안전 처리 (HTML 인젝션 방지) ──
         am_tasks_txt  = safe_str(r["am_tasks"])  or "미입력"
         pm_done_txt   = safe_str(r["pm_done"])   or "미입력"
         cmt_val       = safe_str(r["admin_comment"]) or ""
         prg_val       = r["pm_progress"] if safe_str(str(r["pm_progress"])) else 0
  
-        # ── HTML 카드: </div> 노출 버그 제거 → 문자열 조립 방식 변경 ──
         card_parts = [
             f'<div class="vtm-card">',
             f'  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">',
@@ -961,7 +984,6 @@ def page_admin_tasks():
         card_parts.append('</div>')
         st.markdown("\n".join(card_parts), unsafe_allow_html=True)
  
-        # ── 코멘트 입력 + 승인/반려/보류 버튼 (HTML 완전히 닫힌 뒤 Streamlit 위젯 렌더) ──
         cmt_input = st.text_input(
             "💬 코멘트 입력 (선택사항)",
             key=f"tcmt_{rid}",
