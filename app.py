@@ -973,23 +973,27 @@ table.vtm-cal th.hwd  { background:#1E293B; color:#D4AF37; }
 table.vtm-cal th.hsat { background:#1a2d44; color:#93C5FD; }
 table.vtm-cal th.hsun { background:#2a1520; color:#FCA5A5; }
 table.vtm-cal td {
-    border-radius:8px; vertical-align:top;
-    padding:7px 7px 5px; height:85px;
-    border:1.5px solid transparent; position:relative;
+    /* 위 모서리만 라운드 — 버튼과 한 세트 */
+    border-radius:8px 8px 0 0;
+    vertical-align:top;
+    padding:7px 7px 5px; height:82px;
+    border:1.5px solid transparent;
+    border-bottom:none !important;
+    position:relative;
 }
 table.vtm-cal td.wd {
     background:#FFFFFF; border-color:#CBD5E1;
-    box-shadow:0 1px 4px rgba(0,0,0,0.08);
+    box-shadow:0 1px 4px rgba(0,0,0,0.06);
 }
 table.vtm-cal td.sat { background:#EFF6FF; border-color:#BFDBFE; width:10%; }
 table.vtm-cal td.sun { background:#FFF1F2; border-color:#FECDD3; width:10%; }
 table.vtm-cal td.today {
     background:#FFFBEB !important; border:2px solid #D4AF37 !important;
-    box-shadow:0 0 10px rgba(212,175,55,0.2);
+    border-bottom:none !important;
 }
 table.vtm-cal td.sel {
     background:#EFF6FF !important; border:2px solid #3B82F6 !important;
-    box-shadow:0 0 12px rgba(59,130,246,0.25);
+    border-bottom:none !important;
 }
 table.vtm-cal td.empty { background:transparent !important; border:none !important; }
 table.vtm-cal .daynum {
@@ -1022,53 +1026,57 @@ table.vtm-cal .stamp {
     transform:rotate(-15deg); line-height:1.1; text-align:center;
 }
 
-/* ── 핵심: HTML 테이블 바로 다음 st.columns 행을 위로 끌어올려 겹치기 ── */
+/* ── 버튼 행: 달력 셀 바로 아래에 딱 붙는 탭 ── */
+/* margin-top 으로 위로 당기는 대신, 버튼 자체를 셀 하단 탭처럼 스타일링 */
 [data-testid="stMarkdownContainer"]:has(table.vtm-cal)
   + [data-testid="stHorizontalBlock"] {
-    margin-top: -93px !important;
+    margin-top: -4px !important;
     position: relative !important;
-    z-index: 20 !important;
+    z-index: 5 !important;
+    gap: 3px !important;
 }
-/* 버튼 기본 스타일 — 달력 셀 크기에 맞춘 반투명 버튼 */
+/* 모든 버튼 공통 기반 */
 [data-testid="stMarkdownContainer"]:has(table.vtm-cal)
   + [data-testid="stHorizontalBlock"] .stButton > button {
-    background: rgba(15, 23, 42, 0.45) !important;
-    border: none !important;
-    box-shadow: none !important;
-    color: rgba(148, 163, 184, 0.75) !important;
-    height: 89px !important;
-    min-height: 89px !important;
+    /* 아래 모서리만 라운드 — 셀과 한 세트 */
+    border-radius: 0 0 8px 8px !important;
+    height: 28px !important;
+    min-height: 28px !important;
     padding: 0 4px !important;
-    border-radius: 8px !important;
-    transform: none !important;
-    font-size: 0.6rem !important;
+    font-size: 0.58rem !important;
     font-weight: 700 !important;
-    letter-spacing: 0.04em !important;
-    white-space: normal !important;
-    line-height: 1.3 !important;
+    letter-spacing: 0.03em !important;
+    line-height: 1 !important;
     text-align: center !important;
-    display: flex !important;
-    align-items: flex-end !important;
-    justify-content: center !important;
-    padding-bottom: 6px !important;
+    transform: none !important;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.12) !important;
+    width: 100% !important;
+    /* 기본: 평일 — 슬레이트 그레이 */
+    background: #475569 !important;
+    color: #E2E8F0 !important;
+    border: 1.5px solid #CBD5E1 !important;
+    border-top: none !important;
 }
-/* 비활성(주말/빈칸) 버튼 */
+/* 평일 hover */
+[data-testid="stMarkdownContainer"]:has(table.vtm-cal)
+  + [data-testid="stHorizontalBlock"] .stButton > button:not(:disabled):hover {
+    background: #1E40AF !important;
+    color: #BFDBFE !important;
+    border-color: #3B82F6 !important;
+    box-shadow: 0 3px 10px rgba(59,130,246,0.3) !important;
+    cursor: pointer !important;
+    transform: none !important;
+}
+/* 비활성(주말·빈칸) */
 [data-testid="stMarkdownContainer"]:has(table.vtm-cal)
   + [data-testid="stHorizontalBlock"] .stButton > button:disabled {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    color: transparent !important;
     cursor: default !important;
     pointer-events: none !important;
     opacity: 1 !important;
-    color: transparent !important;
-    background: transparent !important;
-}
-/* 평일 버튼 hover */
-[data-testid="stMarkdownContainer"]:has(table.vtm-cal)
-  + [data-testid="stHorizontalBlock"] .stButton > button:not(:disabled):hover {
-    background: rgba(59, 130, 246, 0.18) !important;
-    color: #93C5FD !important;
-    cursor: pointer !important;
-    border: 1.5px solid rgba(96,165,250,0.5) !important;
-    box-shadow: 0 2px 12px rgba(59,130,246,0.2) !important;
 }
 </style>""", unsafe_allow_html=True)
 
@@ -1574,5 +1582,4 @@ else:
                 font-size:0.74rem;font-weight:700;position:relative;z-index:1;">
         © 2026 (주) 브이티엠 운영 대시보드 v1.0 &nbsp;|&nbsp; 개발자: 박동진 본부장
     </div>""", unsafe_allow_html=True)
-
 
