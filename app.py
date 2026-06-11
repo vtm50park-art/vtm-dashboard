@@ -512,13 +512,15 @@ def render_sidebar():
             ("admin_emp",     "👥 직원관리",False),
             ("admin_excel",   "📥 엑셀",    False),
             ("admin_logs",    "🔍 로그",    False),
+            ("emp_guide",     "📋 VTM WAY", False),
         ]
     else:
         menus = [
-            ("home",         "🏠 홈",     True),
-            ("emp_attend",   "⏰ 출퇴근", False),
-            ("emp_report",   "📝 업무보고",False),
-            ("emp_calendar", "📅 달력",   False),
+            ("home",         "🏠 홈",       True),
+            ("emp_attend",   "⏰ 출퇴근",   False),
+            ("emp_report",   "📝 업무보고", False),
+            ("emp_calendar", "📅 달력",     False),
+            ("emp_guide",    "📋 VTM WAY",  False),
         ]
  
     cols = st.columns([1] * len(menus) + [1])
@@ -1128,8 +1130,304 @@ div:has(> .cmark) + div [data-testid="stColumn"] {
 
 
 # ═══════════════════════════════════════════
-#  관리자: 홈
+#  직원: VTM 사규 / VTM WAY
 # ═══════════════════════════════════════════
+def page_emp_guide():
+    topbar("📋 VTM WAY")
+    st.markdown("""
+<style>
+.vtm-guide-wrap {
+    max-width: 860px; margin: 0 auto; padding: 0 4px;
+    position: relative; z-index: 1;
+}
+.vtm-guide-hero {
+    background: linear-gradient(135deg, #0F172A 0%, #1E293B 60%, #0F172A 100%);
+    border: 1px solid rgba(212,175,55,0.45);
+    border-radius: 18px;
+    padding: 36px 40px 28px;
+    text-align: center;
+    margin-bottom: 20px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+}
+.vtm-guide-hero .en-title {
+    font-size: 0.82rem; font-weight: 900; letter-spacing: 0.22em;
+    color: #D4AF37; margin-bottom: 8px;
+}
+.vtm-guide-hero .ko-title {
+    font-size: 1.55rem; font-weight: 900; color: #F1F5F9;
+    margin-bottom: 10px; letter-spacing: 0.04em;
+}
+.vtm-guide-hero .tagline {
+    font-size: 0.95rem; color: #94A3B8; font-weight: 700;
+    line-height: 1.6;
+}
+.vtm-guide-hero .gold-line {
+    width: 60px; height: 2px;
+    background: linear-gradient(90deg, transparent, #D4AF37, transparent);
+    margin: 14px auto;
+}
+.vtm-section {
+    background: linear-gradient(135deg, #1E293B 0%, #162032 100%);
+    border: 1px solid #2D3F55;
+    border-radius: 14px;
+    padding: 24px 28px;
+    margin-bottom: 14px;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.25);
+}
+.vtm-section-title {
+    font-size: 0.72rem; font-weight: 900; letter-spacing: 0.18em;
+    color: #D4AF37; text-transform: uppercase;
+    margin-bottom: 14px; display: flex; align-items: center; gap: 8px;
+}
+.vtm-section-title::after {
+    content: ""; flex: 1; height: 1px;
+    background: linear-gradient(90deg, rgba(212,175,55,0.4), transparent);
+}
+.vtm-value-item {
+    display: flex; align-items: flex-start; gap: 12px;
+    padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+.vtm-value-item:last-child { border-bottom: none; }
+.vtm-value-num {
+    min-width: 28px; height: 28px; border-radius: 50%;
+    background: linear-gradient(135deg, #D4AF37, #B8860B);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.72rem; font-weight: 900; color: #000;
+    flex-shrink: 0; margin-top: 1px;
+}
+.vtm-value-text { color: #E2E8F0; font-size: 0.9rem; font-weight: 700; line-height: 1.5; }
+.vtm-rule-grid {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 10px; margin-top: 2px;
+}
+.vtm-rule-card {
+    background: rgba(15,23,42,0.6);
+    border: 1px solid rgba(212,175,55,0.2);
+    border-radius: 10px; padding: 14px 16px;
+}
+.vtm-rule-card .rc-label {
+    font-size: 0.68rem; font-weight: 900; color: #D4AF37;
+    letter-spacing: 0.1em; margin-bottom: 6px;
+}
+.vtm-rule-card .rc-val {
+    font-size: 0.88rem; font-weight: 700; color: #F1F5F9;
+}
+.vtm-rule-card .rc-sub {
+    font-size: 0.76rem; color: #94A3B8; font-weight: 600; margin-top: 2px;
+}
+.vtm-badge-row {
+    display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px;
+}
+.vtm-badge {
+    background: rgba(212,175,55,0.12);
+    border: 1px solid rgba(212,175,55,0.35);
+    border-radius: 20px; padding: 5px 14px;
+    font-size: 0.78rem; font-weight: 700; color: #D4AF37;
+}
+.vtm-bullet { list-style: none; padding: 0; margin: 0; }
+.vtm-bullet li {
+    padding: 5px 0 5px 20px; position: relative;
+    color: #E2E8F0; font-size: 0.88rem; font-weight: 600;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+.vtm-bullet li:last-child { border-bottom: none; }
+.vtm-bullet li::before {
+    content: "▸"; position: absolute; left: 0;
+    color: #D4AF37; font-size: 0.72rem; top: 7px;
+}
+.vtm-highlight {
+    background: linear-gradient(135deg, rgba(212,175,55,0.08), rgba(212,175,55,0.04));
+    border-left: 3px solid #D4AF37;
+    border-radius: 0 8px 8px 0;
+    padding: 12px 16px;
+    margin: 8px 0;
+    color: #E2E8F0; font-size: 0.88rem; font-weight: 700; line-height: 1.6;
+}
+.vtm-promise {
+    background: linear-gradient(135deg, #0F172A, #1a2540);
+    border: 1.5px solid rgba(212,175,55,0.5);
+    border-radius: 14px; padding: 22px 26px;
+    text-align: center; margin-top: 6px;
+}
+.vtm-promise p { color: #CBD5E1; font-size: 0.9rem; font-weight: 700;
+    line-height: 1.8; margin: 0; }
+.vtm-promise .gold { color: #D4AF37; font-weight: 900; }
+</style>
+
+<div class="vtm-guide-wrap">
+
+  <!-- 히어로 -->
+  <div class="vtm-guide-hero">
+    <div class="en-title">VTM OS 1.0 &nbsp;·&nbsp; COMPANY GUIDE</div>
+    <div class="ko-title">VTM WAY</div>
+    <div class="gold-line"></div>
+    <div class="tagline">WE GROW TOGETHER, WE GO FURTHER<br>
+      <span style="font-size:0.85rem;color:#64748B;">우리는 함께 성장하는 사람들이 더 큰 가치를 만들어가는 문화를 추구합니다.</span>
+    </div>
+  </div>
+
+  <!-- 핵심 가치 -->
+  <div class="vtm-section">
+    <div class="vtm-section-title">🏆 &nbsp;핵심 가치</div>
+    <div class="vtm-value-item"><div class="vtm-value-num">1</div><div class="vtm-value-text">성장하는 과정을 중요하게 생각합니다.</div></div>
+    <div class="vtm-value-item"><div class="vtm-value-num">2</div><div class="vtm-value-text">혼자 일하지 않습니다.</div></div>
+    <div class="vtm-value-item"><div class="vtm-value-num">3</div><div class="vtm-value-text">책임감을 행동으로 보여줍니다.</div></div>
+    <div class="vtm-value-item"><div class="vtm-value-num">4</div><div class="vtm-value-text">긍정적인 조직 문화를 만듭니다.</div></div>
+    <div class="vtm-value-item"><div class="vtm-value-num">5</div><div class="vtm-value-text">변화와 도전을 두려워하지 않습니다.</div></div>
+    <div class="vtm-value-item"><div class="vtm-value-num">6</div><div class="vtm-value-text">회사의 성장을 함께 만들어 갑니다.</div></div>
+  </div>
+
+  <!-- 근태 규정 -->
+  <div class="vtm-section">
+    <div class="vtm-section-title">⏰ &nbsp;근태 규정</div>
+    <div class="vtm-rule-grid">
+      <div class="vtm-rule-card">
+        <div class="rc-label">출근</div>
+        <div class="rc-val">오전 9:30 이전</div>
+        <div class="rc-sub">출근 후 VTM OS 전산 체크</div>
+      </div>
+      <div class="vtm-rule-card">
+        <div class="rc-label">퇴근</div>
+        <div class="rc-val">17:00</div>
+        <div class="rc-sub">불필요한 야근·연장 지양</div>
+      </div>
+      <div class="vtm-rule-card">
+        <div class="rc-label">오전 근무</div>
+        <div class="rc-val">10:00 ~ 11:50</div>
+      </div>
+      <div class="vtm-rule-card">
+        <div class="rc-label">점심시간</div>
+        <div class="rc-val">11:50 ~ 13:00</div>
+      </div>
+      <div class="vtm-rule-card">
+        <div class="rc-label">오후 근무</div>
+        <div class="rc-val">13:00 ~ 17:00</div>
+      </div>
+      <div class="vtm-rule-card">
+        <div class="rc-label">휴무</div>
+        <div class="rc-val">토 · 일 · 공휴일</div>
+        <div class="rc-sub">국공휴일 및 법정공휴일</div>
+      </div>
+    </div>
+    <div class="vtm-highlight" style="margin-top:12px;">
+      ⚠️ 개인 사정으로 지각 시 <strong>사전 공유 원칙</strong>
+    </div>
+  </div>
+
+  <!-- 휴가 규정 -->
+  <div class="vtm-section">
+    <div class="vtm-section-title">🌴 &nbsp;휴가 규정</div>
+    <div class="vtm-rule-grid">
+      <div class="vtm-rule-card">
+        <div class="rc-label">월차</div>
+        <div class="rc-val">월 1회</div>
+        <div class="rc-sub">전월 만근 시 제공</div>
+      </div>
+      <div class="vtm-rule-card">
+        <div class="rc-label">오전 반차</div>
+        <div class="rc-val">오후 2시 출근</div>
+      </div>
+      <div class="vtm-rule-card">
+        <div class="rc-label">오후 반차</div>
+        <div class="rc-val">오후 2시 퇴근</div>
+      </div>
+      <div class="vtm-rule-card">
+        <div class="rc-label">긴급 상황</div>
+        <div class="rc-val">즉시 본부장 연락</div>
+        <div class="rc-sub">갑작스러운 개인 일정 발생 시</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 사무실 운영 -->
+  <div class="vtm-section">
+    <div class="vtm-section-title">🏢 &nbsp;사무실 운영 규정</div>
+    <div class="vtm-rule-grid">
+      <div class="vtm-rule-card">
+        <div class="rc-label">화요일</div>
+        <div class="rc-val">분리수거</div>
+        <div class="rc-sub">퇴근 전 전 직원 진행</div>
+      </div>
+      <div class="vtm-rule-card">
+        <div class="rc-label">금요일</div>
+        <div class="rc-val">16:30 청소</div>
+        <div class="rc-sub">청소 완료 후 퇴근</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 업무 운영 원칙 -->
+  <div class="vtm-section">
+    <div class="vtm-section-title">📌 &nbsp;업무 운영 원칙</div>
+    <ul class="vtm-bullet">
+      <li><strong>결과 중심 문화</strong> — 결과를 만들기 위한 노력과 과정의 공유 모두 중요합니다.</li>
+      <li><strong>모든 업무 흐름</strong>은 VTM OS를 통해 관리하며, 현황이 항상 확인 가능해야 합니다.</li>
+      <li><strong>결과물 관리</strong> — 모든 결과물은 공용 Google Drive에 업로드합니다. 개인 PC 보관만으로 업무를 종료할 수 없습니다.</li>
+    </ul>
+  </div>
+
+  <!-- AI 사용 규정 -->
+  <div class="vtm-section">
+    <div class="vtm-section-title">🤖 &nbsp;AI 프로그램 사용 규정</div>
+    <div style="color:#94A3B8;font-size:0.78rem;font-weight:700;margin-bottom:10px;">자유롭게 활용 가능한 프로그램</div>
+    <div class="vtm-badge-row">
+      <span class="vtm-badge">ChatGPT</span>
+      <span class="vtm-badge">Gemini</span>
+      <span class="vtm-badge">Claude</span>
+      <span class="vtm-badge">Genspark</span>
+    </div>
+    <div class="vtm-highlight" style="margin-top:14px;">
+      📢 <strong>텔레그램 공유 의무</strong><br>
+      <span style="font-size:0.84rem;color:#CBD5E1;">위 4개 외 AI·자동화 툴은 사용 시작 및 종료 시 텔레그램 업무방에 공유합니다.<br>
+      점심시간 전 반드시 사용 중인 프로그램 종료 공유 후 식사합니다.</span>
+    </div>
+  </div>
+
+  <!-- 커뮤니케이션 규정 -->
+  <div class="vtm-section">
+    <div class="vtm-section-title">💬 &nbsp;커뮤니케이션 규정</div>
+    <ul class="vtm-bullet">
+      <li>현재 진행 상황은 항상 확인 가능해야 합니다.</li>
+      <li>업무 중 어려움이 있으면 혼자 해결하려 하지 않고 적극적으로 공유합니다.</li>
+      <li>새로운 서비스·프로젝트·사업 아이디어는 반드시 <strong>본부장과 사전 소통</strong> 후 진행합니다.</li>
+    </ul>
+    <div style="color:#94A3B8;font-size:0.8rem;font-weight:700;margin:12px 0 6px;">즉시 본부장 보고 필요 상황</div>
+    <div class="vtm-badge-row">
+      <span class="vtm-badge" style="border-color:rgba(239,68,68,0.4);color:#FCA5A5;">일정 지연</span>
+      <span class="vtm-badge" style="border-color:rgba(239,68,68,0.4);color:#FCA5A5;">문제 발생</span>
+      <span class="vtm-badge" style="border-color:rgba(239,68,68,0.4);color:#FCA5A5;">고객 이슈</span>
+      <span class="vtm-badge" style="border-color:rgba(239,68,68,0.4);color:#FCA5A5;">프로젝트 변경</span>
+      <span class="vtm-badge" style="border-color:rgba(239,68,68,0.4);color:#FCA5A5;">긴급 상황</span>
+    </div>
+  </div>
+
+  <!-- VTM 인재상 -->
+  <div class="vtm-section">
+    <div class="vtm-section-title">⭐ &nbsp;VTM 인재상</div>
+    <div style="color:#94A3B8;font-size:0.82rem;font-weight:700;margin-bottom:10px;">우리는 이런 사람과 함께하고 싶습니다.</div>
+    <div class="vtm-badge-row">
+      <span class="vtm-badge">책임감 있는 사람</span>
+      <span class="vtm-badge">실행하는 사람</span>
+      <span class="vtm-badge">협업하는 사람</span>
+      <span class="vtm-badge">성장하려는 사람</span>
+      <span class="vtm-badge">긍정적인 에너지</span>
+    </div>
+  </div>
+
+  <!-- VTM의 약속 -->
+  <div class="vtm-promise">
+    <p>
+      능력은 함께 키울 수 있지만<br>
+      <span class="gold">태도와 책임감은 스스로 선택해야 합니다.</span><br><br>
+      우리는 완벽한 사람보다<br>
+      <span class="gold">함께 성장할 수 있는 사람</span>과 오래 가고 싶습니다.
+    </p>
+  </div>
+
+</div>
+""", unsafe_allow_html=True)
+
+
 def page_admin_home():
     topbar("🔴 관리자 대시보드")
     td = today_str(); conn = get_conn()
@@ -1537,6 +1835,7 @@ else:
             "admin_emp":     page_admin_emp,
             "admin_excel":   page_admin_excel,
             "admin_logs":    page_admin_logs,
+            "emp_guide":     page_emp_guide,
         }
     else:
         pages = {
@@ -1544,6 +1843,7 @@ else:
             "emp_attend":   page_emp_attend,
             "emp_report":   page_emp_report,
             "emp_calendar": page_emp_calendar,
+            "emp_guide":    page_emp_guide,
         }
  
     pages.get(st.session_state.page, list(pages.values())[0])()
