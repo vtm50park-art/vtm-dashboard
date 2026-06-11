@@ -301,6 +301,27 @@ label,.stTextInput label,.stSelectbox label,.stTextArea label,
 .tg-ok  {{ display:block; background:#10B981; color:#fff!important; border-radius:3px; padding:1px 2px; font-size:0.6rem; margin:1px 0; font-weight:700; }}
 .tg-no  {{ display:block; background:#374151; color:#9CA3AF!important; border-radius:3px; padding:1px 2px; font-size:0.6rem; margin:1px 0; }}
  
+/* ── expander 내부 텍스트 가독성 ── */
+[data-testid="stExpander"] details {{
+    background: #1E293B !important;
+    border: 1px solid #334155 !important;
+    border-radius: 10px !important;
+}}
+[data-testid="stExpander"] summary {{
+    color: #F1F5F9 !important;
+    font-weight: 700 !important;
+}}
+[data-testid="stExpander"] summary:hover {{
+    color: #D4AF37 !important;
+}}
+[data-testid="stExpander"] [data-testid="stMarkdownContainer"] p,
+[data-testid="stExpander"] [data-testid="stMarkdownContainer"] li,
+[data-testid="stExpander"] [data-testid="stMarkdownContainer"] span,
+[data-testid="stExpander"] [data-testid="stMarkdownContainer"] strong {{
+    color: #F1F5F9 !important;
+    font-weight: 600 !important;
+}}
+
 #MainMenu, footer, header {{ visibility:hidden !important; }}
 [data-testid="stDecoration"]  {{ display:none !important; }}
  
@@ -1316,22 +1337,28 @@ def page_admin_approve():
         st.rerun()
  
     for _, r in pend.iterrows():
-        with st.expander(f"📝 {r['emp_name']}  ·  {r['work_date']}  ·  {r['pm_progress']}%"):
+        with st.expander(f"📝 {r['emp_name']}  ·  {r['work_date']}  ·  진행률 {r['pm_progress']}%"):
+            am  = safe_str(r['am_tasks'])    or '없음'
+            pm  = safe_str(r['pm_done'])     or '없음'
+            tom = safe_str(r['pm_tomorrow']) or '없음'
+            rem = safe_str(r['pm_remarks'])  or '없음'
             st.markdown(f"""
-**🌅 오전 계획:** {safe_str(r['am_tasks']) or '없음'}
- 
-**🌇 완료 업무:** {safe_str(r['pm_done']) or '없음'}
- 
-**📅 내일 예정:** {safe_str(r['pm_tomorrow']) or '없음'}
- 
-**💬 특이사항:** {safe_str(r['pm_remarks']) or '없음'}
-""")
+<div style="color:#F1F5F9;font-size:0.9rem;line-height:1.8;">
+  <p><span style="color:#D4AF37;font-weight:900;">🌅 오전 계획:</span>&nbsp; {am}</p>
+  <p><span style="color:#D4AF37;font-weight:900;">🌇 완료 업무:</span>&nbsp; {pm}</p>
+  <p><span style="color:#D4AF37;font-weight:900;">📅 내일 예정:</span>&nbsp; {tom}</p>
+  <p><span style="color:#D4AF37;font-weight:900;">💬 특이사항:</span>&nbsp; {rem}</p>
+</div>
+""", unsafe_allow_html=True)
             dl_val = safe_str(r.get("drive_link"))
             rl_val = safe_str(r.get("result_link"))
-            if dl_val: st.markdown(f"📁 [Google Drive]({dl_val})")
-            if rl_val: st.markdown(f"🔗 [결과물 링크]({rl_val})")
- 
-            cmt = st.text_input("💬 코멘트", key=f"cmt_{r['id']}", placeholder="승인/반려 사유...")
+            if dl_val:
+                st.markdown(f'<p style="color:#60A5FA;font-weight:700;">📁 <a href="{dl_val}" target="_blank" style="color:#60A5FA;">Google Drive 링크 열기</a></p>', unsafe_allow_html=True)
+            if rl_val:
+                st.markdown(f'<p style="color:#60A5FA;font-weight:700;">🔗 <a href="{rl_val}" target="_blank" style="color:#60A5FA;">결과물 링크 열기</a></p>', unsafe_allow_html=True)
+
+            st.markdown("<div style='height:6px'></div>", unsafe_allow_html=True)
+            cmt = st.text_input("💬 코멘트", key=f"cmt_{r['id']}", placeholder="승인/반려 사유를 입력하세요...")
             ca, cb, cc = st.columns(3)
             with ca:
                 if st.button("✅ 승인", key=f"ap_{r['id']}", use_container_width=True):
