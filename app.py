@@ -1,7 +1,7 @@
-# vtm_dashboard.py  ← 버그 수정판 v2 (input box ivory gradient + 글자 검정)
+# vtm_dashboard.py  ← Supabase 마이그레이션 버전
 import streamlit as st
-import sqlite3
 import pandas as pd
+from supabase import create_client, Client
 import io
 from datetime import datetime, date, timedelta, timezone
 import calendar
@@ -26,68 +26,52 @@ def today_str() -> str:
 def now_str() -> str:
     return now_kst().strftime("%Y-%m-%d %H:%M:%S")
  
-DB_PATH = "vtm_v3.db"
- 
-def get_conn():
-    return sqlite3.connect(DB_PATH, check_same_thread=False)
- 
-def init_db():
-    conn = get_conn()
-    c = conn.cursor()
-    c.execute("""CREATE TABLE IF NOT EXISTS employees(
-        id TEXT PRIMARY KEY, name TEXT NOT NULL, role TEXT NOT NULL,
-        is_admin INTEGER DEFAULT 0, password TEXT DEFAULT '',
-        active INTEGER DEFAULT 1, created_at TEXT)""")
-    c.execute("""CREATE TABLE IF NOT EXISTS attendance(
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        emp_id TEXT, emp_name TEXT, work_date TEXT,
-        checkin TEXT, checkout TEXT,
-        att_type TEXT DEFAULT '정상출근', created_at TEXT)""")
-    c.execute("""CREATE TABLE IF NOT EXISTS reports(
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        emp_id TEXT, emp_name TEXT, work_date TEXT,
-        am_tasks TEXT, am_priority TEXT, am_notes TEXT,
-        pm_done TEXT, pm_progress INTEGER DEFAULT 0,
-        pm_tomorrow TEXT, pm_remarks TEXT,
-        drive_link TEXT, result_link TEXT,
-        status TEXT DEFAULT '대기중',
-        admin_comment TEXT DEFAULT '',
-        submitted_at TEXT, approved_at TEXT)""")
-    c.execute("""CREATE TABLE IF NOT EXISTS logs(
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        action TEXT, actor TEXT, target TEXT,
-        detail TEXT, created_at TEXT)""")
-    c.execute("SELECT COUNT(*) FROM employees WHERE id='admin_park'")
-    if c.fetchone()[0] == 0:
-        _now = now_str()
-        c.executemany("INSERT INTO employees VALUES(?,?,?,?,?,?,?)",[
-            ('admin_park','박동진 본부장','본부장',1,'5638',1,_now),
-            ('emp_seo','서아영 디자이너','디자이너',0,'',1,_now),
-            ('emp_ahn','안효민 디렉터','디렉터',0,'',1,_now),
-        ])
-    # 김소원 대리 퇴사 처리 (기존 DB에도 반영)
-    c.execute("UPDATE employees SET active=0 WHERE id='emp_kim'")
-    conn.commit(); conn.close()
- 
-init_db()
+
+@st.cache_resource
+def get_supabase() -> "Client":
+    url = st.secrets["SUPABASE_URL"]
+    key = st.secrets["SUPABASE_KEY"]
+    return create_client(url, key)
+
+def _sb():
+    return get_supabase()
+
+def init_data():
+    """Supabase에 기본 직원 데이터 초기화 (최초 1회)"""
+    try:
+        sb = _sb()
+        r = sb.table("employees").select("id").eq("id", "admin_park").execute()
+        if not r.data:
+            _now = now_str()
+            sb.table("employees").insert([
+                {"id":"admin_park","name":"박동진 본부장","role":"본부장","is_admin":1,"password":"5638","active":1,"created_at":_now},
+                {"id":"emp_seo","name":"서아영 디자이너","role":"디자이너","is_admin":0,"password":"","active":1,"created_at":_now},
+                {"id":"emp_ahn","name":"안효민 디렉터","role":"디렉터","is_admin":0,"password":"","active":1,"created_at":_now},
+            ]).execute()
+        # 김소원 퇴사 처리
+        sb.table("employees").update({"active":0}).eq("id","emp_kim").execute()
+    except Exception:
+        pass
+
+init_data()
  
 def wlog(action, actor, target="", detail=""):
     try:
-        conn = get_conn()
-        conn.execute(
-            "INSERT INTO logs(action,actor,target,detail,created_at) VALUES(?,?,?,?,?)",
-            (action, actor, target, detail, now_str())
-        )
-        conn.commit(); conn.close()
-    except:
+        _sb().table("logs").insert({
+            "action": action, "actor": actor,
+            "target": target, "detail": detail, "created_at": now_str()
+        }).execute()
+    except Exception:
         pass
  
 def get_employees(active_only=True):
-    conn = get_conn()
-    q = ("SELECT * FROM employees WHERE active=1 ORDER BY is_admin DESC,name"
-         if active_only else
-         "SELECT * FROM employees ORDER BY is_admin DESC,name")
-    df = pd.read_sql(q, conn); conn.close(); return df
+    sb = _sb()
+    q = sb.table("employees").select("*")
+    if active_only:
+        q = q.eq("active", 1)
+    r = q.order("is_admin", desc=True).order("name").execute()
+    return pd.DataFrame(r.data) if r.data else pd.DataFrame(
+        columns=["id","name","role","is_admin","password","active","created_at"])
  
 def to_excel(dfs):
     buf = io.BytesIO()
@@ -573,12 +557,11 @@ def topbar(title):
 def page_emp_home():
     topbar("🏠 내 대시보드")
     uid = st.session_state.user_id; td = today_str()
-    conn = get_conn()
-    att = pd.read_sql("SELECT * FROM attendance WHERE emp_id=? AND work_date=? LIMIT 1",
-                      conn, params=(uid, td))
-    rep = pd.read_sql("SELECT * FROM reports WHERE emp_id=? AND work_date=? LIMIT 1",
-                      conn, params=(uid, td))
-    conn.close()
+    sb = _sb()
+    att_r = sb.table("attendance").select("*").eq("emp_id",uid).eq("work_date",td).limit(1).execute()
+    rep_r = sb.table("reports").select("*").eq("emp_id",uid).eq("work_date",td).limit(1).execute()
+    att = pd.DataFrame(att_r.data) if att_r.data else pd.DataFrame()
+    rep = pd.DataFrame(rep_r.data) if rep_r.data else pd.DataFrame()
  
     ci  = safe_str(att.iloc[0]["checkin"])  if not att.empty else None
     co  = safe_str(att.iloc[0]["checkout"]) if not att.empty else None
@@ -624,10 +607,9 @@ ATT_TYPES = ["정상출근","오전 반차","오후 반차","조퇴","연차","�
 def page_emp_attend():
     topbar("⏰ 출퇴근")
     uid = st.session_state.user_id; uname = st.session_state.user_name; td = today_str()
-    conn = get_conn()
-    att = pd.read_sql("SELECT * FROM attendance WHERE emp_id=? AND work_date=? LIMIT 1",
-                      conn, params=(uid, td))
-    conn.close()
+    sb = _sb()
+    att_r = sb.table("attendance").select("*").eq("emp_id",uid).eq("work_date",td).limit(1).execute()
+    att = pd.DataFrame(att_r.data) if att_r.data else pd.DataFrame()
  
     c1, c2 = st.columns(2)
     ci_raw = safe_str(att.iloc[0]["checkin"])  if not att.empty else None
@@ -655,13 +637,10 @@ def page_emp_attend():
     if att.empty:
         sel_type = st.selectbox("출근 유형", ATT_TYPES, key="sel_att")
         if st.button(f"✅  출근 체크인 ({sel_type})", key="btn_ci", use_container_width=True):
-            conn = get_conn()
-            conn.execute(
-                "INSERT INTO attendance(emp_id,emp_name,work_date,checkin,att_type,created_at)"
-                " VALUES(?,?,?,?,?,?)",
-                (uid, uname, td, now_str(), sel_type, now_str())
-            )
-            conn.commit(); conn.close()
+            _sb().table("attendance").insert({
+                "emp_id":uid,"emp_name":uname,"work_date":td,
+                "checkin":now_str(),"att_type":sel_type,"created_at":now_str()
+            }).execute()
             wlog("CHECKIN", uname, "", sel_type)
             st.success(f"✅ 출근 완료! ({sel_type} {now_kst().strftime('%H:%M')} KST)")
             st.rerun()
@@ -669,10 +648,7 @@ def page_emp_attend():
         st.success(f"✅ 출근 완료 — {ci_t} ({atp})")
         if not co_raw:
             if st.button("🏠  퇴근 체크아웃", key="btn_co", use_container_width=True):
-                conn = get_conn()
-                conn.execute("UPDATE attendance SET checkout=? WHERE emp_id=? AND work_date=?",
-                             (now_str(), uid, td))
-                conn.commit(); conn.close()
+                _sb().table("attendance").update({"checkout":now_str()}).eq("emp_id",uid).eq("work_date",td).execute()
                 wlog("CHECKOUT", uname)
                 st.success(f"🏠 퇴근 완료! ({now_kst().strftime('%H:%M')} KST)")
                 st.rerun()
@@ -681,13 +657,8 @@ def page_emp_attend():
  
     st.markdown("---")
     st.markdown("<div class='vtm-card'><h3>📋 최근 출퇴근 기록</h3></div>", unsafe_allow_html=True)
-    conn = get_conn()
-    hist = pd.read_sql(
-        "SELECT work_date,att_type,checkin,checkout FROM attendance"
-        " WHERE emp_id=? ORDER BY work_date DESC LIMIT 10",
-        conn, params=(uid,)
-    )
-    conn.close()
+    hist_r = _sb().table("attendance").select("work_date,att_type,checkin,checkout").eq("emp_id",uid).order("work_date",desc=True).limit(10).execute()
+    hist = pd.DataFrame(hist_r.data) if hist_r.data else pd.DataFrame()
     if not hist.empty:
         hist.columns = ["날짜","유형","출근","퇴근"]
         st.dataframe(hist, use_container_width=True, hide_index=True)
@@ -698,10 +669,9 @@ def page_emp_attend():
 def page_emp_report():
     topbar("📝 업무 보고")
     uid = st.session_state.user_id; uname = st.session_state.user_name; td = today_str()
-    conn = get_conn()
-    exist = pd.read_sql("SELECT * FROM reports WHERE emp_id=? AND work_date=? LIMIT 1",
-                        conn, params=(uid, td))
-    conn.close()
+    sb = _sb()
+    ex_r = sb.table("reports").select("*").eq("emp_id",uid).eq("work_date",td).limit(1).execute()
+    exist = pd.DataFrame(ex_r.data) if ex_r.data else pd.DataFrame()
  
     if not exist.empty:
         s = safe_str(exist.iloc[0]["status"]) or ""
@@ -722,20 +692,18 @@ def page_emp_report():
             value=safe_str(exist.iloc[0]["am_notes"]) or "" if not exist.empty else "",
             height=75, placeholder="회의 일정, 협업 요청 등...")
         if st.button("💾  오전 계획 저장", key="btn_am", use_container_width=True):
-            conn = get_conn()
+            sb = _sb()
             if exist.empty:
-                conn.execute(
-                    "INSERT INTO reports(emp_id,emp_name,work_date,am_tasks,"
-                    "am_priority,am_notes,status,submitted_at) VALUES(?,?,?,?,?,?,'대기중',?)",
-                    (uid, uname, td, am_tasks, am_priority, am_notes, now_str())
-                )
+                sb.table("reports").insert({
+                    "emp_id":uid,"emp_name":uname,"work_date":td,
+                    "am_tasks":am_tasks,"am_priority":am_priority,"am_notes":am_notes,
+                    "status":"대기중","submitted_at":now_str()
+                }).execute()
             else:
-                conn.execute(
-                    "UPDATE reports SET am_tasks=?,am_priority=?,am_notes=?,"
-                    "submitted_at=? WHERE emp_id=? AND work_date=?",
-                    (am_tasks, am_priority, am_notes, now_str(), uid, td)
-                )
-            conn.commit(); conn.close()
+                sb.table("reports").update({
+                    "am_tasks":am_tasks,"am_priority":am_priority,
+                    "am_notes":am_notes,"submitted_at":now_str()
+                }).eq("emp_id",uid).eq("work_date",td).execute()
             wlog("AM_PLAN", uname, td)
             st.success("✅ 오전 계획 저장 완료!"); st.rerun()
  
@@ -764,24 +732,22 @@ def page_emp_report():
             value=safe_str(exist.iloc[0]["result_link"]) or "" if not exist.empty else "",
             placeholder="https://...")
         if st.button("📤  업무보고 제출", key="btn_pm", use_container_width=True):
-            conn = get_conn()
+            sb = _sb()
             if exist.empty:
-                conn.execute(
-                    "INSERT INTO reports(emp_id,emp_name,work_date,pm_done,pm_progress,"
-                    "pm_tomorrow,pm_remarks,drive_link,result_link,status,submitted_at)"
-                    " VALUES(?,?,?,?,?,?,?,?,?,'대기중',?)",
-                    (uid, uname, td, pm_done, pm_progress, pm_tomorrow,
-                     pm_remarks, drive_link, result_link, now_str())
-                )
+                sb.table("reports").insert({
+                    "emp_id":uid,"emp_name":uname,"work_date":td,
+                    "pm_done":pm_done,"pm_progress":pm_progress,
+                    "pm_tomorrow":pm_tomorrow,"pm_remarks":pm_remarks,
+                    "drive_link":drive_link,"result_link":result_link,
+                    "status":"대기중","submitted_at":now_str()
+                }).execute()
             else:
-                conn.execute(
-                    "UPDATE reports SET pm_done=?,pm_progress=?,pm_tomorrow=?,"
-                    "pm_remarks=?,drive_link=?,result_link=?,status='대기중',"
-                    "submitted_at=? WHERE emp_id=? AND work_date=?",
-                    (pm_done, pm_progress, pm_tomorrow, pm_remarks,
-                     drive_link, result_link, now_str(), uid, td)
-                )
-            conn.commit(); conn.close()
+                sb.table("reports").update({
+                    "pm_done":pm_done,"pm_progress":pm_progress,
+                    "pm_tomorrow":pm_tomorrow,"pm_remarks":pm_remarks,
+                    "drive_link":drive_link,"result_link":result_link,
+                    "status":"대기중","submitted_at":now_str()
+                }).eq("emp_id",uid).eq("work_date",td).execute()
             wlog("REPORT", uname, td)
             st.success("✅ 업무보고가 완료되었습니다!")
             st.balloons(); st.rerun()
@@ -791,12 +757,11 @@ def page_emp_report():
 # ═══════════════════════════════════════════
 def render_day_detail(uid, d_str):
     """선택한 날짜 상세 카드 — 출퇴근 + 업무보고 + 승인내역"""
-    conn = get_conn()
-    att = pd.read_sql("SELECT * FROM attendance WHERE emp_id=? AND work_date=? LIMIT 1",
-                      conn, params=(uid, d_str))
-    rep = pd.read_sql("SELECT * FROM reports WHERE emp_id=? AND work_date=? LIMIT 1",
-                      conn, params=(uid, d_str))
-    conn.close()
+    sb = _sb()
+    att_r = sb.table("attendance").select("*").eq("emp_id",uid).eq("work_date",d_str).limit(1).execute()
+    rep_r = sb.table("reports").select("*").eq("emp_id",uid).eq("work_date",d_str).limit(1).execute()
+    att = pd.DataFrame(att_r.data) if att_r.data else pd.DataFrame()
+    rep = pd.DataFrame(rep_r.data) if rep_r.data else pd.DataFrame()
 
     try:
         dt_obj = datetime.strptime(d_str, "%Y-%m-%d")
@@ -960,14 +925,11 @@ def page_emp_calendar():
     with c2: mo = st.number_input("월",   value=today.month, min_value=1, max_value=12, key="cm")
     yr = int(yr); mo = int(mo)
 
-    conn = get_conn()
-    att_df = pd.read_sql(
-        "SELECT work_date,att_type FROM attendance WHERE emp_id=? AND work_date LIKE ?",
-        conn, params=(uid, f"{yr}-{mo:02d}-%"))
-    rep_df = pd.read_sql(
-        "SELECT work_date,status,pm_progress FROM reports WHERE emp_id=? AND work_date LIKE ?",
-        conn, params=(uid, f"{yr}-{mo:02d}-%"))
-    conn.close()
+    sb = _sb()
+    att_dr = sb.table("attendance").select("work_date,att_type").eq("emp_id",uid).like("work_date",f"{yr}-{mo:02d}-%").execute()
+    rep_dr = sb.table("reports").select("work_date,status,pm_progress").eq("emp_id",uid).like("work_date",f"{yr}-{mo:02d}-%").execute()
+    att_df = pd.DataFrame(att_dr.data) if att_dr.data else pd.DataFrame()
+    rep_df = pd.DataFrame(rep_dr.data) if rep_dr.data else pd.DataFrame()
 
     att_map = {r["work_date"]: r for _, r in att_df.iterrows()} if not att_df.empty else {}
     rep_map = {r["work_date"]: r for _, r in rep_df.iterrows()} if not rep_df.empty else {}
@@ -1430,15 +1392,17 @@ def page_emp_guide():
 
 def page_admin_home():
     topbar("🔴 관리자 대시보드")
-    td = today_str(); conn = get_conn()
-    total = pd.read_sql("SELECT COUNT(*) as c FROM employees WHERE active=1 AND is_admin=0", conn).iloc[0]["c"]
-    t_att = pd.read_sql("SELECT COUNT(*) as c FROM attendance WHERE work_date=?", conn, params=(td,)).iloc[0]["c"]
-    pend  = pd.read_sql("SELECT COUNT(*) as c FROM reports WHERE status='대기중'", conn).iloc[0]["c"]
-    appr  = pd.read_sql("SELECT COUNT(*) as c FROM reports WHERE status='승인' AND work_date=?", conn, params=(td,)).iloc[0]["c"]
-    emp_df  = pd.read_sql("SELECT id,name FROM employees WHERE active=1 AND is_admin=0", conn)
-    att_td  = pd.read_sql("SELECT emp_id,att_type,checkin,checkout FROM attendance WHERE work_date=?", conn, params=(td,))
-    rep_td  = pd.read_sql("SELECT emp_id,status,pm_progress FROM reports WHERE work_date=?", conn, params=(td,))
-    conn.close()
+    td = today_str(); sb = _sb()
+    total = (sb.table("employees").select("*",count="exact").eq("active",1).eq("is_admin",0).execute().count) or 0
+    t_att = (sb.table("attendance").select("*",count="exact").eq("work_date",td).execute().count) or 0
+    pend  = (sb.table("reports").select("*",count="exact").eq("status","대기중").execute().count) or 0
+    appr  = (sb.table("reports").select("*",count="exact").eq("status","승인").eq("work_date",td).execute().count) or 0
+    emp_r   = sb.table("employees").select("id,name").eq("active",1).eq("is_admin",0).execute()
+    att_r   = sb.table("attendance").select("emp_id,att_type,checkin,checkout").eq("work_date",td).execute()
+    rep_r   = sb.table("reports").select("emp_id,status,pm_progress").eq("work_date",td).execute()
+    emp_df  = pd.DataFrame(emp_r.data)  if emp_r.data  else pd.DataFrame()
+    att_td  = pd.DataFrame(att_r.data)  if att_r.data  else pd.DataFrame()
+    rep_td  = pd.DataFrame(rep_r.data)  if rep_r.data  else pd.DataFrame()
  
     c1, c2, c3, c4 = st.columns(4)
     for col, lbl, val, sub in [
@@ -1514,11 +1478,11 @@ def page_admin_attend():
     with c2:
         emp_df = get_employees(); names = ["전체"] + list(emp_df["name"])
         sel_emp = st.selectbox("직원", names, key="aae")
-    conn = get_conn()
-    q = "SELECT emp_name,att_type,checkin,checkout,work_date FROM attendance WHERE work_date=?"
-    p = [str(sel_date)]
-    if sel_emp != "전체": q += " AND emp_name=?"; p.append(sel_emp)
-    att = pd.read_sql(q + " ORDER BY checkin", conn, params=p); conn.close()
+    sb = _sb()
+    q2 = sb.table("attendance").select("emp_name,att_type,checkin,checkout,work_date").eq("work_date",str(sel_date))
+    if sel_emp != "전체": q2 = q2.eq("emp_name",sel_emp)
+    att_r2 = q2.order("checkin").execute()
+    att = pd.DataFrame(att_r2.data) if att_r2.data else pd.DataFrame()
     if att.empty:
         st.info(f"📭 {sel_date} 출퇴근 기록 없음")
     else:
@@ -1547,20 +1511,19 @@ def page_admin_tasks():
     with c2:
         emp_df = get_employees(); names = ["전체"] + list(emp_df["name"])
         sel_emp = st.selectbox("직원", names, key="ate")
-    conn = get_conn()
-    q = "SELECT * FROM reports WHERE work_date=?"
-    p = [str(sel_date)]
-    if sel_emp != "전체": q += " AND emp_name=?"; p.append(sel_emp)
-    reps = pd.read_sql(q, conn, params=p); conn.close()
+    sb = _sb()
+    rq = sb.table("reports").select("*").eq("work_date",str(sel_date))
+    if sel_emp != "전체": rq = rq.eq("emp_name",sel_emp)
+    reps_r = rq.execute()
+    reps = pd.DataFrame(reps_r.data) if reps_r.data else pd.DataFrame()
     if reps.empty:
         st.info("📭 해당 조건 업무 보고 없음")
         return
  
     def do_approve_task(rid, status, emp, comment):
-        c2 = get_conn()
-        c2.execute("UPDATE reports SET status=?,admin_comment=?,approved_at=? WHERE id=?",
-                   (status, comment, now_str(), rid))
-        c2.commit(); c2.close()
+        _sb().table("reports").update({
+            "status":status,"admin_comment":comment,"approved_at":now_str()
+        }).eq("id",rid).execute()
         wlog(f"APPROVE_{status}", st.session_state.user_name, emp, comment)
         st.rerun()
  
@@ -1618,19 +1581,17 @@ def page_admin_tasks():
 # ═══════════════════════════════════════════
 def page_admin_approve():
     topbar("✅ 결과 승인")
-    conn = get_conn()
-    pend = pd.read_sql("SELECT * FROM reports WHERE status='대기중' ORDER BY submitted_at DESC", conn)
-    conn.close()
+    pend_r = _sb().table("reports").select("*").eq("status","대기중").order("submitted_at",desc=True).execute()
+    pend = pd.DataFrame(pend_r.data) if pend_r.data else pd.DataFrame()
     if pend.empty:
         st.success("✅ 승인 대기 보고 없음")
         return
     st.markdown(f"<div class='vtm-card'><h3>📋 대기 {len(pend)}건</h3></div>", unsafe_allow_html=True)
  
     def do_approve(rid, status, emp, comment):
-        c2 = get_conn()
-        c2.execute("UPDATE reports SET status=?,admin_comment=?,approved_at=? WHERE id=?",
-                   (status, comment, now_str(), rid))
-        c2.commit(); c2.close()
+        _sb().table("reports").update({
+            "status":status,"admin_comment":comment,"approved_at":now_str()
+        }).eq("id",rid).execute()
         wlog(f"APPROVE_{status}", st.session_state.user_name, emp, comment)
         st.rerun()
  
@@ -1690,16 +1651,12 @@ def page_admin_emp():
         with cb:
             if emp["active"] and not emp["is_admin"]:
                 if st.button("🗑 퇴직", key=f"del_{emp['id']}", use_container_width=True):
-                    c2 = get_conn()
-                    c2.execute("UPDATE employees SET active=0 WHERE id=?", (emp["id"],))
-                    c2.commit(); c2.close()
+                    _sb().table("employees").update({"active":0}).eq("id",emp["id"]).execute()
                     wlog("EMP_DEL", st.session_state.user_name, emp["name"])
                     st.success(f"'{emp['name']}' 퇴직 처리"); st.rerun()
             elif not emp["active"]:
                 if st.button("♻ 복직", key=f"act_{emp['id']}", use_container_width=True):
-                    c2 = get_conn()
-                    c2.execute("UPDATE employees SET active=1 WHERE id=?", (emp["id"],))
-                    c2.commit(); c2.close()
+                    _sb().table("employees").update({"active":1}).eq("id",emp["id"]).execute()
                     wlog("EMP_ACT", st.session_state.user_name, emp["name"])
                     st.success(f"'{emp['name']}' 복직 완료"); st.rerun()
     st.markdown("---")
@@ -1718,14 +1675,11 @@ def page_admin_emp():
             else:
                 new_id = "emp_" + re.sub(r'[^a-z0-9]','', new_name.lower()) + str(int(time.time()))[-5:]
                 try:
-                    c2 = get_conn()
-                    c2.execute(
-                        "INSERT INTO employees(id,name,role,is_admin,password,active,created_at)"
-                        " VALUES(?,?,?,?,?,1,?)",
-                        (new_id, new_name.strip(), new_role.strip(),
-                         1 if new_admin else 0, new_pw, now_str())
-                    )
-                    c2.commit(); c2.close()
+                    _sb().table("employees").insert({
+                        "id":new_id,"name":new_name.strip(),"role":new_role.strip(),
+                        "is_admin":1 if new_admin else 0,"password":new_pw,
+                        "active":1,"created_at":now_str()
+                    }).execute()
                     wlog("EMP_ADD", st.session_state.user_name, new_name)
                     st.success(f"✅ '{new_name}' 등록 완료!"); st.rerun()
                 except Exception as e:
@@ -1767,28 +1721,29 @@ def page_admin_excel():
  
     if st.button("📥  엑셀 생성", key="btn_excel", use_container_width=True):
         if not rec_types: st.error("기록 유형을 선택하세요."); return
-        conn = get_conn(); sheets = {}
+        sb = _sb(); sheets = {}
         if "출퇴근 기록" in rec_types:
-            q = ("SELECT emp_name,work_date,att_type,checkin,checkout"
-                 " FROM attendance WHERE work_date BETWEEN ? AND ?")
-            p = [d_from, d_to]
-            if sel_emp != "전체 인원": q += " AND emp_name=?"; p.append(sel_emp)
-            df = pd.read_sql(q + " ORDER BY work_date,emp_name", conn, params=p)
-            if not df.empty:
+            aq = (sb.table("attendance")
+                  .select("emp_name,work_date,att_type,checkin,checkout")
+                  .gte("work_date",d_from).lte("work_date",d_to))
+            if sel_emp != "전체 인원": aq = aq.eq("emp_name",sel_emp)
+            ar = aq.order("work_date").order("emp_name").execute()
+            if ar.data:
+                df = pd.DataFrame(ar.data)
                 df.columns = ["직원명","날짜","유형","출근","퇴근"]
                 sheets["출퇴근 기록"] = df
         if "업무 보고" in rec_types:
-            q = ("SELECT emp_name,work_date,am_tasks,am_priority,pm_done,pm_progress,"
-                 "pm_tomorrow,pm_remarks,drive_link,result_link,status,admin_comment,submitted_at"
-                 " FROM reports WHERE work_date BETWEEN ? AND ?")
-            p = [d_from, d_to]
-            if sel_emp != "전체 인원": q += " AND emp_name=?"; p.append(sel_emp)
-            df = pd.read_sql(q + " ORDER BY work_date,emp_name", conn, params=p)
-            if not df.empty:
+            rq2 = (sb.table("reports")
+                   .select("emp_name,work_date,am_tasks,am_priority,pm_done,pm_progress,"
+                           "pm_tomorrow,pm_remarks,drive_link,result_link,status,admin_comment,submitted_at")
+                   .gte("work_date",d_from).lte("work_date",d_to))
+            if sel_emp != "전체 인원": rq2 = rq2.eq("emp_name",sel_emp)
+            rr2 = rq2.order("work_date").order("emp_name").execute()
+            if rr2.data:
+                df = pd.DataFrame(rr2.data)
                 df.columns = ["직원명","날짜","오전계획","우선순위","완료업무",
                               "진행률","내일예정","특이사항","Drive","결과링크","상태","코멘트","제출시간"]
                 sheets["업무 보고"] = df
-        conn.close()
         if not sheets: st.warning("해당 조건 데이터 없음"); return
         label = sel_emp.replace(" ","_") if sel_emp != "전체 인원" else "전체"
         fname = f"VTM_{label}_{period}_{d_from}~{d_to}.xlsx"
@@ -1805,11 +1760,8 @@ def page_admin_excel():
 # ═══════════════════════════════════════════
 def page_admin_logs():
     topbar("🔍 시스템 로그")
-    conn = get_conn()
-    logs = pd.read_sql(
-        "SELECT created_at,action,actor,target,detail FROM logs"
-        " ORDER BY created_at DESC LIMIT 300", conn)
-    conn.close()
+    log_r = _sb().table("logs").select("created_at,action,actor,target,detail").order("created_at",desc=True).limit(300).execute()
+    logs = pd.DataFrame(log_r.data) if log_r.data else pd.DataFrame()
     if logs.empty:
         st.info("로그 없음")
     else:
