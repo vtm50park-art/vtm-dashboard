@@ -29,31 +29,69 @@ def now_str() -> str:
 
 @st.cache_resource
 def get_supabase() -> "Client":
-    url = st.secrets["SUPABASE_URL"]
-    key = st.secrets["SUPABASE_KEY"]
-    return create_client(url, key)
+    try:
+        url = st.secrets["SUPABASE_URL"]
+        key = st.secrets["SUPABASE_KEY"]
+        return create_client(url, key)
+    except Exception as e:
+        st.error(f"⚠️ Supabase 연결 실패: {e}")
+        st.info("Streamlit Cloud → 앱 Settings → Secrets 탭에 SUPABASE_URL과 SUPABASE_KEY를 등록해주세요.")
+        st.stop()
 
 def _sb():
     return get_supabase()
 
 def init_data():
-    """Supabase에 기본 직원 데이터 초기화 (최초 1회)"""
+    """앱 세션 시작 시 기본 직원 데이터 확인 및 초기화 (세션당 1회 실행)"""
+    # 이미 이번 세션에서 초기화됐으면 스킵
+    if st.session_state.get("_db_init_done"):
+        return
+
     try:
         sb = _sb()
-        r = sb.table("employees").select("id").eq("id", "admin_park").execute()
-        if not r.data:
+
+        # ── Supabase 연결 확인 ──
+        test = sb.table("employees").select("id").limit(1).execute()
+
+        # ── 기본 직원 없으면 삽입 ──
+        check = sb.table("employees").select("id").eq("id","admin_park").execute()
+        if not check.data:
             _now = now_str()
             sb.table("employees").insert([
-                {"id":"admin_park","name":"박동진 본부장","role":"본부장","is_admin":1,"password":"5638","active":1,"created_at":_now},
-                {"id":"emp_seo","name":"서아영 디자이너","role":"디자이너","is_admin":0,"password":"","active":1,"created_at":_now},
-                {"id":"emp_ahn","name":"안효민 디렉터","role":"디렉터","is_admin":0,"password":"","active":1,"created_at":_now},
+                {"id":"admin_park","name":"박동진 본부장","role":"본부장",
+                 "is_admin":1,"password":"5638","active":1,"created_at":_now},
+                {"id":"emp_seo","name":"서아영 디자이너","role":"디자이너",
+                 "is_admin":0,"password":"","active":1,"created_at":_now},
+                {"id":"emp_ahn","name":"안효민 디렉터","role":"디렉터",
+                 "is_admin":0,"password":"","active":1,"created_at":_now},
             ]).execute()
-        # 김소원 퇴사 처리
-        sb.table("employees").update({"active":0}).eq("id","emp_kim").execute()
-    except Exception:
-        pass
 
+        # ── 김소원 퇴사 처리 (행이 없어도 오류 없음) ──
+        try:
+            sb.table("employees").update({"active":0}).eq("id","emp_kim").execute()
+        except Exception:
+            pass
+
+        st.session_state["_db_init_done"] = True
+
+    except Exception as e:
+        st.error(f"⚠️ DB 초기화 오류: {e}")
+        st.warning(
+            "아래 두 가지를 확인해주세요:\n"
+            "1. Streamlit Cloud → Settings → Secrets 에 SUPABASE_URL / SUPABASE_KEY 등록\n"
+            "2. Supabase SQL Editor에서 supabase_schema.sql 실행 (RLS 비활성화 포함)"
+        )
+        st.stop()
+
+# 세션 상태 기본값 설정 먼저
+for _k, _v in {"logged_in": False, "user_id": None, "user_name": None,
+               "is_admin": False, "page": "home"}.items():
+    if _k not in st.session_state:
+        st.session_state[_k] = _v
+
+# DB 초기화 (세션당 1회)
 init_data()
+
  
 def wlog(action, actor, target="", detail=""):
     try:
@@ -91,10 +129,6 @@ def safe_str(val):
     s = str(val).strip()
     return s if s else None
  
-for k, v in {"logged_in": False, "user_id": None, "user_name": None,
-             "is_admin": False, "page": "home"}.items():
-    if k not in st.session_state:
-        st.session_state[k] = v
  
 def logo_svg(size=72):
     return f"""<svg width="{size}" height="{size}" viewBox="0 0 80 80"
