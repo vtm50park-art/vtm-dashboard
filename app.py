@@ -1311,6 +1311,10 @@ html, body,
 [data-testid="stMainBlockContainer"] {
     max-width: 1400px !important;
     width: 100% !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    padding-top: 12px !important;
+    padding-bottom: 16px !important;
 }
 
 .stButton>button {
@@ -1913,10 +1917,10 @@ def render_sidebar():
                     f'{label}</div>', unsafe_allow_html=True)
             elif is_active:
                 st.markdown(
-                    f'<div style="background:linear-gradient(135deg,#F6D365,#D4AF37,#B8860B);'
+                    f'<div style="background:linear-gradient(135deg,#A78BFA,#7C3AED,#5B21B6);'
                     f'border-radius:10px;padding:9px 4px;text-align:center;'
-                    f'font-weight:900;font-size:0.8rem;color:#000;'
-                    f'box-shadow:0 0 10px rgba(212,175,55,0.45);margin:2px 0;">'
+                    f'font-weight:900;font-size:0.8rem;color:#fff;'
+                    f'box-shadow:0 0 14px rgba(139,92,246,0.5);margin:2px 0;">'
                     f'{label}</div>', unsafe_allow_html=True)
             else:
                 if st.button(label, key=f"nav_{key}", use_container_width=True):
