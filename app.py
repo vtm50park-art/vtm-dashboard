@@ -1355,6 +1355,70 @@ html, body,
 }
 .tb-title { color: #7FF7DE !important; }
 
+/* ── 입력창/텍스트영역/셀렉트: 다크 글래스 (출퇴근·업무보고·달력 통일) ── */
+.stTextInput>div>div>input,
+.stNumberInput>div>div>input,
+.stDateInput>div>div>input {
+    background: rgba(8,17,31,0.72) !important;
+    color: #E7EEF7 !important;
+    border: 1px solid rgba(94,234,212,0.22) !important;
+    border-radius: 10px !important;
+}
+.stTextInput>div>div>input::placeholder,
+.stNumberInput>div>div>input::placeholder {
+    color: #6B7E96 !important; opacity: 1 !important;
+}
+.stTextArea textarea {
+    background: rgba(8,17,31,0.72) !important;
+    color: #E7EEF7 !important;
+    border: 1px solid rgba(94,234,212,0.22) !important;
+    border-radius: 10px !important;
+}
+.stTextArea textarea::placeholder { color: #6B7E96 !important; opacity: 1 !important; }
+.stSelectbox>div>div,
+.stMultiSelect>div>div {
+    background: rgba(8,17,31,0.72) !important;
+    border: 1px solid rgba(94,234,212,0.22) !important;
+    border-radius: 10px !important;
+}
+.stSelectbox *, .stMultiSelect * { color: #E7EEF7 !important; }
+.stSelectbox svg, .stMultiSelect svg { fill: #5EEAD4 !important; }
+
+label,.stTextInput label,.stSelectbox label,.stTextArea label,
+.stSlider label,.stNumberInput label,.stDateInput label,.stMultiSelect label {
+    color: #A9BDD3 !important;
+}
+
+/* selectbox/date 팝오버 */
+[data-baseweb="popover"] [role="listbox"],
+[data-baseweb="popover"] ul {
+    background: #0B1526 !important;
+    border: 1px solid rgba(94,234,212,0.22) !important;
+    border-radius: 12px !important;
+}
+[data-baseweb="popover"] li,
+[data-baseweb="popover"] [role="option"] {
+    color: #E2E8F0 !important; background: transparent !important;
+}
+[data-baseweb="popover"] li:hover,
+[data-baseweb="popover"] [role="option"]:hover,
+[data-baseweb="popover"] [aria-selected="true"] {
+    background: rgba(45,212,191,0.14) !important; color: #7FF7DE !important;
+}
+
+/* 데이터프레임(출퇴근 기록 등) 다크 톤 */
+[data-testid="stDataFrame"] {
+    background: rgba(11,18,32,0.6) !important;
+    border: 1px solid rgba(94,234,212,0.14) !important;
+    border-radius: 12px !important;
+}
+[data-testid="stDataFrame"] * { color: #F1F5F9 !important; }
+
+/* 탭(업무보고 오전/오후) 가독성 */
+.stTabs [data-baseweb="tab-list"] { border-bottom-color: rgba(94,234,212,0.18) !important; }
+.stTabs [data-baseweb="tab"] { color: #A9BDD3 !important; }
+.stTabs [aria-selected="true"] { color: #7FF7DE !important; }
+
 @keyframes vdirPulse {
     0%, 100% { opacity: 1;    transform: scale(1); }
     50%      { opacity: 0.45; transform: scale(0.82); }
@@ -3323,11 +3387,11 @@ if not st.session_state.logged_in:
     render_login()
 else:
     # ── 관리자(본부장) 로그인 시: 프리미엄 테마 + 배경 영상(vtm01.mp4) 주입 ──
-    #    비관리자(디렉터/직원) + 홈(home) 화면일 때: 디렉터 테마 + 배경 영상(vtm02.mp4) 주입
-    #    → 출퇴근/업무보고/달력/VTM WAY 등 다른 직원 화면에는 영향 없음
+    #    비관리자(디렉터/직원): 모든 페이지에 디렉터 테마 + 배경 영상(vtm02.mp4) 주입
+    #    → 홈/출퇴근/업무보고/달력/VTM WAY 전 페이지에 동일한 프리미엄 룩 적용
     if st.session_state.is_admin:
         inject_admin_theme()
-    elif st.session_state.page == "home":
+    else:
         inject_director_theme()
 
     render_sidebar()
