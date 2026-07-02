@@ -898,7 +898,7 @@ body::-webkit-scrollbar,
     display: flex !important;
     flex-direction: column !important;
     align-items: center !important;
-    justify-content: center !important;
+    justify-content: flex-start !important;
     scrollbar-width: none !important;
     -ms-overflow-style: none !important;
 }}
@@ -908,7 +908,7 @@ body::-webkit-scrollbar,
 [data-testid="stMainBlockContainer"] {{
     max-width: 1400px !important;
     width: 100% !important;
-    margin: auto !important;
+    margin: 0 auto !important;
     padding-top: 8px !important;
     padding-bottom: 8px !important;
 }}
@@ -1265,6 +1265,25 @@ body { background: transparent !important; }
 [data-testid="stMainBlockContainer"],
 .main, .main>div {
     background: transparent !important;
+}
+
+/* ── 디렉터 홈: 위→아래 자연 스크롤 보장 (내용이 길어도 전체 표시) ── */
+html, body,
+.stApp,
+[data-testid="stAppViewContainer"],
+[data-testid="stAppViewContainer"]>section {
+    height: auto !important;
+    min-height: 100vh !important;
+    max-height: none !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+}
+[data-testid="stMain"] {
+    height: auto !important;
+    min-height: 100vh !important;
+    max-height: none !important;
+    overflow: visible !important;
+    display: block !important;
 }
 
 .vtm-dir-video {
