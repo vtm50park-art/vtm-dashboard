@@ -1522,7 +1522,7 @@ def render_sidebar():
                 background:linear-gradient(90deg,#0B1120,#1E293B);
                 border-bottom:2px solid #D4AF37;border-radius:12px 12px 0 0;
                 padding:10px 18px;margin-bottom:0;">
-      {logo_svg(44)}
+      <img src="{VTM_LOGO_URL}" alt="VTM Logo" style="width:44px;height:auto;display:block;filter:drop-shadow(0 0 10px rgba(20,224,184,0.45));">
       <div>
         <div style="color:#D4AF37;font-weight:900;font-size:1.05rem;line-height:1.2;">
             (주) 브이티엠
