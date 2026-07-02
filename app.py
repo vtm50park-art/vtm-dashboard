@@ -26,7 +26,7 @@ def today_str() -> str:
 def now_str() -> str:
     return now_kst().strftime("%Y-%m-%d %H:%M:%S")
  
-
+ 
 @st.cache_resource
 def get_supabase() -> "Client":
     try:
@@ -37,26 +37,26 @@ def get_supabase() -> "Client":
         st.error(f"⚠️ Supabase 연결 실패: {e}")
         st.info("Streamlit Cloud → 앱 Settings → Secrets 탭에 SUPABASE_URL과 SUPABASE_KEY를 등록해주세요.")
         st.stop()
-
+ 
 def _sb():
     return get_supabase()
-
+ 
 # ── VTM OS 2.0.3 로그인 리디자인 자산 ──
 VTM_LOGO_URL     = "https://i.postimg.cc/TwMLPgWj/beu-itiem-logo.png"
 VTM_BG_VIDEO_URL = "https://pwaqbxfaokaliclhmixo.supabase.co/storage/v1/object/public/assets/vtm.mp4"
-
+ 
 def init_data():
     """앱 세션 시작 시 기본 직원 데이터 확인 및 초기화 (세션당 1회 실행)"""
     # 이미 이번 세션에서 초기화됐으면 스킵
     if st.session_state.get("_db_init_done"):
         return
-
+ 
     try:
         sb = _sb()
-
+ 
         # ── Supabase 연결 확인 ──
         test = sb.table("employees").select("id").limit(1).execute()
-
+ 
         # ── 기본 직원 없으면 삽입 (※ 서아영/emp_seo 는 신규 세팅에서 제외) ──
         check = sb.table("employees").select("id").eq("id","admin_park").execute()
         if not check.data:
@@ -67,21 +67,21 @@ def init_data():
                 {"id":"emp_ahn","name":"안효민 디렉터","role":"디렉터",
                  "is_admin":0,"password":"","active":1,"created_at":_now},
             ]).execute()
-
+ 
         # ── 김소원 퇴사 처리 (행이 없어도 오류 없음) ──
         try:
             sb.table("employees").update({"active":0}).eq("id","emp_kim").execute()
         except Exception:
             pass
-
+ 
         # ── 서아영 퇴사 처리: 기존 DB에 emp_seo가 이미 있는 경우 비활성화 ──
         try:
             sb.table("employees").update({"active":0}).eq("id","emp_seo").execute()
         except Exception:
             pass
-
+ 
         st.session_state["_db_init_done"] = True
-
+ 
     except Exception as e:
         st.error(f"⚠️ DB 초기화 오류: {e}")
         st.warning(
@@ -90,18 +90,18 @@ def init_data():
             "2. Supabase SQL Editor에서 supabase_schema.sql 실행 (RLS 비활성화 포함)"
         )
         st.stop()
-
-
-
+ 
+ 
+ 
 # 세션 상태 기본값 설정 먼저
 for _k, _v in {"logged_in": False, "user_id": None, "user_name": None,
                "is_admin": False, "page": "home"}.items():
     if _k not in st.session_state:
         st.session_state[_k] = _v
-
+ 
 # DB 초기화 (세션당 1회)
 init_data()
-
+ 
  
 def wlog(action, actor, target="", detail=""):
     try:
@@ -256,7 +256,7 @@ button[kind="header"],
 }}
 .tb-title {{ color:#D4AF37 !important; font-size:1.05rem; font-weight:900; }}
 .tb-info  {{ color:#94A3B8 !important; font-size:0.8rem; font-weight:700; }}
-
+ 
 /* ─── 입력 필드: 아이보리 그라데이션 + 검정 글자 ─── */
 .stTextInput>div>div>input,
 .stNumberInput>div>div>input {{
@@ -349,7 +349,7 @@ label,.stTextInput label,.stSelectbox label,.stTextArea label,
     color: #F1F5F9 !important;
     font-weight: 600 !important;
 }}
-
+ 
 #MainMenu, footer, header {{ visibility:hidden !important; }}
 [data-testid="stDecoration"]  {{ display:none !important; }}
  
@@ -369,9 +369,9 @@ label,.stTextInput label,.stSelectbox label,.stTextArea label,
     margin-left:6px;
     vertical-align:middle;
 }}
-
+ 
 /* ── 달력 투명 클릭 버튼 CSS는 page_emp_calendar() 안에서 별도 주입 ── */
-
+ 
 </style>
  
 <canvas id="vtm-stars" style="position:fixed;top:0;left:0;
@@ -426,7 +426,7 @@ label,.stTextInput label,.stSelectbox label,.stTextArea label,
 }})();
 </script>
 """, unsafe_allow_html=True)
-
+ 
     # ═══════════════════════════════════════════════════════════
     # ▼▼▼ [로그인 전용 CSS — 배경 영상 버전] ▼▼▼
     #  · 배경: HTML5 Video (.vtm-video-bg) + Dark Overlay (.vtm-bgoverlay)
@@ -455,7 +455,7 @@ html, body {
 .main, .main>div {
     background: transparent !important;
 }
-
+ 
 /* ── HTML5 배경 영상 (Supabase Storage MP4) ── */
 .vtm-video-bg {
     position: fixed;
@@ -476,22 +476,38 @@ html, body {
         radial-gradient(ellipse at 26% 38%, rgba(20,224,184,0.08) 0%, transparent 55%),
         linear-gradient(180deg, rgba(0,0,0,0.62) 0%, rgba(0,0,0,0.48) 45%, rgba(0,0,0,0.72) 100%);
 }
-
+ 
 [data-testid="stMainBlockContainer"] {
     max-width: 1180px !important;
-    padding-top: 5vh !important;
-    padding-bottom: 4vh !important;
+    /* 무게 중심 상향: 화면 중앙보다 약간 위 (기존 5vh → 2vh, 약 8~10%↑) */
+    padding-top: 2vh !important;
+    padding-bottom: 6vh !important;
 }
-
+ 
 /* ── 좌(브랜드) / 우(카드) 세로 중앙 정렬 ── */
 [data-testid="stHorizontalBlock"] { align-items: center !important; }
-
-/* ── 좌측 브랜드 영역 ── */
-.vtm-brand { padding: 6px 26px 6px 4px; }
+ 
+/* ── 진입 애니메이션 (fade + translateY) ──
+     fill-mode: backwards → 종료 후 transform이 해제되어 hover scale과 충돌 없음 */
+@keyframes vtmEnterBrand {
+    from { opacity: 0; transform: translateY(15px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes vtmEnterCard {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+ 
+/* ── 좌측 브랜드 영역 ──
+     시작점 상향(약 6~8%↑): 하단 여백을 늘려 컨텐츠를 위로 밀어 올림 */
+.vtm-brand {
+    padding: 0 26px 4vh 4px;
+    animation: vtmEnterBrand 0.7s cubic-bezier(0.22, 1, 0.36, 1) 0.05s backwards;
+}
 .vtm-brand-logo img {
     width: 150px; max-width: 42vw; height: auto; display: block;
     filter: drop-shadow(0 0 26px rgba(20,224,184,0.35));
-    margin-bottom: 18px;
+    margin-bottom: 26px;
 }
 .vtm-brand-title {
     color: #E8FFFA; font-size: 2.45rem; font-weight: 900;
@@ -502,12 +518,12 @@ html, body {
 }
 .vtm-brand-sub {
     color: #5EEAD4; font-size: 0.98rem; font-weight: 700;
-    letter-spacing: 0.42em; margin: 7px 0 0 2px;
+    letter-spacing: 0.42em; margin: 10px 0 0 2px;
 }
-
+ 
 /* ── Human × AI Workforce 카피 ── */
 .vtm-hx-badge {
-    display: inline-block; margin: 20px 0 0;
+    display: inline-block; margin: 26px 0 0;
     padding: 6px 14px; border-radius: 999px;
     background: rgba(45,212,191,0.10);
     border: 1px solid rgba(45,212,191,0.42);
@@ -516,10 +532,10 @@ html, body {
 }
 .vtm-hx-line1 {
     color: #DCE8F5; font-size: 1.02rem; font-weight: 700;
-    margin: 14px 0 0; letter-spacing: 0.01em;
+    margin: 16px 0 0; letter-spacing: 0.01em;
 }
 .vtm-hx-line2 {
-    font-size: 0.92rem; font-weight: 800; margin: 5px 0 0;
+    font-size: 0.92rem; font-weight: 800; margin: 6px 0 0;
     background: linear-gradient(90deg, #7FF7DE 0%, #38BDF8 100%);
     -webkit-background-clip: text; background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -527,19 +543,19 @@ html, body {
 }
 .vtm-brand-tag {
     color: #7E93AB; font-size: 0.84rem; font-weight: 500;
-    margin: 10px 0 0; letter-spacing: 0.02em;
+    margin: 12px 0 0; letter-spacing: 0.02em;
 }
-
+ 
 /* ── 아이콘 3종 ── */
-.vtm-feat-row { display: flex; gap: 30px; margin-top: 28px; flex-wrap: wrap; }
+.vtm-feat-row { display: flex; gap: 34px; margin-top: 36px; flex-wrap: wrap; }
 .vtm-feat { text-align: center; min-width: 86px; }
-.vtm-feat svg { width: 28px; height: 28px; margin-bottom: 7px; }
+.vtm-feat svg { width: 28px; height: 28px; margin-bottom: 8px; }
 .vtm-feat-t { color: #F1F5F9; font-size: 0.84rem; font-weight: 800; margin: 0; }
-.vtm-feat-d { color: #7E93AB; font-size: 0.74rem; font-weight: 500; margin: 3px 0 0; }
-
+.vtm-feat-d { color: #7E93AB; font-size: 0.74rem; font-weight: 500; margin: 4px 0 0; }
+ 
 /* ── Workforce Status 패널 (기능 없는 상태 표시 카드) ── */
 .vtm-wf-panel {
-    margin-top: 26px; max-width: 480px;
+    margin-top: 32px; max-width: 480px;
     background: linear-gradient(160deg, rgba(13,26,44,0.62) 0%, rgba(7,14,26,0.78) 100%);
     border: 1px solid rgba(94,234,212,0.16);
     border-radius: 16px;
@@ -602,19 +618,101 @@ html, body {
     0%, 100% { opacity: 1;   transform: scale(1); }
     50%      { opacity: 0.45; transform: scale(0.82); }
 }
-
+ 
 .vtm-copy { color: #55677E; font-size: 0.72rem; font-weight: 500; margin-top: 30px; }
-
+ 
 /* ── 로그인 카드 외곽: 위치 선택자만 사용 (st-key 클래스 의존 제거) ──
      로그인 화면의 유일한 컬럼 블록에서 마지막 컬럼 = 카드 컬럼.
      순수 CSS이므로 미적용되어도 앱은 정상 동작함.                    ── */
 [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:last-child,
 [data-testid="stHorizontalBlock"] > div[data-testid="column"]:last-child {
+    position: relative;
     background: linear-gradient(165deg, rgba(14,26,44,0.78) 0%, rgba(7,14,26,0.90) 100%);
-    border: 1px solid rgba(94,234,212,0.16);
+    border: 1px solid rgba(94,234,212,0.14);
     border-radius: 24px;
     padding: 34px 30px 24px;
     box-shadow: 0 34px 90px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.06);
+    animation: vtmEnterCard 0.9s cubic-bezier(0.22, 1, 0.36, 1) 0.18s backwards;
+    transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1),
+                box-shadow 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+    will-change: transform;
+}
+ 
+/* ── Hover: 미세한 확대만 (scale 1.01 고정) ── */
+[data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:last-child:hover,
+[data-testid="stHorizontalBlock"] > div[data-testid="column"]:last-child:hover {
+    transform: scale(1.01);
+    box-shadow: 0 40px 100px rgba(0,0,0,0.65), inset 0 1px 0 rgba(255,255,255,0.07);
+}
+ 
+/* ── Animated Neon Border ──
+     Cyan → Blue → Violet 빛줄기가 카드 외곽을 아주 천천히(14s) 한 바퀴 순환.
+     conic-gradient 각도(--vtm-a)를 @property로 회전 + mask로 1.5px 링만 노출.
+     @property 미지원 브라우저: 정적 그라데이션 링으로 우아하게 폴백(오류 없음). */
+@property --vtm-a {
+    syntax: '<angle>';
+    initial-value: 0deg;
+    inherits: false;
+}
+@keyframes vtmNeonOrbit {
+    to { --vtm-a: 360deg; }
+}
+[data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:last-child::before,
+[data-testid="stHorizontalBlock"] > div[data-testid="column"]:last-child::before {
+    content: "";
+    position: absolute;
+    inset: -1px;
+    border-radius: 25px;
+    padding: 1.5px;
+    background: conic-gradient(from var(--vtm-a, 0deg),
+        transparent 0deg,
+        transparent 250deg,
+        rgba(34,211,238,0.55) 285deg,   /* Cyan   */
+        rgba(59,130,246,0.75) 315deg,   /* Blue   */
+        rgba(139,92,246,0.55) 345deg,   /* Violet */
+        transparent 360deg);
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+            mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            mask-composite: exclude;
+    animation: vtmNeonOrbit 14s linear infinite;
+    pointer-events: none;
+    opacity: 0.9;
+}
+/* 은은한 후광: 링을 살짝 블러한 레이어 (Glow 과하지 않게 낮은 투명도) */
+[data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:last-child::after,
+[data-testid="stHorizontalBlock"] > div[data-testid="column"]:last-child::after {
+    content: "";
+    position: absolute;
+    inset: -2px;
+    border-radius: 26px;
+    padding: 3px;
+    background: conic-gradient(from var(--vtm-a, 0deg),
+        transparent 0deg,
+        transparent 255deg,
+        rgba(34,211,238,0.20) 290deg,
+        rgba(59,130,246,0.28) 315deg,
+        rgba(139,92,246,0.20) 340deg,
+        transparent 360deg);
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+            mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            mask-composite: exclude;
+    filter: blur(5px);
+    animation: vtmNeonOrbit 14s linear infinite;
+    pointer-events: none;
+}
+ 
+/* ── 모션 최소화 설정 사용자 배려 (프리미엄 접근성) ── */
+@media (prefers-reduced-motion: reduce) {
+    .vtm-brand,
+    [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:last-child,
+    [data-testid="stHorizontalBlock"] > div[data-testid="column"]:last-child,
+    [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:last-child::before,
+    [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:last-child::after {
+        animation: none !important;
+        transition: none !important;
+    }
 }
 /* ── 카드 헤더 (HTML 전용 div — 위젯 미포함) ── */
 .vtm-login-card { text-align: center; margin-bottom: 16px; }
@@ -639,7 +737,7 @@ html, body {
     font-weight: 600; margin-top: 14px;
 }
 .vtm-ver b { color: #7E93AB; }
-
+ 
 /* ── 로그인 모드: 입력 필드 → 다크 글래스 ── */
 .stSelectbox>div>div {
     background: rgba(8,17,31,0.75) !important;
@@ -648,7 +746,7 @@ html, body {
 }
 .stSelectbox * { color: #E2E8F0 !important; font-weight: 600 !important; }
 .stSelectbox svg { fill: #5EEAD4 !important; }
-
+ 
 .stTextInput>div>div>input {
     background: rgba(8,17,31,0.75) !important;
     color: #E2E8F0 !important;
@@ -671,11 +769,11 @@ html, body {
     box-shadow: none !important;
 }
 .stTextInput button:hover { color: #2DD4BF !important; }
-
+ 
 label, .stTextInput label, .stSelectbox label {
     color: #A9BDD3 !important; font-weight: 700 !important;
 }
-
+ 
 /* ── selectbox 드롭다운 팝오버 ── */
 [data-baseweb="popover"] [role="listbox"],
 [data-baseweb="popover"] ul {
@@ -694,7 +792,7 @@ label, .stTextInput label, .stSelectbox label {
     background: rgba(45,212,191,0.14) !important;
     color: #7FF7DE !important;
 }
-
+ 
 /* ── 로그인 버튼 → 틸 그라데이션 ── */
 .stButton>button {
     background: linear-gradient(90deg, #14E0B8 0%, #22C9DD 55%, #0EA5E9 100%) !important;
@@ -716,10 +814,10 @@ label, .stTextInput label, .stSelectbox label {
 .stButton>button *, .stButton>button p, .stButton>button span {
     color: #04121F !important; font-weight: 900 !important;
 }
-
+ 
 /* ── 별 캔버스: 은은하게 ── */
 #vtm-stars { opacity: 0.35 !important; }
-
+ 
 /* ── 모바일: 첫 번째 컬럼(브랜드) 숨김 → 카드 중심 단일 컬럼 ── */
 /*    위치 선택자(first/last-child)만 사용 — 로그인 화면의 유일한 컬럼 블록 ── */
 @media (max-width: 920px) {
@@ -733,18 +831,18 @@ label, .stTextInput label, .stSelectbox label {
         padding: 26px 20px 20px; border-radius: 20px;
     }
     [data-testid="stMainBlockContainer"] {
-        padding-top: 6vh !important;
+        padding-top: 4vh !important;
         max-width: 460px !important;
     }
     .vtm-card-welcome { font-size: 1.48rem; }
 }
 </style>
 """, unsafe_allow_html=True)
-
-
+ 
+ 
 def render_login():
     inject_all()
-
+ 
     # ── HTML5 배경 영상 + Dark Overlay ──
     #    autoplay / muted / loop / playsinline: 모바일 포함 자동재생 정책 대응
     #    pointer-events:none (CSS): 영상 클릭 불가
@@ -754,10 +852,10 @@ def render_login():
     </video>
     <div class="vtm-bgoverlay"></div>
     """, unsafe_allow_html=True)
-
+ 
     # ── PC: 좌측 브랜드 + 우측 로그인 카드 / 모바일: 카드 단일 컬럼 ──
     left, right = st.columns([1.25, 1], gap="large")
-
+ 
     with left:
         st.markdown(f"""
         <div class="vtm-brand">
@@ -766,12 +864,12 @@ def render_login():
           </div>
           <h1 class="vtm-brand-title">VTM</h1>
           <p class="vtm-brand-sub">OPERATING&nbsp;SYSTEM</p>
-
+ 
           <div class="vtm-hx-badge">HUMAN&nbsp;×&nbsp;AI&nbsp;WORKFORCE&nbsp;OS</div>
           <p class="vtm-hx-line1">Real people and AI employees working as one.</p>
           <p class="vtm-hx-line2">One Team. Two Workforces. Infinite Possibilities.</p>
           <p class="vtm-brand-tag">AI와 사람이 함께 만드는 브랜드 커넥트의 미래</p>
-
+ 
           <div class="vtm-feat-row">
             <div class="vtm-feat">
               <svg viewBox="0 0 24 24" fill="none" stroke="#2DD4BF" stroke-width="1.7"
@@ -806,7 +904,7 @@ def render_login():
               <p class="vtm-feat-d">유기적인 팀워크</p>
             </div>
           </div>
-
+ 
           <div class="vtm-wf-panel">
             <div class="vtm-wf-head"><span class="vtm-wf-head-dot"></span>WORKFORCE&nbsp;STATUS</div>
             <div class="vtm-wf-grid">
@@ -831,17 +929,17 @@ def render_login():
               <span class="vtm-op"><span class="vtm-op-dot"></span>Operational</span>
             </div>
           </div>
-
+ 
           <p class="vtm-copy">© 2026 VTM Co., Ltd. All rights reserved.</p>
         </div>
         """, unsafe_allow_html=True)
-
+ 
     with right:
         # ── 안정화: st.container(key=...) 미사용. 순수 st.container()만 사용.
         #    카드 외곽 스타일은 위치 선택자(:last-child) CSS가 담당 (순수 CSS,
         #    적용 실패해도 앱 동작에는 영향 없음)
         card = st.container()
-
+ 
         with card:
             # 카드 헤더: HTML만 담는 자체 완결 div (위젯은 넣지 않음)
             st.markdown(f"""
@@ -852,21 +950,21 @@ def render_login():
               <p class="vtm-card-sub">브이티엠 운영 시스템에 오신것을 환영합니다.</p>
             </div>
             """, unsafe_allow_html=True)
-
+ 
             # ── 이하 로그인 로직: 원본과 동일 (절대 변경 금지 영역) ──
             emp_df  = get_employees(active_only=True)
             options = ["담당자를 선택하세요"] + [
                 f"{r['name']} ({r['role']})" for _, r in emp_df.iterrows()
             ]
             sel = st.selectbox("담당자 선택", options, key="login_sel")
-
+ 
             selected = None
             if sel != "담당자를 선택하세요":
                 nm = sel.split(" (")[0]
                 m  = emp_df[emp_df["name"] == nm]
                 if not m.empty:
                     selected = m.iloc[0]
-
+ 
             pw_input = ""
             if selected is not None:
                 if str(selected["password"]).strip():
@@ -877,7 +975,7 @@ def render_login():
                     <div class="vtm-nopw">
                       <span>🔓 비밀번호 없이 접속 가능</span>
                     </div>""", unsafe_allow_html=True)
-
+ 
             st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
             if st.button("시스템 접속  →", key="btn_login", use_container_width=True):
                 if sel == "담당자를 선택하세요" or selected is None:
@@ -895,12 +993,12 @@ def render_login():
                         st.rerun()
                     else:
                         st.error("❌ 비밀번호가 올바르지 않습니다.")
-
+ 
             st.markdown("""
-            <p class="vtm-ver"><b>VTM OS 2.0.3</b> · 개발자: 박동진 본부장</p>
+            <p class="vtm-ver"><b>VTM OS 2.0.4</b> · 개발자: 박동진 본부장</p>
             """, unsafe_allow_html=True)
-
-
+ 
+ 
 def render_sidebar():
     role_txt = "🔴 관리자" if st.session_state.is_admin else "🟢 직원"
     kst_now  = now_kst().strftime("%H:%M")
@@ -1202,14 +1300,14 @@ def render_day_detail(uid, d_str):
     rep_r = sb.table("reports").select("*").eq("emp_id",uid).eq("work_date",d_str).limit(1).execute()
     att = pd.DataFrame(att_r.data) if att_r.data else pd.DataFrame()
     rep = pd.DataFrame(rep_r.data) if rep_r.data else pd.DataFrame()
-
+ 
     try:
         dt_obj = datetime.strptime(d_str, "%Y-%m-%d")
         day_kr = ["월","화","수","목","금","토","일"][dt_obj.weekday()]
         d_label = f"{dt_obj.year}년 {dt_obj.month}월 {dt_obj.day}일 ({day_kr})"
     except Exception:
         d_label = d_str
-
+ 
     # 헤더
     st.markdown(
         f'<div style="background:linear-gradient(90deg,#1E293B,#0F172A);'
@@ -1218,7 +1316,7 @@ def render_day_detail(uid, d_str):
         f'📅 {d_label} — 상세 보기 &nbsp;<span style="font-size:0.75rem;color:#94A3B8;">'
         f'(같은 날짜 버튼을 다시 누르면 닫힙니다)</span></span></div>',
         unsafe_allow_html=True)
-
+ 
     # 출퇴근
     if not att.empty:
         a = att.iloc[0]
@@ -1248,9 +1346,9 @@ def render_day_detail(uid, d_str):
             'border-radius:10px;padding:10px;margin:4px 0;text-align:center;">'
             '<span style="color:#EF4444;font-weight:900;">❗ 출근 기록 없음</span></div>',
             unsafe_allow_html=True)
-
+ 
     st.markdown("<div style='height:4px'></div>", unsafe_allow_html=True)
-
+ 
     # 업무보고
     if not rep.empty:
         r = rep.iloc[0]
@@ -1259,7 +1357,7 @@ def render_day_detail(uid, d_str):
         s_emoji = {"승인":"✅","대기중":"⏳","반려":"❌","보류":"⏸"}.get(status,"📋")
         prg     = int(r["pm_progress"]) if safe_str(str(r["pm_progress"])) else 0
         bar_c   = "#10B981" if prg >= 80 else ("#F59E0B" if prg >= 40 else "#EF4444")
-
+ 
         am_tasks = safe_str(r["am_tasks"])    or "—"
         am_pri   = safe_str(r["am_priority"]) or "—"
         am_notes = safe_str(r["am_notes"])    or "—"
@@ -1271,7 +1369,7 @@ def render_day_detail(uid, d_str):
         appr_at  = safe_str(r["approved_at"])   or "—"
         dl_val   = safe_str(r["drive_link"])
         rl_val   = safe_str(r["result_link"])
-
+ 
         # 상단 헤더 카드
         st.markdown(
             f'<div class="vtm-card" style="padding:10px 16px;margin:4px 0 2px;">'
@@ -1281,7 +1379,7 @@ def render_day_detail(uid, d_str):
             f'font-weight:900;font-size:0.8rem;">{s_emoji} {status}</span>'
             f'</div></div>',
             unsafe_allow_html=True)
-
+ 
         # 오전 계획
         st.markdown(
             f'<div style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:10px;'
@@ -1292,7 +1390,7 @@ def render_day_detail(uid, d_str):
             f'<p style="font-size:0.76rem;color:#475569;margin:0;">'
             f'우선순위: {am_pri}&nbsp;&nbsp;|&nbsp;&nbsp;특이사항: {am_notes}</p></div>',
             unsafe_allow_html=True)
-
+ 
         # 퇴근 결과
         st.markdown(
             f'<div style="background:#F0FDF4;border:1px solid #BBF7D0;border-radius:10px;'
@@ -1308,7 +1406,7 @@ def render_day_detail(uid, d_str):
                if pm_rem and pm_rem != "—" else "")
             + '</div>',
             unsafe_allow_html=True)
-
+ 
         # 링크
         dl_a = (f'<a href="{dl_val}" target="_blank" style="color:#3B82F6;font-weight:700;">🔗 열기</a>'
                 if dl_val else '없음')
@@ -1319,7 +1417,7 @@ def render_day_detail(uid, d_str):
             f'padding:7px 14px;margin:3px 0;font-size:0.77rem;color:#475569;">'
             f'📁 Drive: {dl_a}&nbsp;&nbsp;&nbsp;🔗 결과물: {rl_a}</div>',
             unsafe_allow_html=True)
-
+ 
         # 관리자 코멘트
         if cmt:
             st.markdown(
@@ -1330,7 +1428,7 @@ def render_day_detail(uid, d_str):
                 f'<p style="font-size:0.9rem;font-weight:700;color:#1A1A1A;margin:0;'
                 f'line-height:1.5;">{cmt}</p></div>',
                 unsafe_allow_html=True)
-
+ 
         # 타임스탬프
         sub_disp  = sub_at[-17:-3]  if len(sub_at)  > 13 else sub_at
         appr_disp = appr_at[-17:-3] if len(appr_at) > 13 else appr_at
@@ -1348,36 +1446,36 @@ def render_day_detail(uid, d_str):
             '<p style="color:#64748B;font-weight:700;font-size:0.9rem;margin:0;">'
             '📭 이 날 업무 보고 내역이 없습니다.</p></div>',
             unsafe_allow_html=True)
-
+ 
     st.markdown("<hr style='border-color:#1E3A5F;margin:12px 0 4px;'>", unsafe_allow_html=True)
-
-
+ 
+ 
 def page_emp_calendar():
     topbar("📅 업무 달력")
     uid   = st.session_state.user_id
     today = now_kst().date()
-
+ 
     if "cal_selected" not in st.session_state:
         st.session_state.cal_selected = None
-
+ 
     c1, c2, _ = st.columns([1, 1, 2])
     with c1: yr = st.number_input("연도", value=today.year, min_value=2024, max_value=2030, key="cy")
     with c2: mo = st.number_input("월",   value=today.month, min_value=1, max_value=12, key="cm")
     yr = int(yr); mo = int(mo)
-
+ 
     sb = _sb()
     att_dr = sb.table("attendance").select("work_date,att_type").eq("emp_id",uid).like("work_date",f"{yr}-{mo:02d}-%").execute()
     rep_dr = sb.table("reports").select("work_date,status,pm_progress").eq("emp_id",uid).like("work_date",f"{yr}-{mo:02d}-%").execute()
     att_df = pd.DataFrame(att_dr.data) if att_dr.data else pd.DataFrame()
     rep_df = pd.DataFrame(rep_dr.data) if rep_dr.data else pd.DataFrame()
-
+ 
     att_map = {r["work_date"]: r for _, r in att_df.iterrows()} if not att_df.empty else {}
     rep_map = {r["work_date"]: r for _, r in rep_df.iterrows()} if not rep_df.empty else {}
     cal_weeks = calendar.monthcalendar(yr, mo)
     sel = st.session_state.cal_selected
-
+ 
     COLG = '<colgroup><col style="width:16.8%"><col style="width:16.8%"><col style="width:16.8%"><col style="width:16.8%"><col style="width:16.8%"><col style="width:8%"><col style="width:8%"></colgroup>'
-
+ 
     # ── CSS ──
     st.markdown("""<style>
 table.vtm-cal {
@@ -1429,7 +1527,7 @@ table.vtm-cal .stamp {
     background:rgba(220,38,38,0.08); transform:rotate(-15deg);
     line-height:1.1; text-align:center;
 }
-
+ 
 /* ── 핵심: .cmark 마커 바로 다음 div의 버튼을 슬레이트 색으로 ── */
 /* 골드 그라데이션(.stButton>button)보다 높은 specificity로 override */
 div:has(> .cmark) + div .stButton > button {
@@ -1463,7 +1561,7 @@ div:has(> .cmark) + div [data-testid="stColumn"] {
     min-width: 0 !important;
 }
 </style>""", unsafe_allow_html=True)
-
+ 
     # ── 헤더 ──
     st.markdown(
         f'<table class="vtm-cal">{COLG}'
@@ -1474,7 +1572,7 @@ div:has(> .cmark) + div [data-testid="stColumn"] {
         '<th class="hsat">토</th><th class="hsun">일</th>'
         '</tr></thead></table>',
         unsafe_allow_html=True)
-
+ 
     # ── 주 단위 렌더 ──
     for wi, week in enumerate(cal_weeks):
         # ① HTML 셀 (시각 전용)
@@ -1507,10 +1605,10 @@ div:has(> .cmark) + div [data-testid="stColumn"] {
             cells += f'<td class="{cls}">{stamp}<span class="daynum">{day}</span>{badges}</td>'
         cells += '</tr></tbody></table>'
         st.markdown(cells, unsafe_allow_html=True)
-
+ 
         # ② CSS 타겟 마커 (이 바로 다음 div = 버튼 행)
         st.markdown('<div class="cmark"></div>', unsafe_allow_html=True)
-
+ 
         # ③ Streamlit 버튼 (마커 덕분에 슬레이트 색으로 오버라이드됨)
         cols = st.columns([1, 1, 1, 1, 1, 0.48, 0.48])
         for i, day in enumerate(week):
@@ -1524,13 +1622,13 @@ div:has(> .cmark) + div [data-testid="stColumn"] {
                     if st.button(lbl, key=f"cbtn_{d}", use_container_width=True):
                         st.session_state.cal_selected = None if is_sel else d
                         st.rerun()
-
+ 
         # ④ 상세 카드
         week_dates = [f"{yr}-{mo:02d}-{day:02d}" for i,day in enumerate(week) if day!=0 and i<5]
         if sel in week_dates:
             render_day_detail(uid, sel)
-
-
+ 
+ 
 # ═══════════════════════════════════════════
 #  직원: VTM 사규 / VTM WAY
 # ═══════════════════════════════════════════
@@ -1655,9 +1753,9 @@ def page_emp_guide():
     line-height: 1.8; margin: 0; }
 .vtm-promise .gold { color: #D4AF37; font-weight: 900; }
 </style>
-
+ 
 <div class="vtm-guide-wrap">
-
+ 
   <!-- 히어로 -->
   <div class="vtm-guide-hero">
     <div class="en-title">VTM OS 1.0 &nbsp;·&nbsp; COMPANY GUIDE</div>
@@ -1667,7 +1765,7 @@ def page_emp_guide():
       <span style="font-size:0.85rem;color:#64748B;">우리는 함께 성장하는 사람들이 더 큰 가치를 만들어가는 문화를 추구합니다.</span>
     </div>
   </div>
-
+ 
   <!-- 핵심 가치 -->
   <div class="vtm-section">
     <div class="vtm-section-title">🏆 &nbsp;핵심 가치</div>
@@ -1678,7 +1776,7 @@ def page_emp_guide():
     <div class="vtm-value-item"><div class="vtm-value-num">5</div><div class="vtm-value-text">변화와 도전을 두려워하지 않습니다.</div></div>
     <div class="vtm-value-item"><div class="vtm-value-num">6</div><div class="vtm-value-text">회사의 성장을 함께 만들어 갑니다.</div></div>
   </div>
-
+ 
   <!-- 근태 규정 -->
   <div class="vtm-section">
     <div class="vtm-section-title">⏰ &nbsp;근태 규정</div>
@@ -1715,7 +1813,7 @@ def page_emp_guide():
       ⚠️ 개인 사정으로 지각 시 <strong>사전 공유 원칙</strong>
     </div>
   </div>
-
+ 
   <!-- 휴가 규정 -->
   <div class="vtm-section">
     <div class="vtm-section-title">🌴 &nbsp;휴가 규정</div>
@@ -1740,7 +1838,7 @@ def page_emp_guide():
       </div>
     </div>
   </div>
-
+ 
   <!-- 사무실 운영 -->
   <div class="vtm-section">
     <div class="vtm-section-title">🏢 &nbsp;사무실 운영 규정</div>
@@ -1757,7 +1855,7 @@ def page_emp_guide():
       </div>
     </div>
   </div>
-
+ 
   <!-- 업무 운영 원칙 -->
   <div class="vtm-section">
     <div class="vtm-section-title">📌 &nbsp;업무 운영 원칙</div>
@@ -1767,7 +1865,7 @@ def page_emp_guide():
       <li><strong>결과물 관리</strong> — 모든 결과물은 공용 Google Drive에 업로드합니다. 개인 PC 보관만으로 업무를 종료할 수 없습니다.</li>
     </ul>
   </div>
-
+ 
   <!-- AI 사용 규정 -->
   <div class="vtm-section">
     <div class="vtm-section-title">🤖 &nbsp;AI 프로그램 사용 규정</div>
@@ -1784,7 +1882,7 @@ def page_emp_guide():
       점심시간 전 반드시 사용 중인 프로그램 종료 공유 후 식사합니다.</span>
     </div>
   </div>
-
+ 
   <!-- 커뮤니케이션 규정 -->
   <div class="vtm-section">
     <div class="vtm-section-title">💬 &nbsp;커뮤니케이션 규정</div>
@@ -1802,7 +1900,7 @@ def page_emp_guide():
       <span class="vtm-badge" style="border-color:rgba(239,68,68,0.4);color:#FCA5A5;">긴급 상황</span>
     </div>
   </div>
-
+ 
   <!-- VTM 인재상 -->
   <div class="vtm-section">
     <div class="vtm-section-title">⭐ &nbsp;VTM 인재상</div>
@@ -1815,7 +1913,7 @@ def page_emp_guide():
       <span class="vtm-badge">긍정적인 에너지</span>
     </div>
   </div>
-
+ 
   <!-- VTM의 약속 -->
   <div class="vtm-promise">
     <p>
@@ -1825,11 +1923,11 @@ def page_emp_guide():
       <span class="gold">함께 성장할 수 있는 사람</span>과 오래 가고 싶습니다.
     </p>
   </div>
-
+ 
 </div>
 """, unsafe_allow_html=True)
-
-
+ 
+ 
 def page_admin_home():
     topbar("🔴 관리자 대시보드")
     td = today_str(); sb = _sb()
@@ -2055,7 +2153,7 @@ def page_admin_approve():
                 st.markdown(f'<p style="color:#60A5FA;font-weight:700;">📁 <a href="{dl_val}" target="_blank" style="color:#60A5FA;">Google Drive 링크 열기</a></p>', unsafe_allow_html=True)
             if rl_val:
                 st.markdown(f'<p style="color:#60A5FA;font-weight:700;">🔗 <a href="{rl_val}" target="_blank" style="color:#60A5FA;">결과물 링크 열기</a></p>', unsafe_allow_html=True)
-
+ 
             st.markdown("<div style='height:6px'></div>", unsafe_allow_html=True)
             cmt = st.text_input("💬 코멘트", key=f"cmt_{r['id']}", placeholder="승인/반려 사유를 입력하세요...")
             ca, cb, cc = st.columns(3)
