@@ -438,14 +438,27 @@ label,.stTextInput label,.stSelectbox label,.stTextArea label,
     if not st.session_state.get("logged_in", False):
         st.markdown("""
 <style>
-/* ── 폴백 배경: 영상 로드 전/실패 시 노출되는 다크 그라데이션 ──
-     (root 배경은 z-index:-2 영상보다 항상 뒤에 그려짐)            */
-html, body {
+/* ══════════════════════════════════════════════════════════════
+   [배경 영상 미표시 원인 및 수정]
+   원인 1 (핵심): 기존에 html과 body "둘 다"에 폴백 그라데이션을 칠했음.
+     CSS 페인팅 순서(Appendix E)상 body의 자체 배경은
+     z-index가 음수인 fixed 요소(영상 -2, 오버레이 -1)보다 "나중에"
+     그려지므로 body 배경이 영상을 완전히 덮어버림.
+     → 폴백은 html에만, body는 transparent로 분리.
+   원인 2: v2.0.5에서 추가한 zoom(0.93)·overflow:hidden 조상 컨테이너가
+     내부의 fixed 영상을 축소/클리핑할 수 있음.
+     → 스크립트로 영상·오버레이를 body 직속으로 이동시켜
+       body > video > overlay > login layout 구조를 강제 (render_login 참조).
+   ══════════════════════════════════════════════════════════════ */
+/* ── 폴백 배경: html(root)에만 — root 배경은 항상 영상보다 뒤에 그려짐 ── */
+html {
     background:
         radial-gradient(1100px 640px at 16% 26%, rgba(20,224,184,0.12) 0%, transparent 60%),
         radial-gradient(920px 560px at 86% 78%, rgba(14,165,233,0.11) 0%, transparent 60%),
         linear-gradient(180deg, #050B14 0%, #081222 48%, #04090F 100%) !important;
 }
+/* ── body는 반드시 투명: body 배경이 있으면 z-index:-2 영상을 덮음 ── */
+body { background: transparent !important; }
 /* ── 영상이 비치도록 Streamlit 컨테이너 전부 투명화 ── */
 .stApp,
 [data-testid="stAppViewContainer"],
@@ -456,15 +469,17 @@ html, body {
     background: transparent !important;
 }
 
-/* ── HTML5 배경 영상 (Supabase Storage MP4) ── */
+/* ── HTML5 배경 영상 (Supabase Storage MP4) — body 직속 기준 스펙 ── */
 .vtm-video-bg {
     position: fixed;
-    top: 0; left: 0;
-    width: 100%;
-    height: 100%;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
     object-fit: cover;
     z-index: -2;
     pointer-events: none;
+    opacity: 1;
 }
 /* ── Dark Overlay: 로그인 카드 가독성 확보 (평균 ≈ rgba(0,0,0,.55)) ── */
 .vtm-bgoverlay {
@@ -886,6 +901,18 @@ label, .stTextInput label, .stSelectbox label {
 }
 </style>
 """, unsafe_allow_html=True)
+    else:
+        # ── 로그인 후 정리: body 직속으로 이동시킨 배경 영상/오버레이 제거 ──
+        #    (body로 옮긴 노드는 Streamlit rerun이 지워주지 않으므로 직접 제거.
+        #     화면 표시 정리용 스크립트일 뿐, 앱 기능에는 관여하지 않음)
+        st.markdown("""
+<script>
+(function(){
+    document.querySelectorAll('#vtm-bg-video, #vtm-bg-overlay')
+        .forEach(function(n){ n.remove(); });
+})();
+</script>
+""", unsafe_allow_html=True)
 
 
 def render_login():
@@ -894,11 +921,38 @@ def render_login():
     # ── HTML5 배경 영상 + Dark Overlay ──
     #    autoplay / muted / loop / playsinline: 모바일 포함 자동재생 정책 대응
     #    pointer-events:none (CSS): 영상 클릭 불가
+    #    아래 스크립트가 video/overlay를 body "직속"으로 이동시켜
+    #    body > video > overlay > login layout 구조를 보장.
+    #    (Streamlit 컨테이너 내부에 두면 zoom/overflow/배경 페인팅 순서에
+    #     의해 영상이 가려지거나 잘릴 수 있음 — 이번 미표시 버그의 원인)
     st.markdown(f"""
-    <video autoplay muted loop playsinline preload="auto" class="vtm-video-bg">
+    <video id="vtm-bg-video" autoplay muted loop playsinline preload="auto" class="vtm-video-bg">
         <source src="{VTM_BG_VIDEO_URL}" type="video/mp4">
     </video>
-    <div class="vtm-bgoverlay"></div>
+    <div id="vtm-bg-overlay" class="vtm-bgoverlay"></div>
+    <script>
+    (function(){{
+        function vtmMountBg(){{
+            var all = document.querySelectorAll('#vtm-bg-video, #vtm-bg-overlay');
+            var v = null, o = null;
+            /* rerun으로 남은 body 직속 구버전 노드는 제거하고,
+               이번 렌더에서 새로 생성된(아직 앱 내부에 있는) 노드를 채택 */
+            all.forEach(function(n){{
+                if (n.parentElement === document.body) {{ n.remove(); return; }}
+                if (n.id === 'vtm-bg-video')   v = n;
+                if (n.id === 'vtm-bg-overlay') o = n;
+            }});
+            if (!v || !o) {{ setTimeout(vtmMountBg, 300); return; }}
+            /* body 최상단으로 이동: <body> → video → overlay → (앱 레이아웃) */
+            document.body.insertBefore(v, document.body.firstChild);
+            document.body.insertBefore(o, v.nextSibling);
+            v.muted = true;
+            var p = v.play();
+            if (p && p.catch) {{ p.catch(function(){{}}); }}
+        }}
+        vtmMountBg();
+    }})();
+    </script>
     """, unsafe_allow_html=True)
 
     # ── PC: 좌측 브랜드 + 우측 로그인 카드 / 모바일: 카드 단일 컬럼 ──
@@ -1043,7 +1097,7 @@ def render_login():
                         st.error("❌ 비밀번호가 올바르지 않습니다.")
 
             st.markdown("""
-            <p class="vtm-ver"><b>VTM OS 2.0.5</b> · 개발자: 박동진 본부장</p>
+            <p class="vtm-ver"><b>VTM OS 2.0.6</b> · 개발자: 박동진 본부장</p>
             """, unsafe_allow_html=True)
 
 
