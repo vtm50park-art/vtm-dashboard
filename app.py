@@ -517,8 +517,15 @@ html, body,
     padding-top: 0 !important;
     padding-bottom: 0 !important;
     margin: 0 auto !important;
-    /* 전체 스케일 93%: 1920x1080에서 스크롤 없이 자연스러운 여백 확보
-       (zoom 미지원 브라우저는 100%로 폴백 — flex 중앙 정렬은 그대로 유지) */
+}
+/* ── 전체 스케일 93% ──
+   [중요] zoom은 반드시 "컨텐츠(컬럼 블록)"에만 적용한다.
+   블록 컨테이너 전체에 걸면 그 안에 렌더링되는 fixed 배경 영상까지
+   0.93배로 축소되어 우측·하단에 약 7% 공백이 생긴다(직전 버그의 원인).
+   영상/오버레이 markdown은 stHorizontalBlock 밖의 형제 요소이므로
+   여기에만 zoom을 걸면 영상은 100vw×100vh 그대로 유지된다.
+   (zoom 미지원 브라우저는 100%로 폴백 — flex 중앙 정렬은 그대로) */
+[data-testid="stHorizontalBlock"] {
     zoom: 0.93;
 }
 
@@ -887,32 +894,21 @@ label, .stTextInput label, .stSelectbox label {
     [data-testid="stMainBlockContainer"] {
         padding-top: 0 !important;
         max-width: 460px !important;
-        zoom: 0.93;
     }
     .vtm-card-welcome { font-size: 1.48rem; }
 }
 
 /* ── 세로가 짧은 화면: 스케일을 더 줄여 스크롤 없이 한 화면 유지 ── */
 @media (max-height: 760px) {
-    [data-testid="stMainBlockContainer"] { zoom: 0.84; }
+    [data-testid="stHorizontalBlock"] { zoom: 0.84; }
 }
 @media (max-height: 640px) {
-    [data-testid="stMainBlockContainer"] { zoom: 0.74; }
+    [data-testid="stHorizontalBlock"] { zoom: 0.74; }
 }
 </style>
 """, unsafe_allow_html=True)
-    else:
-        # ── 로그인 후 정리: body 직속으로 이동시킨 배경 영상/오버레이 제거 ──
-        #    (body로 옮긴 노드는 Streamlit rerun이 지워주지 않으므로 직접 제거.
-        #     화면 표시 정리용 스크립트일 뿐, 앱 기능에는 관여하지 않음)
-        st.markdown("""
-<script>
-(function(){
-    document.querySelectorAll('#vtm-bg-video, #vtm-bg-overlay')
-        .forEach(function(n){ n.remove(); });
-})();
-</script>
-""", unsafe_allow_html=True)
+    # 영상/오버레이는 Streamlit이 관리하는 DOM 안에 있으므로
+    # 로그인 후 rerun 시 자동으로 제거됨 — 별도 정리 스크립트 불필요.
 
 
 def render_login():
@@ -921,38 +917,15 @@ def render_login():
     # ── HTML5 배경 영상 + Dark Overlay ──
     #    autoplay / muted / loop / playsinline: 모바일 포함 자동재생 정책 대응
     #    pointer-events:none (CSS): 영상 클릭 불가
-    #    아래 스크립트가 video/overlay를 body "직속"으로 이동시켜
-    #    body > video > overlay > login layout 구조를 보장.
-    #    (Streamlit 컨테이너 내부에 두면 zoom/overflow/배경 페인팅 순서에
-    #     의해 영상이 가려지거나 잘릴 수 있음 — 이번 미표시 버그의 원인)
+    #    [참고] st.markdown은 HTML을 innerHTML로 삽입하므로 <script>가
+    #    실행되지 않는다 → JS로 body 이동시키는 방식은 동작하지 않아 제거.
+    #    대신 zoom을 컬럼 블록에만 스코프시켜(inject_all 참조) fixed 영상이
+    #    100vw×100vh 그대로 전체 화면을 덮도록 순수 CSS로 해결.
     st.markdown(f"""
     <video id="vtm-bg-video" autoplay muted loop playsinline preload="auto" class="vtm-video-bg">
         <source src="{VTM_BG_VIDEO_URL}" type="video/mp4">
     </video>
     <div id="vtm-bg-overlay" class="vtm-bgoverlay"></div>
-    <script>
-    (function(){{
-        function vtmMountBg(){{
-            var all = document.querySelectorAll('#vtm-bg-video, #vtm-bg-overlay');
-            var v = null, o = null;
-            /* rerun으로 남은 body 직속 구버전 노드는 제거하고,
-               이번 렌더에서 새로 생성된(아직 앱 내부에 있는) 노드를 채택 */
-            all.forEach(function(n){{
-                if (n.parentElement === document.body) {{ n.remove(); return; }}
-                if (n.id === 'vtm-bg-video')   v = n;
-                if (n.id === 'vtm-bg-overlay') o = n;
-            }});
-            if (!v || !o) {{ setTimeout(vtmMountBg, 300); return; }}
-            /* body 최상단으로 이동: <body> → video → overlay → (앱 레이아웃) */
-            document.body.insertBefore(v, document.body.firstChild);
-            document.body.insertBefore(o, v.nextSibling);
-            v.muted = true;
-            var p = v.play();
-            if (p && p.catch) {{ p.catch(function(){{}}); }}
-        }}
-        vtmMountBg();
-    }})();
-    </script>
     """, unsafe_allow_html=True)
 
     # ── PC: 좌측 브랜드 + 우측 로그인 카드 / 모바일: 카드 단일 컬럼 ──
@@ -1097,7 +1070,7 @@ def render_login():
                         st.error("❌ 비밀번호가 올바르지 않습니다.")
 
             st.markdown("""
-            <p class="vtm-ver"><b>VTM OS 2.0.6</b> · 개발자: 박동진 본부장</p>
+            <p class="vtm-ver"><b>VTM OS 2.0.7</b> · 개발자: 박동진 본부장</p>
             """, unsafe_allow_html=True)
 
 
