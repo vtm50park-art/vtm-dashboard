@@ -41,6 +41,24 @@ def get_supabase() -> "Client":
 def _sb():
     return get_supabase()
 
+# ── VTM OS 2.0.3 로그인 리디자인 자산 ──
+VTM_LOGO_URL     = "https://i.postimg.cc/TwMLPgWj/beu-itiem-logo.png"
+VTM_BG_VIDEO_URL = "https://pwaqbxfaokaliclhmixo.supabase.co/storage/v1/object/public/assets/vtm.mp4"
+
+# ── 관리자(본부장) 화면 배경 영상 자산 ──
+VTM_ADMIN_BG_VIDEO_URL = "https://pwaqbxfaokaliclhmixo.supabase.co/storage/v1/object/public/assets/vtm01.mp4"
+
+# ── 관리자 대시보드 표시용 AI 직원 (표시 전용 · DB 무관) ──
+AI_STAFF = [
+    ("몽해 블로그 작업 AI직원",   "블로그 작성중"),
+    ("탈모 블로그 작업 AI직원",   "블로그 작성중"),
+    ("강민호 전략실장 AI직원",    "몽해 비즈니스 전략 수립중"),
+    ("최도윤 영업팀장 AI직원",    "덴탈 팩토리 세일즈 계획수립중"),
+    ("김하린 마케팅 팀장 AI직원", "몽해 마케팅 진행중"),
+    ("VTM AI 총괄과장 AI직원",   "AI직원 역할분담 수행중"),
+    ("서윤 비서 실장 AI직원",     "본부장 스케줄 체크중"),
+]
+
 def init_data():
     """앱 세션 시작 시 기본 직원 데이터 확인 및 초기화 (세션당 1회 실행)"""
     # 이미 이번 세션에서 초기화됐으면 스킵
@@ -53,15 +71,13 @@ def init_data():
         # ── Supabase 연결 확인 ──
         test = sb.table("employees").select("id").limit(1).execute()
 
-        # ── 기본 직원 없으면 삽입 ──
+        # ── 기본 직원 없으면 삽입 (※ 서아영/emp_seo 는 신규 세팅에서 제외) ──
         check = sb.table("employees").select("id").eq("id","admin_park").execute()
         if not check.data:
             _now = now_str()
             sb.table("employees").insert([
                 {"id":"admin_park","name":"박동진 본부장","role":"본부장",
                  "is_admin":1,"password":"5638","active":1,"created_at":_now},
-                {"id":"emp_seo","name":"서아영 디자이너","role":"디자이너",
-                 "is_admin":0,"password":"","active":1,"created_at":_now},
                 {"id":"emp_ahn","name":"안효민 디렉터","role":"디렉터",
                  "is_admin":0,"password":"","active":1,"created_at":_now},
             ]).execute()
@@ -69,6 +85,12 @@ def init_data():
         # ── 김소원 퇴사 처리 (행이 없어도 오류 없음) ──
         try:
             sb.table("employees").update({"active":0}).eq("id","emp_kim").execute()
+        except Exception:
+            pass
+
+        # ── 서아영 퇴사 처리: 기존 DB에 emp_seo가 이미 있는 경우 비활성화 ──
+        try:
+            sb.table("employees").update({"active":0}).eq("id","emp_seo").execute()
         except Exception:
             pass
 
@@ -82,6 +104,8 @@ def init_data():
             "2. Supabase SQL Editor에서 supabase_schema.sql 실행 (RLS 비활성화 포함)"
         )
         st.stop()
+
+
 
 # 세션 상태 기본값 설정 먼저
 for _k, _v in {"logged_in": False, "user_id": None, "user_name": None,
@@ -416,85 +440,1078 @@ label,.stTextInput label,.stSelectbox label,.stTextArea label,
 }})();
 </script>
 """, unsafe_allow_html=True)
- 
+
+    # ═══════════════════════════════════════════════════════════
+    # ▼▼▼ [로그인 전용 CSS — 배경 영상 버전] ▼▼▼
+    #  · 배경: HTML5 Video (.vtm-video-bg) + Dark Overlay (.vtm-bgoverlay)
+    #  · 폴백: html/body 다크 그라데이션 (영상 로드 실패 시 자동 노출)
+    #  · Vimeo iframe 미사용 / :has() 미사용
+    #  · 카드 외곽: 위치 선택자(:last-child) / 헤더: .vtm-login-card div
+    #  · 로그인 전(logged_in=False)에만 주입 → 로그인 후 영향 없음
+    # ═══════════════════════════════════════════════════════════
+    if not st.session_state.get("logged_in", False):
+        st.markdown("""
+<style>
+/* ══════════════════════════════════════════════════════════════
+   [배경 영상 미표시 원인 및 수정]
+   원인 1 (핵심): 기존에 html과 body "둘 다"에 폴백 그라데이션을 칠했음.
+     CSS 페인팅 순서(Appendix E)상 body의 자체 배경은
+     z-index가 음수인 fixed 요소(영상 -2, 오버레이 -1)보다 "나중에"
+     그려지므로 body 배경이 영상을 완전히 덮어버림.
+     → 폴백은 html에만, body는 transparent로 분리.
+   원인 2: v2.0.5에서 추가한 zoom(0.93)·overflow:hidden 조상 컨테이너가
+     내부의 fixed 영상을 축소/클리핑할 수 있음.
+     → 스크립트로 영상·오버레이를 body 직속으로 이동시켜
+       body > video > overlay > login layout 구조를 강제 (render_login 참조).
+   ══════════════════════════════════════════════════════════════ */
+/* ── 폴백 배경: html(root)에만 — root 배경은 항상 영상보다 뒤에 그려짐 ── */
+html {
+    background:
+        radial-gradient(1100px 640px at 16% 26%, rgba(20,224,184,0.12) 0%, transparent 60%),
+        radial-gradient(920px 560px at 86% 78%, rgba(14,165,233,0.11) 0%, transparent 60%),
+        linear-gradient(180deg, #050B14 0%, #081222 48%, #04090F 100%) !important;
+}
+/* ── body는 반드시 투명: body 배경이 있으면 z-index:-2 영상을 덮음 ── */
+body { background: transparent !important; }
+/* ── 영상이 비치도록 Streamlit 컨테이너 전부 투명화 ── */
+.stApp,
+[data-testid="stAppViewContainer"],
+[data-testid="stAppViewContainer"]>section,
+[data-testid="stMain"],
+[data-testid="stMainBlockContainer"],
+.main, .main>div {
+    background: transparent !important;
+}
+
+/* ── HTML5 배경 영상 (Supabase Storage MP4) — body 직속 기준 스펙 ── */
+.vtm-video-bg {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    object-fit: cover;
+    z-index: -2;
+    pointer-events: none;
+    opacity: 1;
+}
+/* ── Dark Overlay: 로그인 카드 가독성 확보 (평균 ≈ rgba(0,0,0,.55)) ── */
+.vtm-bgoverlay {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background:
+        radial-gradient(ellipse at 26% 38%, rgba(20,224,184,0.08) 0%, transparent 55%),
+        linear-gradient(180deg, rgba(0,0,0,0.62) 0%, rgba(0,0,0,0.48) 45%, rgba(0,0,0,0.72) 100%);
+}
+
+/* ── 100vh 완전 중앙 정렬 + 스크롤 완전 차단 ──
+     stMain을 flex 컨테이너로 만들어 블록 컨테이너를 수직 정중앙 배치.
+     html/body/앱 컨테이너 전부 100vh + overflow:hidden → 스크롤바 원천 차단. */
+html, body,
+.stApp,
+[data-testid="stAppViewContainer"],
+[data-testid="stAppViewContainer"]>section {
+    height: 100vh !important;
+    max-height: 100vh !important;
+    overflow: hidden !important;
+}
+[data-testid="stMain"] {
+    height: 100vh !important;
+    max-height: 100vh !important;
+    overflow: hidden !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+[data-testid="stMainBlockContainer"] {
+    max-width: 1180px !important;
+    width: 100% !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    margin: 0 auto !important;
+}
+/* ── 전체 스케일 93% ──
+   [중요] zoom은 반드시 "컨텐츠(컬럼 블록)"에만 적용한다.
+   블록 컨테이너 전체에 걸면 그 안에 렌더링되는 fixed 배경 영상까지
+   0.93배로 축소되어 우측·하단에 약 7% 공백이 생긴다(직전 버그의 원인).
+   영상/오버레이 markdown은 stHorizontalBlock 밖의 형제 요소이므로
+   여기에만 zoom을 걸면 영상은 100vw×100vh 그대로 유지된다.
+   (zoom 미지원 브라우저는 100%로 폴백 — flex 중앙 정렬은 그대로) */
+[data-testid="stHorizontalBlock"] {
+    zoom: 0.93;
+}
+
+/* ── 좌(브랜드) / 우(카드) 세로 중앙 정렬 ── */
+[data-testid="stHorizontalBlock"] { align-items: center !important; }
+
+/* ── 진입 애니메이션 (fade + translateY) ──
+     fill-mode: backwards → 종료 후 transform이 해제되어 hover scale과 충돌 없음 */
+@keyframes vtmEnterBrand {
+    from { opacity: 0; transform: translateY(15px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes vtmEnterCard {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── 좌측 브랜드 영역 (flex 정중앙 정렬로 별도 상향 패딩 불필요) ── */
+.vtm-brand {
+    padding: 0 26px 0 4px;
+    animation: vtmEnterBrand 0.7s cubic-bezier(0.22, 1, 0.36, 1) 0.05s backwards;
+}
+.vtm-brand-logo img {
+    width: 150px; max-width: 42vw; height: auto; display: block;
+    filter: drop-shadow(0 0 26px rgba(20,224,184,0.35));
+    margin-bottom: 26px;
+}
+.vtm-brand-title {
+    color: #E8FFFA; font-size: 2.45rem; font-weight: 900;
+    letter-spacing: 0.12em; line-height: 1.05; margin: 0;
+    background: linear-gradient(120deg, #7FF7DE 0%, #2DD4BF 45%, #38BDF8 100%);
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+.vtm-brand-sub {
+    color: #5EEAD4; font-size: 0.98rem; font-weight: 700;
+    letter-spacing: 0.42em; margin: 10px 0 0 2px;
+}
+
+/* ── Human × AI Workforce 카피 ── */
+.vtm-hx-badge {
+    display: inline-block; margin: 26px 0 0;
+    padding: 6px 14px; border-radius: 999px;
+    background: rgba(45,212,191,0.10);
+    border: 1px solid rgba(45,212,191,0.42);
+    color: #7FF7DE; font-size: 0.82rem; font-weight: 900;
+    letter-spacing: 0.14em;
+}
+.vtm-hx-line1 {
+    color: #DCE8F5; font-size: 1.02rem; font-weight: 700;
+    margin: 16px 0 0; letter-spacing: 0.01em;
+}
+.vtm-hx-line2 {
+    font-size: 0.92rem; font-weight: 800; margin: 6px 0 0;
+    background: linear-gradient(90deg, #7FF7DE 0%, #38BDF8 100%);
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent;
+    letter-spacing: 0.04em;
+}
+.vtm-brand-tag {
+    color: #7E93AB; font-size: 0.84rem; font-weight: 500;
+    margin: 12px 0 0; letter-spacing: 0.02em;
+}
+
+/* ── 아이콘 3종 ── */
+.vtm-feat-row { display: flex; gap: 34px; margin-top: 36px; flex-wrap: wrap; }
+.vtm-feat { text-align: center; min-width: 86px; }
+.vtm-feat svg { width: 28px; height: 28px; margin-bottom: 8px; }
+.vtm-feat-t { color: #F1F5F9; font-size: 0.84rem; font-weight: 800; margin: 0; }
+.vtm-feat-d { color: #7E93AB; font-size: 0.74rem; font-weight: 500; margin: 4px 0 0; }
+
+/* ── Workforce Status 패널 (기능 없는 상태 표시 카드) ──
+     Glassmorphism: 로그인 카드와 동일 스펙으로 통일 ── */
+.vtm-wf-panel {
+    margin-top: 32px; max-width: 480px;
+    background: rgba(18,24,38,0.42);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(94,234,212,0.16);
+    border-radius: 16px;
+    padding: 16px 18px 14px;
+    box-shadow: 0 16px 44px rgba(0,0,0,0.4);
+}
+.vtm-wf-head {
+    color: #5EEAD4; font-size: 0.72rem; font-weight: 900;
+    letter-spacing: 0.2em; margin-bottom: 12px;
+    display: flex; align-items: center; gap: 7px;
+}
+.vtm-wf-head-dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: #2DD4BF; display: inline-block;
+    box-shadow: 0 0 8px rgba(45,212,191,0.9);
+    animation: vtmPulse 2s ease-in-out infinite;
+}
+.vtm-wf-grid { display: flex; gap: 10px; }
+.vtm-wf-item {
+    flex: 1; text-align: center;
+    background: rgba(8,17,31,0.55);
+    border: 1px solid rgba(94,234,212,0.10);
+    border-radius: 12px; padding: 12px 6px 10px;
+}
+.vtm-wf-num {
+    display: block; font-size: 1.55rem; font-weight: 900; line-height: 1;
+    background: linear-gradient(120deg, #7FF7DE 0%, #38BDF8 100%);
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+.vtm-wf-lbl {
+    display: block; color: #A9BDD3; font-size: 0.68rem;
+    font-weight: 700; margin-top: 6px; letter-spacing: 0.02em;
+}
+.vtm-wf-state {
+    display: inline-block; margin-top: 6px;
+    font-size: 0.62rem; font-weight: 800;
+    padding: 2px 8px; border-radius: 999px;
+}
+.vtm-wf-state.on    { color: #34D399; background: rgba(52,211,153,0.12); border: 1px solid rgba(52,211,153,0.35); }
+.vtm-wf-state.run   { color: #38BDF8; background: rgba(56,189,248,0.12); border: 1px solid rgba(56,189,248,0.35); }
+.vtm-wf-state.total { color: #7FF7DE; background: rgba(45,212,191,0.12); border: 1px solid rgba(45,212,191,0.35); }
+.vtm-wf-foot {
+    margin-top: 12px; padding-top: 10px;
+    border-top: 1px solid rgba(94,234,212,0.10);
+    display: flex; justify-content: space-between; align-items: center;
+    color: #7E93AB; font-size: 0.74rem; font-weight: 700;
+}
+.vtm-op {
+    color: #34D399; font-weight: 900;
+    display: inline-flex; align-items: center; gap: 6px;
+}
+.vtm-op-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: #34D399; display: inline-block;
+    box-shadow: 0 0 10px rgba(52,211,153,0.9);
+    animation: vtmPulse 1.6s ease-in-out infinite;
+}
+@keyframes vtmPulse {
+    0%, 100% { opacity: 1;   transform: scale(1); }
+    50%      { opacity: 0.45; transform: scale(0.82); }
+}
+
+.vtm-copy { color: #55677E; font-size: 0.72rem; font-weight: 500; margin-top: 30px; }
+
+/* ── 로그인 카드 외곽: 위치 선택자만 사용 (st-key 클래스 의존 제거) ──
+     Glassmorphism: Workforce 패널과 동일 스펙 (rgba(18,24,38,0.42) + blur 20px) */
+[data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:last-child,
+[data-testid="stHorizontalBlock"] > div[data-testid="column"]:last-child {
+    position: relative;
+    background: rgba(18,24,38,0.42);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(94,234,212,0.10);
+    border-radius: 24px;
+    padding: 34px 30px 24px;
+    box-shadow: 0 34px 90px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.06);
+    animation: vtmEnterCard 0.9s cubic-bezier(0.22, 1, 0.36, 1) 0.18s backwards;
+    transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1),
+                box-shadow 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+    will-change: transform;
+}
+
+/* ── Hover: 미세한 확대(scale 1.01) + Glow 소폭 증가만 ── */
+[data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:last-child:hover,
+[data-testid="stHorizontalBlock"] > div[data-testid="column"]:last-child:hover {
+    transform: scale(1.01);
+    box-shadow: 0 40px 100px rgba(0,0,0,0.65), inset 0 1px 0 rgba(255,255,255,0.07);
+}
+[data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:last-child:hover::before,
+[data-testid="stHorizontalBlock"] > div[data-testid="column"]:last-child:hover::before {
+    opacity: 1;
+}
+[data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:last-child:hover::after,
+[data-testid="stHorizontalBlock"] > div[data-testid="column"]:last-child:hover::after {
+    opacity: 1;
+}
+
+/* ── Animated Neon Border ──
+     Cyan → Blue → Violet 빛줄기가 카드 외곽을 9초에 한 바퀴 순환.
+     링 두께 3px(기존 2배) + 밝기 상향 — 흐름이 한눈에 보이되 절제된 톤.
+     @property 미지원 브라우저: 정적 그라데이션 링으로 우아하게 폴백(오류 없음). */
+@property --vtm-a {
+    syntax: '<angle>';
+    initial-value: 0deg;
+    inherits: false;
+}
+@keyframes vtmNeonOrbit {
+    to { --vtm-a: 360deg; }
+}
+[data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:last-child::before,
+[data-testid="stHorizontalBlock"] > div[data-testid="column"]:last-child::before {
+    content: "";
+    position: absolute;
+    inset: -1.5px;
+    border-radius: 25px;
+    padding: 3px;
+    background: conic-gradient(from var(--vtm-a, 0deg),
+        transparent 0deg,
+        transparent 205deg,
+        rgba(34,211,238,0.30) 240deg,   /* Cyan 진입  */
+        rgba(34,211,238,0.85) 275deg,   /* Cyan       */
+        rgba(59,130,246,0.95) 310deg,   /* Blue 피크  */
+        rgba(139,92,246,0.85) 338deg,   /* Violet     */
+        rgba(139,92,246,0.25) 355deg,   /* Violet 소멸 */
+        transparent 360deg);
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+            mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            mask-composite: exclude;
+    animation: vtmNeonOrbit 9s linear infinite;
+    pointer-events: none;
+    opacity: 0.92;
+    transition: opacity 0.45s ease;
+}
+/* 후광: 블러 링 — Hover 시 소폭 밝아짐 (RGB 게이밍 느낌 금지, 저채도 유지) */
+[data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:last-child::after,
+[data-testid="stHorizontalBlock"] > div[data-testid="column"]:last-child::after {
+    content: "";
+    position: absolute;
+    inset: -3px;
+    border-radius: 27px;
+    padding: 6px;
+    background: conic-gradient(from var(--vtm-a, 0deg),
+        transparent 0deg,
+        transparent 215deg,
+        rgba(34,211,238,0.30) 262deg,
+        rgba(59,130,246,0.42) 310deg,
+        rgba(139,92,246,0.30) 345deg,
+        transparent 360deg);
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+            mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            mask-composite: exclude;
+    filter: blur(8px);
+    animation: vtmNeonOrbit 9s linear infinite;
+    pointer-events: none;
+    opacity: 0.8;
+    transition: opacity 0.45s ease;
+}
+
+/* ── 모션 최소화 설정 사용자 배려 (프리미엄 접근성) ── */
+@media (prefers-reduced-motion: reduce) {
+    .vtm-brand,
+    [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:last-child,
+    [data-testid="stHorizontalBlock"] > div[data-testid="column"]:last-child,
+    [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:last-child::before,
+    [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:last-child::after {
+        animation: none !important;
+        transition: none !important;
+    }
+}
+/* ── 카드 헤더 (HTML 전용 div — 위젯 미포함) ── */
+.vtm-login-card { text-align: center; margin-bottom: 16px; }
+.vtm-login-card img {
+    width: 56px; height: auto;
+    filter: drop-shadow(0 0 14px rgba(20,224,184,0.45));
+}
+.vtm-card-os {
+    color: #2DD4BF; font-size: 1rem; font-weight: 900;
+    letter-spacing: 0.24em; margin: 10px 0 4px;
+}
+.vtm-card-welcome { color: #FFFFFF; font-size: 1.68rem; font-weight: 900; margin: 0; }
+.vtm-card-sub { color: #8CA3BC; font-size: 0.85rem; font-weight: 500; margin: 8px 0 0; }
+.vtm-nopw {
+    background: rgba(45,212,191,0.10);
+    border: 1px solid rgba(45,212,191,0.45);
+    border-radius: 10px; padding: 9px; text-align: center; margin: 6px 0;
+}
+.vtm-nopw span { color: #2DD4BF; font-weight: 700; font-size: 0.84rem; }
+.vtm-ver {
+    text-align: center; color: #5E7490; font-size: 0.75rem;
+    font-weight: 600; margin-top: 14px;
+}
+.vtm-ver b { color: #7E93AB; }
+
+/* ── 로그인 모드: 입력 필드 → 다크 글래스 ── */
+.stSelectbox>div>div {
+    background: rgba(8,17,31,0.75) !important;
+    border: 1px solid rgba(94,234,212,0.22) !important;
+    border-radius: 12px !important;
+}
+.stSelectbox * { color: #E2E8F0 !important; font-weight: 600 !important; }
+.stSelectbox svg { fill: #5EEAD4 !important; }
+
+.stTextInput>div>div>input {
+    background: rgba(8,17,31,0.75) !important;
+    color: #E2E8F0 !important;
+    border: 1px solid rgba(94,234,212,0.22) !important;
+    border-radius: 12px !important;
+    font-weight: 600 !important;
+}
+.stTextInput>div>div>input::placeholder {
+    color: #64748B !important; font-weight: 500 !important; opacity: 1 !important;
+}
+.stTextInput>div>div>input:focus,
+.stSelectbox>div>div:focus-within {
+    border-color: #2DD4BF !important;
+    box-shadow: 0 0 0 3px rgba(45,212,191,0.18) !important;
+}
+.stTextInput button {
+    background: transparent !important;
+    border: none !important;
+    color: #7E93AB !important;
+    box-shadow: none !important;
+}
+.stTextInput button:hover { color: #2DD4BF !important; }
+
+label, .stTextInput label, .stSelectbox label {
+    color: #A9BDD3 !important; font-weight: 700 !important;
+}
+
+/* ── selectbox 드롭다운 팝오버 ── */
+[data-baseweb="popover"] [role="listbox"],
+[data-baseweb="popover"] ul {
+    background: #0B1526 !important;
+    border: 1px solid rgba(94,234,212,0.22) !important;
+    border-radius: 12px !important;
+}
+[data-baseweb="popover"] li,
+[data-baseweb="popover"] [role="option"] {
+    color: #E2E8F0 !important;
+    background: transparent !important;
+}
+[data-baseweb="popover"] li:hover,
+[data-baseweb="popover"] [role="option"]:hover,
+[data-baseweb="popover"] [aria-selected="true"] {
+    background: rgba(45,212,191,0.14) !important;
+    color: #7FF7DE !important;
+}
+
+/* ── 로그인 버튼 → 틸 그라데이션 ── */
+.stButton>button {
+    background: linear-gradient(90deg, #14E0B8 0%, #22C9DD 55%, #0EA5E9 100%) !important;
+    color: #04121F !important;
+    border: none !important;
+    border-radius: 12px !important;
+    padding: 13px 18px !important;
+    font-weight: 900 !important;
+    font-size: 0.98rem !important;
+    letter-spacing: 0.02em !important;
+    box-shadow: 0 12px 34px rgba(20,224,184,0.34) !important;
+}
+.stButton>button:hover {
+    background: linear-gradient(90deg, #3BF0CC 0%, #38D6EA 55%, #38BDF8 100%) !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 16px 44px rgba(20,224,184,0.5) !important;
+    color: #04121F !important;
+}
+.stButton>button *, .stButton>button p, .stButton>button span {
+    color: #04121F !important; font-weight: 900 !important;
+}
+
+/* ── 별 캔버스: 은은하게 ── */
+#vtm-stars { opacity: 0.35 !important; }
+
+/* ── 모바일: 첫 번째 컬럼(브랜드) 숨김 → 카드 중심 단일 컬럼 ── */
+/*    위치 선택자(first/last-child)만 사용 — 로그인 화면의 유일한 컬럼 블록 ── */
+@media (max-width: 920px) {
+    [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:first-child,
+    [data-testid="stHorizontalBlock"] > div[data-testid="column"]:first-child {
+        display: none !important;
+    }
+    [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:last-child,
+    [data-testid="stHorizontalBlock"] > div[data-testid="column"]:last-child {
+        width: 100% !important; flex: 1 1 100% !important;
+        padding: 26px 20px 20px; border-radius: 20px;
+    }
+    [data-testid="stMainBlockContainer"] {
+        padding-top: 0 !important;
+        max-width: 460px !important;
+    }
+    .vtm-card-welcome { font-size: 1.48rem; }
+}
+
+/* ── 세로가 짧은 화면: 스케일을 더 줄여 스크롤 없이 한 화면 유지 ── */
+@media (max-height: 760px) {
+    [data-testid="stHorizontalBlock"] { zoom: 0.84; }
+}
+@media (max-height: 640px) {
+    [data-testid="stHorizontalBlock"] { zoom: 0.74; }
+}
+</style>
+""", unsafe_allow_html=True)
+    # 영상/오버레이는 Streamlit이 관리하는 DOM 안에 있으므로
+    # 로그인 후 rerun 시 자동으로 제거됨 — 별도 정리 스크립트 불필요.
+
+
+# ═══════════════════════════════════════════════════════════════════
+#  ▼▼▼ 관리자(본부장) 전용 테마 + 배경 영상 ▼▼▼
+#  · 로그인 후 is_admin=True 일 때만 주입됨 (직원/디렉터 화면엔 영향 없음)
+#  · 배경: HTML5 Video (vtm01.mp4) + Dark Overlay
+#  · 흰색 카드 → Glassmorphism, 골드 버튼 톤 완화
+#  · 레퍼런스 이미지: 다크네이비 + 시안 + 바이올렛 + 골드 포인트
+# ═══════════════════════════════════════════════════════════════════
+def inject_admin_theme():
+    st.markdown(f"""
+<style>
+/* ── 폴백 배경: html(root)에만 (영상 로드 실패 시 노출) ── */
+html {{
+    background:
+        radial-gradient(1200px 700px at 14% 20%, rgba(45,212,191,0.10) 0%, transparent 60%),
+        radial-gradient(1000px 640px at 88% 82%, rgba(139,92,246,0.10) 0%, transparent 60%),
+        linear-gradient(180deg, #050B14 0%, #081222 48%, #04090F 100%) !important;
+}}
+body {{ background: transparent !important; }}
+
+/* ── 영상이 비치도록 컨테이너 투명화 ── */
+.stApp,
+[data-testid="stAppViewContainer"],
+[data-testid="stAppViewContainer"]>section,
+[data-testid="stMain"],
+[data-testid="stMainBlockContainer"],
+.main, .main>div {{
+    background: transparent !important;
+}}
+
+/* ══════════════════════════════════════════════════════════════
+   [관리자 화면: 스크롤바 완전 제거 + 세로 중앙 정렬]
+   · 로그인 화면과 동일하게 스크롤바를 숨긴다.
+   · 콘텐츠가 화면보다 길어도 잘리지 않도록 내부 스크롤은 허용하되
+     스크롤바 자체(트랙/썸)를 모든 브라우저에서 숨김.
+   · 콘텐츠가 짧으면 margin:auto 로 화면 정중앙 배치.
+   ══════════════════════════════════════════════════════════════ */
+html, body,
+.stApp,
+[data-testid="stAppViewContainer"],
+[data-testid="stAppViewContainer"]>section {{
+    height: 100vh !important;
+    max-height: 100vh !important;
+    overflow: hidden !important;
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+}}
+html::-webkit-scrollbar,
+body::-webkit-scrollbar,
+.stApp::-webkit-scrollbar,
+[data-testid="stAppViewContainer"]::-webkit-scrollbar,
+[data-testid="stAppViewContainer"]>section::-webkit-scrollbar {{
+    width: 0 !important; height: 0 !important; display: none !important;
+}}
+[data-testid="stMain"] {{
+    height: 100vh !important;
+    max-height: 100vh !important;
+    overflow-y: auto !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+}}
+[data-testid="stMain"]::-webkit-scrollbar {{
+    width: 0 !important; height: 0 !important; display: none !important;
+}}
+[data-testid="stMainBlockContainer"] {{
+    max-width: 1400px !important;
+    width: 100% !important;
+    margin: auto !important;
+    padding-top: 8px !important;
+    padding-bottom: 8px !important;
+}}
+
+/* ── HTML5 배경 영상 (vtm01.mp4) — 전체화면 cover, 공백 없음 ── */
+.vtm-admin-video {{
+    position: fixed;
+    top: 0; left: 0;
+    width: 100vw; height: 100vh;
+    object-fit: cover;
+    z-index: -2;
+    pointer-events: none;
+    opacity: 1;
+}}
+/* ── Dark Overlay: 카드 가독성 확보 ── */
+.vtm-admin-overlay {{
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background:
+        radial-gradient(ellipse at 22% 30%, rgba(45,212,191,0.07) 0%, transparent 55%),
+        radial-gradient(ellipse at 82% 78%, rgba(139,92,246,0.07) 0%, transparent 55%),
+        linear-gradient(180deg, rgba(4,9,18,0.80) 0%, rgba(6,14,26,0.72) 45%, rgba(4,9,15,0.86) 100%);
+}}
+
+/* ── 별 캔버스는 관리자 화면에서 은은하게 ── */
+#vtm-stars {{ opacity: 0.28 !important; }}
+
+/* ══════════════════════════════════════════
+   관리자: 흰색 카드 → Glassmorphism 변환
+   [투명도: 로그인 카드와 동일 → rgba(18,24,38,0.42) + blur(20px)]
+   ══════════════════════════════════════════ */
+.vtm-card {{
+    background: rgba(18,24,38,0.42) !important;
+    backdrop-filter: blur(20px) !important;
+    -webkit-backdrop-filter: blur(20px) !important;
+    border: 1px solid rgba(94,234,212,0.14) !important;
+    border-radius: 16px !important;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.45) !important;
+}}
+.vtm-card * {{ color: #E7EEF7 !important; }}
+.vtm-card h3 {{ color: #7FF7DE !important; }}
+
+/* ── 메트릭 카드 (상단 KPI) → 로그인 투명도로 통일 ── */
+.met-card {{
+    background: rgba(18,24,38,0.42) !important;
+    backdrop-filter: blur(20px) !important;
+    -webkit-backdrop-filter: blur(20px) !important;
+    border: 1px solid rgba(94,234,212,0.18) !important;
+    border-radius: 16px !important;
+    box-shadow: 0 12px 36px rgba(0,0,0,0.45) !important;
+}}
+.met-val {{
+    background: linear-gradient(120deg, #7FF7DE 0%, #38BDF8 100%) !important;
+    -webkit-background-clip: text !important; background-clip: text !important;
+    -webkit-text-fill-color: transparent !important;
+    color: #7FF7DE !important;
+}}
+.met-lbl {{ color: #A9BDD3 !important; }}
+
+/* ── topbar: 글래스 + 시안 라인 (로그인 투명도로 통일) ── */
+.topbar {{
+    background: rgba(18,24,38,0.42) !important;
+    backdrop-filter: blur(20px) !important;
+    -webkit-backdrop-filter: blur(20px) !important;
+    border-bottom: 2px solid rgba(45,212,191,0.55) !important;
+    box-shadow: 0 8px 28px rgba(0,0,0,0.4) !important;
+}}
+.tb-title {{ color: #7FF7DE !important; }}
+
+/* ── 관리자 버튼: 골드 톤 완화 → 틸/시안 그라데이션 ── */
+.stButton>button {{
+    background: linear-gradient(90deg, #14E0B8 0%, #22C9DD 55%, #0EA5E9 100%) !important;
+    color: #04121F !important;
+    border: none !important;
+    border-radius: 12px !important;
+    box-shadow: 0 8px 24px rgba(20,224,184,0.28) !important;
+}}
+.stButton>button:hover {{
+    background: linear-gradient(90deg, #3BF0CC 0%, #38D6EA 55%, #38BDF8 100%) !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 12px 34px rgba(20,224,184,0.44) !important;
+    color: #04121F !important;
+}}
+.stButton>button *, .stButton>button p, .stButton>button span {{
+    color: #04121F !important; font-weight: 900 !important;
+}}
+
+/* ── 입력 필드: 다크 글래스 ── */
+.stTextInput>div>div>input,
+.stNumberInput>div>div>input,
+.stDateInput>div>div>input {{
+    background: rgba(8,17,31,0.72) !important;
+    color: #E7EEF7 !important;
+    border: 1px solid rgba(94,234,212,0.22) !important;
+    border-radius: 10px !important;
+}}
+.stTextInput>div>div>input::placeholder {{ color: #6B7E96 !important; }}
+.stTextArea textarea {{
+    background: rgba(8,17,31,0.72) !important;
+    color: #E7EEF7 !important;
+    border: 1px solid rgba(94,234,212,0.22) !important;
+    border-radius: 10px !important;
+}}
+.stTextArea textarea::placeholder {{ color: #6B7E96 !important; }}
+.stSelectbox>div>div,
+.stMultiSelect>div>div {{
+    background: rgba(8,17,31,0.72) !important;
+    border: 1px solid rgba(94,234,212,0.22) !important;
+    border-radius: 10px !important;
+}}
+.stSelectbox *, .stMultiSelect * {{ color: #E7EEF7 !important; }}
+.stSelectbox svg, .stMultiSelect svg {{ fill: #5EEAD4 !important; }}
+
+label,.stTextInput label,.stSelectbox label,.stTextArea label,
+.stSlider label,.stNumberInput label,.stDateInput label,.stMultiSelect label {{
+    color: #A9BDD3 !important;
+}}
+
+/* selectbox/multiselect 팝오버 */
+[data-baseweb="popover"] [role="listbox"],
+[data-baseweb="popover"] ul {{
+    background: #0B1526 !important;
+    border: 1px solid rgba(94,234,212,0.22) !important;
+    border-radius: 12px !important;
+}}
+[data-baseweb="popover"] li,
+[data-baseweb="popover"] [role="option"] {{
+    color: #E2E8F0 !important; background: transparent !important;
+}}
+[data-baseweb="popover"] li:hover,
+[data-baseweb="popover"] [role="option"]:hover,
+[data-baseweb="popover"] [aria-selected="true"] {{
+    background: rgba(45,212,191,0.14) !important; color: #7FF7DE !important;
+}}
+
+/* ── dataframe: 다크 톤 ── */
+[data-testid="stDataFrame"] {{
+    background: rgba(11,18,32,0.6) !important;
+    border: 1px solid rgba(94,234,212,0.14) !important;
+    border-radius: 12px !important;
+}}
+
+/* ══════════════════════════════════════════
+   관리자 홈: 커스텀 KPI / AI 패널 스타일
+   [Glassmorphism 투명도: 로그인 카드와 동일 rgba(18,24,38,0.42)+blur20]
+   ══════════════════════════════════════════ */
+.vadm-hero {{
+    display:flex; align-items:center; justify-content:space-between;
+    flex-wrap:wrap; gap:14px;
+    background: rgba(18,24,38,0.42);
+    backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(94,234,212,0.16);
+    border-radius: 18px;
+    padding: 18px 26px;
+    margin-bottom: 16px;
+    box-shadow: 0 14px 44px rgba(0,0,0,0.45);
+}}
+.vadm-hero-left {{ display:flex; align-items:center; gap:16px; }}
+.vadm-hero-logo img {{
+    width: 48px; height: auto; display: block;
+    filter: drop-shadow(0 0 14px rgba(20,224,184,0.45));
+}}
+.vadm-hero-title {{
+    font-size: 1.35rem; font-weight: 900; margin:0; letter-spacing:0.02em;
+    background: linear-gradient(120deg,#7FF7DE 0%,#38BDF8 55%,#8B5CF6 100%);
+    -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
+}}
+.vadm-hero-sub {{ color:#94A3B8; font-size:0.8rem; font-weight:700; margin:4px 0 0; }}
+.vadm-hero-badge {{
+    display:inline-flex; align-items:center; gap:7px;
+    background: rgba(52,211,153,0.12);
+    border: 1px solid rgba(52,211,153,0.4);
+    color:#34D399; font-weight:900; font-size:0.82rem;
+    padding:7px 16px; border-radius:999px;
+}}
+.vadm-hero-dot {{
+    width:8px; height:8px; border-radius:50%; background:#34D399;
+    box-shadow:0 0 10px rgba(52,211,153,0.9);
+    animation: vtmPulse 1.6s ease-in-out infinite;
+}}
+
+/* KPI 4카드 (홈) */
+.vadm-kpi {{
+    position:relative; overflow:hidden;
+    background: rgba(18,24,38,0.42);
+    backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(94,234,212,0.16);
+    border-radius: 18px;
+    padding: 20px 20px 18px;
+    box-shadow: 0 14px 40px rgba(0,0,0,0.42);
+    min-height: 132px;
+}}
+.vadm-kpi::before {{
+    content:""; position:absolute; top:-40%; right:-30%;
+    width:180px; height:180px; border-radius:50%;
+    background: radial-gradient(circle, var(--glow,rgba(45,212,191,0.30)) 0%, transparent 70%);
+    filter: blur(6px);
+}}
+.vadm-kpi .k-top {{ display:flex; align-items:flex-start; justify-content:space-between; }}
+.vadm-kpi .k-num {{
+    font-size: 2.4rem; font-weight:900; line-height:1;
+    color:#F1F5F9; letter-spacing:-0.01em;
+}}
+.vadm-kpi .k-unit {{ font-size:1rem; font-weight:800; color:#94A3B8; margin-left:3px; }}
+.vadm-kpi .k-lbl {{ color:#E2E8F0; font-size:0.92rem; font-weight:800; margin:10px 0 2px; }}
+.vadm-kpi .k-en  {{ color:#7E93AB; font-size:0.68rem; font-weight:700; letter-spacing:0.14em; }}
+.vadm-kpi .k-ico {{
+    width:44px; height:44px; border-radius:12px;
+    display:flex; align-items:center; justify-content:center; font-size:1.3rem;
+    border:1px solid rgba(255,255,255,0.08);
+}}
+.vadm-kpi.c-teal   {{ --glow:rgba(45,212,191,0.30); }}
+.vadm-kpi.c-teal   .k-ico {{ background:rgba(45,212,191,0.14); }}
+.vadm-kpi.c-violet {{ --glow:rgba(139,92,246,0.30); }}
+.vadm-kpi.c-violet .k-ico {{ background:rgba(139,92,246,0.16); }}
+.vadm-kpi.c-cyan   {{ --glow:rgba(56,189,248,0.30); }}
+.vadm-kpi.c-cyan   .k-ico {{ background:rgba(56,189,248,0.14); }}
+.vadm-kpi.c-gold   {{ --glow:rgba(212,175,55,0.30); border-color:rgba(212,175,55,0.35); }}
+.vadm-kpi.c-gold   .k-ico {{ background:rgba(212,175,55,0.14); }}
+.vadm-kpi.c-gold   .k-num {{
+    background:linear-gradient(120deg,#F6D365,#D4AF37);
+    -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
+}}
+
+/* 섹션 타이틀 */
+.vadm-sec-title {{
+    display:flex; align-items:center; gap:9px;
+    color:#7FF7DE; font-size:0.96rem; font-weight:900;
+    letter-spacing:0.04em; margin:6px 0 10px;
+}}
+.vadm-sec-title .cnt {{
+    font-size:0.72rem; font-weight:800; color:#38BDF8;
+    background:rgba(56,189,248,0.12); border:1px solid rgba(56,189,248,0.3);
+    padding:2px 10px; border-radius:999px;
+}}
+
+/* 직원 현황 행 (홈) */
+.vadm-emp-row {{
+    display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;
+    background: rgba(18,24,38,0.42);
+    backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(94,234,212,0.10);
+    border-radius: 12px; padding: 12px 18px; margin:5px 0;
+}}
+.vadm-emp-name {{ font-size:0.98rem; font-weight:900; color:#F1F5F9; }}
+.vadm-chip {{ font-weight:800; font-size:0.82rem; padding:3px 10px; border-radius:8px; }}
+.vadm-chip.on  {{ color:#34D399; background:rgba(52,211,153,0.12); }}
+.vadm-chip.off {{ color:#FCA5A5; background:rgba(239,68,68,0.12); }}
+.vadm-chip.mut {{ color:#94A3B8; background:rgba(148,163,184,0.10); }}
+.vadm-chip.rep {{ color:#38BDF8; background:rgba(56,189,248,0.12); }}
+.vadm-chip.gold{{ color:#F6D365; background:rgba(212,175,55,0.12); }}
+
+/* ══════════════════════════════════════════
+   AI 직원 롤업 패널 (표시 전용 · CSS 애니메이션)
+   ══════════════════════════════════════════ */
+.vai-panel {{
+    background: rgba(18,24,38,0.42);
+    backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(139,92,246,0.24);
+    border-radius: 18px;
+    padding: 18px 20px 16px;
+    box-shadow: 0 14px 44px rgba(0,0,0,0.5);
+    height: 100%;
+}}
+.vai-head {{
+    display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;
+}}
+.vai-head .t {{
+    display:flex; align-items:center; gap:8px;
+    color:#C4B5FD; font-size:0.92rem; font-weight:900; letter-spacing:0.03em;
+}}
+.vai-head .live {{
+    display:inline-flex; align-items:center; gap:6px;
+    color:#8B5CF6; font-size:0.68rem; font-weight:900; letter-spacing:0.1em;
+    background:rgba(139,92,246,0.12); border:1px solid rgba(139,92,246,0.35);
+    padding:3px 10px; border-radius:999px;
+}}
+.vai-live-dot {{
+    width:7px; height:7px; border-radius:50%; background:#8B5CF6;
+    box-shadow:0 0 8px rgba(139,92,246,0.9);
+    animation: vtmPulse 1.4s ease-in-out infinite;
+}}
+
+/* 롤업 뷰포트 — 3개 행 높이만 보이고 위로 순환 */
+.vai-view {{
+    position:relative; height:216px; overflow:hidden;
+    -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 12%, #000 88%, transparent 100%);
+            mask-image: linear-gradient(180deg, transparent 0, #000 12%, #000 88%, transparent 100%);
+}}
+.vai-track {{
+    display:flex; flex-direction:column; gap:8px;
+    animation: vaiRoll 21s linear infinite;
+}}
+.vai-view:hover .vai-track {{ animation-play-state: paused; }}
+.vai-item {{
+    display:flex; align-items:center; gap:12px;
+    background: rgba(23,30,48,0.7);
+    border: 1px solid rgba(139,92,246,0.14);
+    border-radius: 12px; padding: 10px 14px;
+    min-height: 64px;
+}}
+.vai-ava {{
+    width:38px; height:38px; border-radius:10px; flex-shrink:0;
+    display:flex; align-items:center; justify-content:center; font-size:1.15rem;
+    background: linear-gradient(135deg, rgba(139,92,246,0.28), rgba(56,189,248,0.22));
+    border:1px solid rgba(139,92,246,0.3);
+}}
+.vai-info {{ flex:1; min-width:0; }}
+.vai-name {{ color:#F1F5F9; font-size:0.9rem; font-weight:800; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }}
+.vai-task {{ color:#A9BDD3; font-size:0.76rem; font-weight:600; margin-top:2px;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }}
+.vai-state {{
+    flex-shrink:0; display:inline-flex; align-items:center; gap:5px;
+    color:#34D399; font-size:0.66rem; font-weight:900;
+    background:rgba(52,211,153,0.12); border:1px solid rgba(52,211,153,0.3);
+    padding:3px 9px; border-radius:999px;
+}}
+.vai-state-dot {{
+    width:6px; height:6px; border-radius:50%; background:#34D399;
+    box-shadow:0 0 6px rgba(52,211,153,0.9);
+    animation: vtmPulse 1.5s ease-in-out infinite;
+}}
+/* 7개 항목을 2벌 이어붙여 -50% 지점에서 무한 순환 (n vs 2n) */
+@keyframes vaiRoll {{
+    0%   {{ transform: translateY(0); }}
+    100% {{ transform: translateY(-50%); }}
+}}
+@media (prefers-reduced-motion: reduce) {{
+    .vai-track {{ animation: none !important; }}
+}}
+.vai-foot {{
+    margin-top:12px; padding-top:10px; border-top:1px solid rgba(139,92,246,0.14);
+    display:flex; justify-content:space-between; align-items:center;
+    color:#94A3B8; font-size:0.74rem; font-weight:700;
+}}
+.vai-foot .op {{ color:#34D399; font-weight:900; display:inline-flex; align-items:center; gap:6px; }}
+
+@media (max-width: 920px) {{
+    .vadm-kpi .k-num {{ font-size:2rem; }}
+}}
+</style>
+""", unsafe_allow_html=True)
+
+    # ── HTML5 배경 영상 + 오버레이 (관리자 전용) ──
+    st.markdown(f"""
+    <video id="vtm-admin-bg-video" autoplay muted loop playsinline preload="auto" class="vtm-admin-video">
+        <source src="{VTM_ADMIN_BG_VIDEO_URL}" type="video/mp4">
+    </video>
+    <div class="vtm-admin-overlay"></div>
+    """, unsafe_allow_html=True)
+
 def render_login():
     inject_all()
-    _, mid, _ = st.columns([1, 2, 1])
-    with mid:
+
+    # ── HTML5 배경 영상 + Dark Overlay ──
+    #    autoplay / muted / loop / playsinline: 모바일 포함 자동재생 정책 대응
+    #    pointer-events:none (CSS): 영상 클릭 불가
+    #    [참고] st.markdown은 HTML을 innerHTML로 삽입하므로 <script>가
+    #    실행되지 않는다 → JS로 body 이동시키는 방식은 동작하지 않아 제거.
+    #    대신 zoom을 컬럼 블록에만 스코프시켜(inject_all 참조) fixed 영상이
+    #    100vw×100vh 그대로 전체 화면을 덮도록 순수 CSS로 해결.
+    st.markdown(f"""
+    <video id="vtm-bg-video" autoplay muted loop playsinline preload="auto" class="vtm-video-bg">
+        <source src="{VTM_BG_VIDEO_URL}" type="video/mp4">
+    </video>
+    <div id="vtm-bg-overlay" class="vtm-bgoverlay"></div>
+    """, unsafe_allow_html=True)
+
+    # ── PC: 좌측 브랜드 + 우측 로그인 카드 / 모바일: 카드 단일 컬럼 ──
+    left, right = st.columns([1.25, 1], gap="large")
+
+    with left:
         st.markdown(f"""
-        <div style="margin-top:50px;background:rgba(15,23,42,0.92);
-            border:1px solid rgba(212,175,55,0.45);border-radius:22px;
-            padding:36px 32px;box-shadow:0 20px 55px rgba(0,0,0,0.6);
-            position:relative;z-index:2;">
-          <div style="text-align:center;margin-bottom:24px;">
-            {logo_svg(76)}
-            <h1 style="color:#D4AF37;font-size:1.5rem;font-weight:900;
-                       margin:12px 0 4px;">(주) 브이티엠</h1>
-            <p style="color:#94A3B8;font-size:0.87rem;font-weight:700;margin:0;">
-                VTM 운영 대시보드 v1.0
-            </p>
+        <div class="vtm-brand">
+          <div class="vtm-brand-logo">
+            <img src="{VTM_LOGO_URL}" alt="VTM Logo">
           </div>
-          <div style="background:rgba(212,175,55,0.12);border:1px solid rgba(212,175,55,0.3);
-                      border-radius:9px;padding:9px;text-align:center;margin-bottom:16px;">
-            <span style="color:#D4AF37;font-weight:900;font-size:0.84rem;">
-                🔐 시스템 접속 인증
-            </span>
+          <h1 class="vtm-brand-title">VTM</h1>
+          <p class="vtm-brand-sub">OPERATING&nbsp;SYSTEM</p>
+
+          <div class="vtm-hx-badge">HUMAN&nbsp;×&nbsp;AI&nbsp;WORKFORCE&nbsp;OS</div>
+          <p class="vtm-hx-line1">Real people and AI employees working as one.</p>
+          <p class="vtm-hx-line2">One Team. Two Workforces. Infinite Possibilities.</p>
+          <p class="vtm-brand-tag">AI와 사람이 함께 만드는 브랜드 커넥트의 미래</p>
+
+          <div class="vtm-feat-row">
+            <div class="vtm-feat">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#2DD4BF" stroke-width="1.7"
+                   stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 2l8 3.5v5.2c0 5-3.4 9.3-8 10.8-4.6-1.5-8-5.8-8-10.8V5.5L12 2z"/>
+                <path d="M9 12l2 2 4-4.5"/>
+              </svg>
+              <p class="vtm-feat-t">보안 중심</p>
+              <p class="vtm-feat-d">안전한 데이터 보호</p>
+            </div>
+            <div class="vtm-feat">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#2DD4BF" stroke-width="1.7"
+                   stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 21h18"/>
+                <rect x="5" y="12" width="3" height="6" rx="0.5"/>
+                <rect x="10.5" y="8" width="3" height="10" rx="0.5"/>
+                <rect x="16" y="10" width="3" height="8" rx="0.5"/>
+                <path d="M5 8l4-3 4 2 5-4"/>
+              </svg>
+              <p class="vtm-feat-t">업무 효율화</p>
+              <p class="vtm-feat-d">체계적인 업무 관리</p>
+            </div>
+            <div class="vtm-feat">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#2DD4BF" stroke-width="1.7"
+                   stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="6" cy="6" r="2.5"/>
+                <circle cx="18" cy="8" r="2.5"/>
+                <circle cx="12" cy="18" r="2.5"/>
+                <path d="M8.2 7.2l7.4 0M7.4 8.2l3.4 7.6M16.8 10.2l-3.4 5.6"/>
+              </svg>
+              <p class="vtm-feat-t">연결과 협업</p>
+              <p class="vtm-feat-d">유기적인 팀워크</p>
+            </div>
           </div>
+
+          <div class="vtm-wf-panel">
+            <div class="vtm-wf-head"><span class="vtm-wf-head-dot"></span>WORKFORCE&nbsp;STATUS</div>
+            <div class="vtm-wf-grid">
+              <div class="vtm-wf-item">
+                <span class="vtm-wf-num">3</span>
+                <span class="vtm-wf-lbl">Human Workforce</span>
+                <span class="vtm-wf-state on">Online</span>
+              </div>
+              <div class="vtm-wf-item">
+                <span class="vtm-wf-num">7</span>
+                <span class="vtm-wf-lbl">AI Workforce</span>
+                <span class="vtm-wf-state run">Running</span>
+              </div>
+              <div class="vtm-wf-item">
+                <span class="vtm-wf-num">10</span>
+                <span class="vtm-wf-lbl">Total Workforce</span>
+                <span class="vtm-wf-state total">Active</span>
+              </div>
+            </div>
+            <div class="vtm-wf-foot">
+              Automation Status
+              <span class="vtm-op"><span class="vtm-op-dot"></span>Operational</span>
+            </div>
+          </div>
+
+          <p class="vtm-copy">© 2026 VTM Co., Ltd. All rights reserved.</p>
         </div>
         """, unsafe_allow_html=True)
- 
-        emp_df  = get_employees(active_only=True)
-        options = ["담당자를 선택하세요"] + [
-            f"{r['name']} ({r['role']})" for _, r in emp_df.iterrows()
-        ]
-        sel = st.selectbox("👤 담당자 선택", options, key="login_sel")
- 
-        selected = None
-        if sel != "담당자를 선택하세요":
-            nm = sel.split(" (")[0]
-            m  = emp_df[emp_df["name"] == nm]
-            if not m.empty:
-                selected = m.iloc[0]
- 
-        pw_input = ""
-        if selected is not None:
-            if str(selected["password"]).strip():
-                pw_input = st.text_input("🔑 비밀번호", type="password",
-                    placeholder="비밀번호 입력", key="login_pw")
-            else:
-                st.markdown("""
-                <div style="background:rgba(16,185,129,0.15);border:1px solid #10B981;
-                    border-radius:8px;padding:8px;text-align:center;margin:6px 0;">
-                  <span style="color:#10B981;font-weight:700;font-size:0.84rem;">
-                      🔓 비밀번호 없이 접속 가능
-                  </span>
-                </div>""", unsafe_allow_html=True)
- 
-        st.markdown("<div style='height:6px'></div>", unsafe_allow_html=True)
-        if st.button("🚀  시스템 접속", key="btn_login", use_container_width=True):
-            if sel == "담당자를 선택하세요" or selected is None:
-                st.error("⚠️ 담당자를 선택해 주세요.")
-            else:
-                pw_ok = (not str(selected["password"]).strip()) or \
-                        (pw_input == str(selected["password"]))
-                if pw_ok:
-                    st.session_state.logged_in  = True
-                    st.session_state.user_id    = selected["id"]
-                    st.session_state.user_name  = selected["name"]
-                    st.session_state.is_admin   = bool(int(selected["is_admin"]))
-                    st.session_state.page       = "home"
-                    wlog("LOGIN", selected["name"])
-                    st.rerun()
+
+    with right:
+        # ── 안정화: st.container(key=...) 미사용. 순수 st.container()만 사용.
+        #    카드 외곽 스타일은 위치 선택자(:last-child) CSS가 담당 (순수 CSS,
+        #    적용 실패해도 앱 동작에는 영향 없음)
+        card = st.container()
+
+        with card:
+            # 카드 헤더: HTML만 담는 자체 완결 div (위젯은 넣지 않음)
+            st.markdown(f"""
+            <div class="vtm-login-card">
+              <img src="{VTM_LOGO_URL}" alt="VTM OS">
+              <p class="vtm-card-os">VTM&nbsp;OS</p>
+              <h2 class="vtm-card-welcome">Welcome Back</h2>
+              <p class="vtm-card-sub">브이티엠 운영 시스템에 오신것을 환영합니다.</p>
+            </div>
+            """, unsafe_allow_html=True)
+
+            # ── 이하 로그인 로직: 원본과 동일 (절대 변경 금지 영역) ──
+            emp_df  = get_employees(active_only=True)
+            options = ["담당자를 선택하세요"] + [
+                f"{r['name']} ({r['role']})" for _, r in emp_df.iterrows()
+            ]
+            sel = st.selectbox("담당자 선택", options, key="login_sel")
+
+            selected = None
+            if sel != "담당자를 선택하세요":
+                nm = sel.split(" (")[0]
+                m  = emp_df[emp_df["name"] == nm]
+                if not m.empty:
+                    selected = m.iloc[0]
+
+            pw_input = ""
+            if selected is not None:
+                if str(selected["password"]).strip():
+                    pw_input = st.text_input("비밀번호", type="password",
+                        placeholder="비밀번호를 입력하세요", key="login_pw")
                 else:
-                    st.error("❌ 비밀번호가 올바르지 않습니다.")
- 
-        st.markdown("""
-        <div style="text-align:center;margin-top:16px;">
-          <p style="color:#475569;font-size:0.75rem;font-weight:700;">
-              개발자: 박동진 본부장
-          </p>
-        </div>""", unsafe_allow_html=True)
- 
+                    st.markdown("""
+                    <div class="vtm-nopw">
+                      <span>🔓 비밀번호 없이 접속 가능</span>
+                    </div>""", unsafe_allow_html=True)
+
+            st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
+            if st.button("시스템 접속  →", key="btn_login", use_container_width=True):
+                if sel == "담당자를 선택하세요" or selected is None:
+                    st.error("⚠️ 담당자를 선택해 주세요.")
+                else:
+                    pw_ok = (not str(selected["password"]).strip()) or \
+                            (pw_input == str(selected["password"]))
+                    if pw_ok:
+                        st.session_state.logged_in  = True
+                        st.session_state.user_id    = selected["id"]
+                        st.session_state.user_name  = selected["name"]
+                        st.session_state.is_admin   = bool(int(selected["is_admin"]))
+                        st.session_state.page       = "home"
+                        wlog("LOGIN", selected["name"])
+                        st.rerun()
+                    else:
+                        st.error("❌ 비밀번호가 올바르지 않습니다.")
+
+            st.markdown("""
+            <p class="vtm-ver"><b>VTM OS 2.0.7</b> · 개발자: 박동진 본부장</p>
+            """, unsafe_allow_html=True)
+
+
 def render_sidebar():
     role_txt = "🔴 관리자" if st.session_state.is_admin else "🟢 직원"
     kst_now  = now_kst().strftime("%H:%M")
@@ -1427,80 +2444,176 @@ def page_emp_guide():
 def page_admin_home():
     topbar("🔴 관리자 대시보드")
     td = today_str(); sb = _sb()
-    total = (sb.table("employees").select("*",count="exact").eq("active",1).eq("is_admin",0).execute().count) or 0
+
+    # ── 실제 DB 기반 지표 (기능 유지) ──
+    human_total = (sb.table("employees").select("*",count="exact").eq("active",1).eq("is_admin",0).execute().count) or 0
     t_att = (sb.table("attendance").select("*",count="exact").eq("work_date",td).execute().count) or 0
     pend  = (sb.table("reports").select("*",count="exact").eq("status","대기중").execute().count) or 0
     appr  = (sb.table("reports").select("*",count="exact").eq("status","승인").eq("work_date",td).execute().count) or 0
-    emp_r   = sb.table("employees").select("id,name").eq("active",1).eq("is_admin",0).execute()
+
+    emp_r   = sb.table("employees").select("id,name,role").eq("active",1).eq("is_admin",0).execute()
     att_r   = sb.table("attendance").select("emp_id,att_type,checkin,checkout").eq("work_date",td).execute()
     rep_r   = sb.table("reports").select("emp_id,status,pm_progress").eq("work_date",td).execute()
     emp_df  = pd.DataFrame(emp_r.data)  if emp_r.data  else pd.DataFrame()
     att_td  = pd.DataFrame(att_r.data)  if att_r.data  else pd.DataFrame()
     rep_td  = pd.DataFrame(rep_r.data)  if rep_r.data  else pd.DataFrame()
- 
-    c1, c2, c3, c4 = st.columns(4)
-    for col, lbl, val, sub in [
-        (c1, "전체 직원", f"{total}명", ""),
-        (c2, "오늘 출근", f"{t_att}명", f"/{total}명"),
-        (c3, "승인 대기", f"{pend}건",  "검토 필요"),
-        (c4, "오늘 승인", f"{appr}건",  "")]:
-        col.markdown(f"""<div class="met-card">
-          <span class="met-val">{val}</span>
-          <span class="met-lbl">{lbl}</span>
-          <span style="color:#64748B;font-size:0.66rem;font-weight:700;">{sub}</span>
-        </div>""", unsafe_allow_html=True)
- 
-    st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
- 
-    att_map = {}
-    if not att_td.empty:
-        for _, row in att_td.iterrows():
-            att_map[row["emp_id"]] = row
- 
-    rep_map = {}
-    if not rep_td.empty:
-        for _, row in rep_td.iterrows():
-            rep_map[row["emp_id"]] = row
- 
-    for _, emp in emp_df.iterrows():
-        eid = emp["id"]; ename = emp["name"]
-        a = att_map.get(eid)
-        r = rep_map.get(eid)
- 
-        if a is not None:
-            ci_raw = safe_str(a["checkin"])
-            co_raw = safe_str(a["checkout"])
-            ci  = ci_raw[-8:-3] if ci_raw else "--:--"
-            co  = co_raw[-8:-3] if co_raw else "퇴근전"
-            atp = safe_str(a["att_type"]) or "정상출근"
-        else:
-            ci = "--:--"; co = "퇴근전"; atp = "미출근"
- 
-        if r is not None:
-            rs = safe_str(r["status"]) or "미제출"
-            try:
-                prg = int(r["pm_progress"]) if safe_str(str(r["pm_progress"])) else 0
-            except (ValueError, TypeError):
-                prg = 0
-        else:
-            rs = "미제출"; prg = 0
- 
-        ci_c = "#10B981" if a is not None else "#EF4444"
-        rs_c = {"승인":"#10B981","대기중":"#F59E0B","반려":"#EF4444"}.get(rs,"#6B7280")
-        st.markdown(f"""<div class="vtm-card" style="padding:12px;margin:3px 0;">
-          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;">
-            <span style="font-size:0.96rem;font-weight:900;">{ename}</span>
-            <div style="display:flex;gap:10px;flex-wrap:wrap;font-weight:700;font-size:0.84rem;">
-              <span style="color:{ci_c};">✅ 출근:{ci}</span>
-              <span style="color:#64748B;">🏠 퇴근:{co}</span>
-              <span>📋 {atp}</span>
-              <span style="color:{rs_c};">
-                  {'미제출(출근전)' if rs=='미제출' else '보고:'+rs}
-              </span>
-              <span>📊{prg}%</span>
+
+    # ── 표시 지표: Human = 실제 재직 직원, AI = 상수 7명 ──
+    ai_total       = len(AI_STAFF)                # 7
+    human_online   = int(t_att)                  # 오늘 출근한 휴먼 직원
+    total_workforce = human_total + ai_total     # 전체 Workforce
+
+    # ── Hero ──
+    kst = now_kst()
+    day_kr = ["월","화","수","목","금","토","일"][kst.weekday()]
+    st.markdown(f"""
+    <div class="vadm-hero">
+      <div class="vadm-hero-left">
+       <div class="vadm-hero-logo"><img src="{VTM_LOGO_URL}" alt="VTM Logo"></div>
+        <div>
+          <h2 class="vadm-hero-title">관리자 대시보드</h2>
+          <p class="vadm-hero-sub">🇰🇷 KST {kst.strftime('%Y년 %m월 %d일')} ({day_kr}) {kst.strftime('%H:%M')} &nbsp;·&nbsp; 👤 {st.session_state.user_name}</p>
+        </div>
+      </div>
+      <div class="vadm-hero-badge"><span class="vadm-hero-dot"></span>SYSTEM OPERATIONAL · 정상 운영 중</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # ── KPI 4카드 (레퍼런스 이미지 구성) ──
+    k1, k2, k3, k4 = st.columns(4)
+    kpi_data = [
+        (k1, "c-teal",   f"{human_online}", "명", "오늘 출근 (휴먼 직원)", "HUMAN ONLINE", "🧑‍💼"),
+        (k2, "c-violet", f"{ai_total}",     "명", "오늘 출근 (AI 직원)",   "AI ONLINE",     "🤖"),
+        (k3, "c-cyan",   f"{ai_total}",     "명", "AI 직원 상시 대기",     "AI STANDBY",    "🛰️"),
+        (k4, "c-gold",   f"{appr}",         "건", "오늘 승인",             "TODAY'S APPROVALS", "🗂️"),
+    ]
+    for col, cls, num, unit, lbl, en, ico in kpi_data:
+        col.markdown(f"""
+        <div class="vadm-kpi {cls}">
+          <div class="k-top">
+            <div>
+              <span class="k-num">{num}</span><span class="k-unit">{unit}</span>
+              <div class="k-lbl">{lbl}</div>
+              <div class="k-en">{en}</div>
             </div>
+            <div class="k-ico">{ico}</div>
           </div>
-        </div>""", unsafe_allow_html=True)
+        </div>
+        """, unsafe_allow_html=True)
+
+    # ── 전체 Workforce 요약 배지 ──
+    st.markdown(f"""
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin:14px 0 6px;">
+      <div class="vadm-chip on"   style="padding:7px 16px;border:1px solid rgba(52,211,153,0.35);">🧑‍💼 휴먼 직원 {human_total}명</div>
+      <div class="vadm-chip"      style="padding:7px 16px;color:#C4B5FD;background:rgba(139,92,246,0.12);border:1px solid rgba(139,92,246,0.35);">🤖 AI 직원 {ai_total}명</div>
+      <div class="vadm-chip gold" style="padding:7px 16px;border:1px solid rgba(212,175,55,0.35);">👥 전체 Workforce {total_workforce}명</div>
+      <div class="vadm-chip rep"  style="padding:7px 16px;border:1px solid rgba(56,189,248,0.35);">⏳ 승인 대기 {pend}건</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
+
+    # ── 좌: 휴먼 직원 현황 / 우: AI 직원 롤업 패널 ──
+    left, right = st.columns([1.35, 1], gap="large")
+
+    with left:
+        st.markdown(
+            f'<div class="vadm-sec-title">🧑‍💼 휴먼 직원 현황 '
+            f'<span class="cnt">전체 {human_total}명</span></div>',
+            unsafe_allow_html=True)
+
+        att_map = {}
+        if not att_td.empty:
+            for _, row in att_td.iterrows():
+                att_map[row["emp_id"]] = row
+        rep_map = {}
+        if not rep_td.empty:
+            for _, row in rep_td.iterrows():
+                rep_map[row["emp_id"]] = row
+
+        if emp_df.empty:
+            st.markdown('<div class="vtm-card"><p>재직 중인 휴먼 직원이 없습니다.</p></div>', unsafe_allow_html=True)
+        else:
+            for _, emp in emp_df.iterrows():
+                eid = emp["id"]; ename = emp["name"]; erole = safe_str(emp.get("role")) or ""
+                a = att_map.get(eid)
+                r = rep_map.get(eid)
+
+                if a is not None:
+                    ci_raw = safe_str(a["checkin"])
+                    co_raw = safe_str(a["checkout"])
+                    ci  = ci_raw[-8:-3] if ci_raw else "--:--"
+                    co  = co_raw[-8:-3] if co_raw else "퇴근전"
+                    atp = safe_str(a["att_type"]) or "정상출근"
+                else:
+                    ci = "--:--"; co = "퇴근전"; atp = "미출근"
+
+                if r is not None:
+                    rs = safe_str(r["status"]) or "미제출"
+                    try:
+                        prg = int(r["pm_progress"]) if safe_str(str(r["pm_progress"])) else 0
+                    except (ValueError, TypeError):
+                        prg = 0
+                else:
+                    rs = "미제출"; prg = 0
+
+                ci_cls = "on" if a is not None else "off"
+                rep_cls = {"승인":"on","대기중":"gold","반려":"off","보류":"mut"}.get(rs, "mut")
+                rep_txt = "미제출(출근전)" if rs == "미제출" else "보고:" + rs
+
+                st.markdown(f"""
+                <div class="vadm-emp-row">
+                  <div style="display:flex;flex-direction:column;">
+                    <span class="vadm-emp-name">{ename}</span>
+                    <span style="color:#7E93AB;font-size:0.74rem;font-weight:700;">{erole}</span>
+                  </div>
+                  <div style="display:flex;gap:7px;flex-wrap:wrap;">
+                    <span class="vadm-chip {ci_cls}">✅ {ci}</span>
+                    <span class="vadm-chip mut">🏠 {co}</span>
+                    <span class="vadm-chip mut">📋 {atp}</span>
+                    <span class="vadm-chip {rep_cls}">{rep_txt}</span>
+                    <span class="vadm-chip rep">📊 {prg}%</span>
+                  </div>
+                </div>
+                """, unsafe_allow_html=True)
+
+    with right:
+        st.markdown(
+            f'<div class="vadm-sec-title">🤖 AI 직원 실시간 업무 '
+            f'<span class="cnt">{ai_total}명 가동</span></div>',
+            unsafe_allow_html=True)
+
+        # 롤업: 7개 항목을 2벌 이어붙여 -50% 지점에서 무한 순환 → 끊김 없음
+        avatars = ["✍️","✍️","♟️","📈","📣","🧭","🗓️"]
+        items_html = ""
+        for _bank in range(2):
+            for idx, (nm, task) in enumerate(AI_STAFF):
+                ava = avatars[idx % len(avatars)]
+                items_html += f"""
+                <div class="vai-item">
+                  <div class="vai-ava">{ava}</div>
+                  <div class="vai-info">
+                    <div class="vai-name">{nm}</div>
+                    <div class="vai-task">{task}</div>
+                  </div>
+                  <div class="vai-state"><span class="vai-state-dot"></span>업무중</div>
+                </div>"""
+
+        st.markdown(f"""
+        <div class="vai-panel">
+          <div class="vai-head">
+            <div class="t">🤖 AI WORKFORCE</div>
+            <div class="live"><span class="vai-live-dot"></span>LIVE</div>
+          </div>
+          <div class="vai-view">
+            <div class="vai-track">{items_html}</div>
+          </div>
+          <div class="vai-foot">
+            AI 자동화 상태
+            <span class="op"><span class="vadm-hero-dot"></span>Running · {ai_total} Agents</span>
+          </div>
+        </div>
+        """, unsafe_allow_html=True)
  
 # ═══════════════════════════════════════════
 #  관리자: 출퇴근 현황
@@ -1529,9 +2642,9 @@ def page_admin_attend():
         if not absent.empty:
             st.markdown("---")
             for _, row in absent.iterrows():
-                st.markdown(f"""<div style="background:rgba(239,68,68,0.1);border:1px solid #EF4444;
-                    border-radius:10px;padding:10px;margin:3px 0;">
-                  <span style="color:#EF4444;font-weight:900;">
+                st.markdown(f"""<div style="background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.5);
+                    border-radius:10px;padding:10px;margin:3px 0;backdrop-filter:blur(10px);">
+                  <span style="color:#FCA5A5;font-weight:900;">
                       ❗ {row['name']} — 미출근 / 출근 전
                   </span></div>""", unsafe_allow_html=True)
  
@@ -1568,8 +2681,8 @@ def page_admin_tasks():
  
         dl_val = safe_str(r["drive_link"])
         rl_val = safe_str(r["result_link"])
-        dl_html = f'<a href="{dl_val}" target="_blank" style="color:#3B82F6;font-weight:700;">링크열기</a>' if dl_val else "없음"
-        rl_html = f'<a href="{rl_val}" target="_blank" style="color:#3B82F6;font-weight:700;">링크열기</a>' if rl_val else "없음"
+        dl_html = f'<a href="{dl_val}" target="_blank" style="color:#38BDF8;font-weight:700;">링크열기</a>' if dl_val else "없음"
+        rl_html = f'<a href="{rl_val}" target="_blank" style="color:#38BDF8;font-weight:700;">링크열기</a>' if rl_val else "없음"
  
         am_tasks_txt  = safe_str(r["am_tasks"])  or "미입력"
         pm_done_txt   = safe_str(r["pm_done"])   or "미입력"
@@ -1588,7 +2701,7 @@ def page_admin_tasks():
             f'  <p><b>📁 Drive:</b> {dl_html} &nbsp;&nbsp; <b>🔗 결과물:</b> {rl_html}</p>',
         ]
         if cmt_val:
-            card_parts.append(f'  <p style="background:rgba(212,175,55,0.15);border-left:3px solid #D4AF37;padding:6px 10px;border-radius:4px;"><b>💬 코멘트:</b> {cmt_val}</p>')
+            card_parts.append(f'  <p style="background:rgba(45,212,191,0.15);border-left:3px solid #2DD4BF;padding:6px 10px;border-radius:4px;"><b>💬 코멘트:</b> {cmt_val}</p>')
         card_parts.append('</div>')
         st.markdown("\n".join(card_parts), unsafe_allow_html=True)
  
@@ -1637,10 +2750,10 @@ def page_admin_approve():
             rem = safe_str(r['pm_remarks'])  or '없음'
             st.markdown(f"""
 <div style="color:#F1F5F9;font-size:0.9rem;line-height:1.8;">
-  <p><span style="color:#D4AF37;font-weight:900;">🌅 오전 계획:</span>&nbsp; {am}</p>
-  <p><span style="color:#D4AF37;font-weight:900;">🌇 완료 업무:</span>&nbsp; {pm}</p>
-  <p><span style="color:#D4AF37;font-weight:900;">📅 내일 예정:</span>&nbsp; {tom}</p>
-  <p><span style="color:#D4AF37;font-weight:900;">💬 특이사항:</span>&nbsp; {rem}</p>
+  <p><span style="color:#7FF7DE;font-weight:900;">🌅 오전 계획:</span>&nbsp; {am}</p>
+  <p><span style="color:#7FF7DE;font-weight:900;">🌇 완료 업무:</span>&nbsp; {pm}</p>
+  <p><span style="color:#7FF7DE;font-weight:900;">📅 내일 예정:</span>&nbsp; {tom}</p>
+  <p><span style="color:#7FF7DE;font-weight:900;">💬 특이사항:</span>&nbsp; {rem}</p>
 </div>
 """, unsafe_allow_html=True)
             dl_val = safe_str(r.get("drive_link"))
@@ -1671,14 +2784,14 @@ def page_admin_emp():
     emp_df = get_employees(active_only=False)
     st.markdown("<div class='vtm-card'><h3>👥 전체 직원 목록</h3></div>", unsafe_allow_html=True)
     for _, emp in emp_df.iterrows():
-        ac  = "#10B981" if emp["active"] else "#EF4444"
+        ac  = "#34D399" if emp["active"] else "#FCA5A5"
         at  = "재직 중" if emp["active"] else "퇴직"
         adm = "🔴 관리자" if emp["is_admin"] else "🟢 직원"
         ci, cb = st.columns([5, 1])
         with ci:
             st.markdown(f"""<div class="vtm-card" style="padding:9px 15px;margin:2px 0;">
               <span style="font-weight:900;">{emp['name']}</span>
-              &nbsp;<span style="color:#64748B;font-weight:700;">{emp['role']}</span>
+              &nbsp;<span style="color:#94A3B8;font-weight:700;">{emp['role']}</span>
               &nbsp;<span style="color:{ac};font-weight:700;">{at}</span>
               &nbsp;<span style="font-weight:700;">{adm}</span>
             </div>""", unsafe_allow_html=True)
@@ -1742,7 +2855,7 @@ def page_admin_excel():
             we  = st.date_input("주 종료일", value=kst_today, key="ex_we")
             ws  = we - timedelta(days=we.weekday())
             d_from, d_to = str(ws), str(we)
-            st.markdown(f"<span style='color:#D4AF37;font-weight:700;font-size:0.84rem;'>"
+            st.markdown(f"<span style='color:#7FF7DE;font-weight:700;font-size:0.84rem;'>"
                         f"📅 {ws} ~ {we}</span>", unsafe_allow_html=True)
         elif period == "월간":
             my = st.number_input("연도", value=kst_today.year,  min_value=2024, max_value=2030, key="ex_my")
@@ -1810,6 +2923,11 @@ inject_all()
 if not st.session_state.logged_in:
     render_login()
 else:
+    # ── 관리자(본부장) 로그인 시에만 프리미엄 테마 + 배경 영상 주입 ──
+    #    직원/디렉터 화면에는 영향 없음
+    if st.session_state.is_admin:
+        inject_admin_theme()
+
     render_sidebar()
  
     if st.session_state.is_admin:
@@ -1839,4 +2957,3 @@ else:
                 font-size:0.74rem;font-weight:700;position:relative;z-index:1;">
         © 2026 (주) 브이티엠 운영 대시보드 v1.0 &nbsp;|&nbsp; 개발자: 박동진 본부장
     </div>""", unsafe_allow_html=True)
-
