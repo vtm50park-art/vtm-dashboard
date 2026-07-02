@@ -2326,8 +2326,8 @@ def render_day_detail(uid, d_str):
 
     st.markdown(
         f'<div style="background:linear-gradient(90deg,#1E293B,#0F172A);'
-        f'border:2px solid #D4AF37;border-radius:14px;padding:12px 20px;margin:6px 0 2px;">'
-        f'<span style="color:#D4AF37;font-size:1rem;font-weight:900;">'
+        f'border:2px solid #2DD4BF;border-radius:14px;padding:12px 20px;margin:6px 0 2px;">'
+        f'<span style="color:#2DD4BF;font-size:1rem;font-weight:900;">'
         f'📅 {d_label} — 상세 보기 &nbsp;<span style="font-size:0.75rem;color:#94A3B8;">'
         f'(같은 날짜 버튼을 다시 누르면 닫힙니다)</span></span></div>',
         unsafe_allow_html=True)
@@ -2429,9 +2429,9 @@ def render_day_detail(uid, d_str):
 
         if cmt:
             st.markdown(
-                f'<div style="background:linear-gradient(135deg,#FFF8E7,#FFF3CD);'
-                f'border:2px solid #D4AF37;border-radius:10px;padding:10px 16px;margin:4px 0;">'
-                f'<p style="font-size:0.72rem;color:#92610A;font-weight:900;margin:0 0 4px;">'
+                f'<div style="background:linear-gradient(135deg,#ECFEFF,#CFFAFE);'
+                f'border:2px solid #2DD4BF;border-radius:10px;padding:10px 16px;margin:4px 0;">'
+                f'<p style="font-size:0.72rem;color:#0E7490;font-weight:900;margin:0 0 4px;">'
                 f'💬 관리자 코멘트</p>'
                 f'<p style="font-size:0.9rem;font-weight:700;color:#1A1A1A;margin:0;'
                 f'line-height:1.5;">{cmt}</p></div>',
@@ -2492,7 +2492,7 @@ table.vtm-cal th {
     padding:8px 4px; text-align:center; font-weight:900;
     font-size:0.86rem; border-radius:7px;
 }
-table.vtm-cal th.hwd  { background:#1E293B; color:#D4AF37; }
+table.vtm-cal th.hwd  { background:#1E293B; color:#2DD4BF; }
 table.vtm-cal th.hsat { background:#1a2d44; color:#93C5FD; }
 table.vtm-cal th.hsun { background:#2a1520; color:#FCA5A5; }
 table.vtm-cal td {
@@ -2504,14 +2504,14 @@ table.vtm-cal td {
 table.vtm-cal td.wd    { background:#FFFFFF; border-color:#CBD5E1; }
 table.vtm-cal td.sat   { background:#EFF6FF; border-color:#BFDBFE; }
 table.vtm-cal td.sun   { background:#FFF1F2; border-color:#FECDD3; }
-table.vtm-cal td.today { background:#FFFBEB !important; border:2px solid #D4AF37 !important; border-bottom:none !important; }
+table.vtm-cal td.today { background:#ECFEFF !important; border:2px solid #2DD4BF !important; border-bottom:none !important; }
 table.vtm-cal td.sel   { background:#EFF6FF !important; border:2px solid #3B82F6 !important; border-bottom:none !important; }
 table.vtm-cal td.empty { background:transparent !important; border:none !important; }
 table.vtm-cal .daynum  { font-size:1rem; font-weight:900; display:block; margin-bottom:3px; line-height:1; }
 table.vtm-cal td.wd    .daynum { color:#1E293B; }
 table.vtm-cal td.sat   .daynum { color:#1D4ED8; }
 table.vtm-cal td.sun   .daynum { color:#BE123C; }
-table.vtm-cal td.today .daynum { color:#B45309; }
+table.vtm-cal td.today .daynum { color:#0E7490; }
 table.vtm-cal td.today .daynum::after { content:" ★"; font-size:0.6rem; }
 table.vtm-cal td.sel   .daynum { color:#1D4ED8; }
 table.vtm-cal .badge {
@@ -2521,7 +2521,7 @@ table.vtm-cal .badge {
 }
 table.vtm-cal .b-att  { background:#D1FAE5; color:#065f46; }
 table.vtm-cal .b-ok   { background:#DBEAFE; color:#1e40af; }
-table.vtm-cal .b-pend { background:#FEF3C7; color:#92400e; }
+table.vtm-cal .b-pend { background:#CFFAFE; color:#155E75; }
 table.vtm-cal .b-rjct { background:#FEE2E2; color:#991b1b; }
 table.vtm-cal .b-hold { background:#EDE9FE; color:#4C1D95; }
 table.vtm-cal .b-none { background:#F1F5F9; color:#94A3B8; }
@@ -2639,7 +2639,7 @@ def page_emp_guide():
 }
 .vtm-guide-hero {
     background: linear-gradient(135deg, #0F172A 0%, #1E293B 60%, #0F172A 100%);
-    border: 1px solid rgba(212,175,55,0.45);
+    border: 1px solid rgba(45,212,191,0.45);
     border-radius: 18px;
     padding: 36px 40px 28px;
     text-align: center;
@@ -2648,7 +2648,7 @@ def page_emp_guide():
 }
 .vtm-guide-hero .en-title {
     font-size: 0.82rem; font-weight: 900; letter-spacing: 0.22em;
-    color: #D4AF37; margin-bottom: 8px;
+    color: #2DD4BF; margin-bottom: 8px;
 }
 .vtm-guide-hero .ko-title {
     font-size: 1.55rem; font-weight: 900; color: #F1F5F9;
@@ -2660,7 +2660,7 @@ def page_emp_guide():
 }
 .vtm-guide-hero .gold-line {
     width: 60px; height: 2px;
-    background: linear-gradient(90deg, transparent, #D4AF37, transparent);
+    background: linear-gradient(90deg, transparent, #2DD4BF, transparent);
     margin: 14px auto;
 }
 .vtm-section {
@@ -2673,12 +2673,12 @@ def page_emp_guide():
 }
 .vtm-section-title {
     font-size: 0.72rem; font-weight: 900; letter-spacing: 0.18em;
-    color: #D4AF37; text-transform: uppercase;
+    color: #2DD4BF; text-transform: uppercase;
     margin-bottom: 14px; display: flex; align-items: center; gap: 8px;
 }
 .vtm-section-title::after {
     content: ""; flex: 1; height: 1px;
-    background: linear-gradient(90deg, rgba(212,175,55,0.4), transparent);
+    background: linear-gradient(90deg, rgba(45,212,191,0.4), transparent);
 }
 .vtm-value-item {
     display: flex; align-items: flex-start; gap: 12px;
@@ -2687,7 +2687,7 @@ def page_emp_guide():
 .vtm-value-item:last-child { border-bottom: none; }
 .vtm-value-num {
     min-width: 28px; height: 28px; border-radius: 50%;
-    background: linear-gradient(135deg, #D4AF37, #B8860B);
+    background: linear-gradient(135deg, #2DD4BF, #0EA5E9);
     display: flex; align-items: center; justify-content: center;
     font-size: 0.72rem; font-weight: 900; color: #000;
     flex-shrink: 0; margin-top: 1px;
@@ -2699,11 +2699,11 @@ def page_emp_guide():
 }
 .vtm-rule-card {
     background: rgba(15,23,42,0.6);
-    border: 1px solid rgba(212,175,55,0.2);
+    border: 1px solid rgba(45,212,191,0.2);
     border-radius: 10px; padding: 14px 16px;
 }
 .vtm-rule-card .rc-label {
-    font-size: 0.68rem; font-weight: 900; color: #D4AF37;
+    font-size: 0.68rem; font-weight: 900; color: #2DD4BF;
     letter-spacing: 0.1em; margin-bottom: 6px;
 }
 .vtm-rule-card .rc-val {
@@ -2716,10 +2716,10 @@ def page_emp_guide():
     display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px;
 }
 .vtm-badge {
-    background: rgba(212,175,55,0.12);
-    border: 1px solid rgba(212,175,55,0.35);
+    background: rgba(45,212,191,0.12);
+    border: 1px solid rgba(45,212,191,0.35);
     border-radius: 20px; padding: 5px 14px;
-    font-size: 0.78rem; font-weight: 700; color: #D4AF37;
+    font-size: 0.78rem; font-weight: 700; color: #2DD4BF;
 }
 .vtm-bullet { list-style: none; padding: 0; margin: 0; }
 .vtm-bullet li {
@@ -2730,11 +2730,11 @@ def page_emp_guide():
 .vtm-bullet li:last-child { border-bottom: none; }
 .vtm-bullet li::before {
     content: "▸"; position: absolute; left: 0;
-    color: #D4AF37; font-size: 0.72rem; top: 7px;
+    color: #2DD4BF; font-size: 0.72rem; top: 7px;
 }
 .vtm-highlight {
-    background: linear-gradient(135deg, rgba(212,175,55,0.08), rgba(212,175,55,0.04));
-    border-left: 3px solid #D4AF37;
+    background: linear-gradient(135deg, rgba(45,212,191,0.08), rgba(45,212,191,0.04));
+    border-left: 3px solid #2DD4BF;
     border-radius: 0 8px 8px 0;
     padding: 12px 16px;
     margin: 8px 0;
@@ -2742,13 +2742,13 @@ def page_emp_guide():
 }
 .vtm-promise {
     background: linear-gradient(135deg, #0F172A, #1a2540);
-    border: 1.5px solid rgba(212,175,55,0.5);
+    border: 1.5px solid rgba(45,212,191,0.5);
     border-radius: 14px; padding: 22px 26px;
     text-align: center; margin-top: 6px;
 }
 .vtm-promise p { color: #CBD5E1; font-size: 0.9rem; font-weight: 700;
     line-height: 1.8; margin: 0; }
-.vtm-promise .gold { color: #D4AF37; font-weight: 900; }
+.vtm-promise .gold { color: #2DD4BF; font-weight: 900; }
 </style>
 
 <div class="vtm-guide-wrap">
