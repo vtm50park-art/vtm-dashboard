@@ -1,7 +1,16 @@
 # ═══════════════════════════════════════════════════════════════════
-#  VTM OS 로그인 — 배경 영상 버전 패치 (v2.0.2-video)
+#  VTM OS 로그인 — 부팅 안정화 버전 패치 (v2.0.3-safe)
 #
-#  [v2.0.1-stable 대비 변경점]
+#  [v2.0.2 대비 긴급 안정화 변경점]
+#   · st.container(key=...) 완전 제거 → card = st.container() 만 사용
+#     (Python 레벨에서 실패 가능한 코드 경로 자체를 없앰)
+#   · .st-key-vtm_login_card 클래스 의존 CSS 전부 제거
+#   · 카드 헤더는 HTML 전용 <div class="vtm-login-card"> 로 자체 완결
+#     (Streamlit 위젯은 div 안에 넣지 않음)
+#   · 카드 외곽 스타일은 columns 기반: 마지막 컬럼(:last-child) 위치
+#     선택자로만 적용 — 순수 CSS라 미적용되어도 앱은 항상 뜸
+#
+#  [v2.0.2에서 유지]
 #   · 배경: HTML5 <video> (Supabase Storage MP4) 방식으로 적용
 #     - autoplay / muted / loop / playsinline / preload="auto"
 #     - position:fixed + object-fit:cover 로 전체 화면 커버
@@ -77,7 +86,7 @@ def init_data():
 # 2) inject_all()  ─ 교체 블록
 #    전역 CSS/별 캔버스: 원본 그대로.
 #    로그인 전용 CSS: Vimeo·:has() 제거, 그라데이션 배경,
-#    클래스 기반 카드(.st-key-vtm_login_card), Workforce 패널 스타일 추가.
+#    카드(위치 선택자 기반), Workforce 패널 스타일 추가.
 # ───────────────────────────────────────────────────────────────────
 def inject_all():
     st.markdown('<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">', unsafe_allow_html=True)
@@ -351,7 +360,7 @@ label,.stTextInput label,.stSelectbox label,.stTextArea label,
     #  · 배경: HTML5 Video (.vtm-video-bg) + Dark Overlay (.vtm-bgoverlay)
     #  · 폴백: html/body 다크 그라데이션 (영상 로드 실패 시 자동 노출)
     #  · Vimeo iframe 미사용 / :has() 미사용
-    #  · 카드는 .st-key-vtm_login_card (클래스 기반 wrapper)
+    #  · 카드 외곽: 위치 선택자(:last-child) / 헤더: .vtm-login-card div
     #  · 로그인 전(logged_in=False)에만 주입 → 로그인 후 영향 없음
     # ═══════════════════════════════════════════════════════════
     if not st.session_state.get("logged_in", False):
@@ -524,16 +533,20 @@ html, body {
 
 .vtm-copy { color: #55677E; font-size: 0.72rem; font-weight: 500; margin-top: 30px; }
 
-/* ── 로그인 카드: 클래스 기반 wrapper (st.container(key=...)) ── */
-.st-key-vtm_login_card {
+/* ── 로그인 카드 외곽: 위치 선택자만 사용 (st-key 클래스 의존 제거) ──
+     로그인 화면의 유일한 컬럼 블록에서 마지막 컬럼 = 카드 컬럼.
+     순수 CSS이므로 미적용되어도 앱은 정상 동작함.                    ── */
+[data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:last-child,
+[data-testid="stHorizontalBlock"] > div[data-testid="column"]:last-child {
     background: linear-gradient(165deg, rgba(14,26,44,0.78) 0%, rgba(7,14,26,0.90) 100%);
     border: 1px solid rgba(94,234,212,0.16);
     border-radius: 24px;
     padding: 34px 30px 24px;
     box-shadow: 0 34px 90px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.06);
 }
-.vtm-card-head { text-align: center; margin-bottom: 16px; }
-.vtm-card-head img {
+/* ── 카드 헤더 (HTML 전용 div — 위젯 미포함) ── */
+.vtm-login-card { text-align: center; margin-bottom: 16px; }
+.vtm-login-card img {
     width: 56px; height: auto;
     filter: drop-shadow(0 0 14px rgba(20,224,184,0.45));
 }
@@ -645,8 +658,8 @@ label, .stTextInput label, .stSelectbox label {
     [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:last-child,
     [data-testid="stHorizontalBlock"] > div[data-testid="column"]:last-child {
         width: 100% !important; flex: 1 1 100% !important;
+        padding: 26px 20px 20px; border-radius: 20px;
     }
-    .st-key-vtm_login_card { padding: 26px 20px 20px; border-radius: 20px; }
     [data-testid="stMainBlockContainer"] {
         padding-top: 6vh !important;
         max-width: 460px !important;
@@ -660,7 +673,7 @@ label, .stTextInput label, .stSelectbox label {
 # ───────────────────────────────────────────────────────────────────
 # 3) render_login()  ─ 교체 블록
 #    · 배경: HTML5 <video> (Supabase Storage MP4) + Dark Overlay
-#    · 카드: st.container(key="vtm_login_card") → 클래스 기반 스타일
+#    · 카드: 순수 st.container() + 위치 선택자 CSS (key 미사용)
 #    · 로그인 로직: 원본과 100% 동일
 # ───────────────────────────────────────────────────────────────────
 def render_login():
@@ -758,16 +771,15 @@ def render_login():
         """, unsafe_allow_html=True)
 
     with right:
-        # 클래스 기반 카드 wrapper: .st-key-vtm_login_card 로 스타일링
-        # (Streamlit ≥1.39. 구버전이면 스타일 없이도 정상 동작하도록 폴백)
-        try:
-            card = st.container(key="vtm_login_card")
-        except TypeError:
-            card = st.container()
+        # ── 안정화: st.container(key=...) 미사용. 순수 st.container()만 사용.
+        #    카드 외곽 스타일은 위치 선택자(:last-child) CSS가 담당 (순수 CSS,
+        #    적용 실패해도 앱 동작에는 영향 없음)
+        card = st.container()
 
         with card:
+            # 카드 헤더: HTML만 담는 자체 완결 div (위젯은 넣지 않음)
             st.markdown(f"""
-            <div class="vtm-card-head">
+            <div class="vtm-login-card">
               <img src="{VTM_LOGO_URL}" alt="VTM OS">
               <p class="vtm-card-os">VTM&nbsp;OS</p>
               <h2 class="vtm-card-welcome">Welcome Back</h2>
@@ -819,5 +831,5 @@ def render_login():
                         st.error("❌ 비밀번호가 올바르지 않습니다.")
 
             st.markdown("""
-            <p class="vtm-ver"><b>VTM OS 2.0.2</b> · 개발자: 박동진 본부장</p>
+            <p class="vtm-ver"><b>VTM OS 2.0.3</b> · 개발자: 박동진 본부장</p>
             """, unsafe_allow_html=True)
