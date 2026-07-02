@@ -41,34 +41,53 @@ def get_supabase() -> "Client":
 def _sb():
     return get_supabase()
 
+# ── VTM OS 2.0.3 로그인 리디자인 자산 ──
+VTM_LOGO_URL     = "https://i.postimg.cc/TwMLPgWj/beu-itiem-logo.png"
+VTM_BG_VIDEO_URL = "https://pwaqbxfaokaliclhmixo.supabase.co/storage/v1/object/public/assets/vtm.mp4"
+
+# ── 관리자(본부장) 화면 배경 영상 자산 ──
+VTM_ADMIN_BG_VIDEO_URL = "https://pwaqbxfaokaliclhmixo.supabase.co/storage/v1/object/public/assets/vtm01.mp4"
+
+# ── 디렉터/직원 홈 화면 배경 영상 자산 (VTM OS 2.0.8 신규) ──
+VTM_DIR_BG_VIDEO_URL = "https://pwaqbxfaokaliclhmixo.supabase.co/storage/v1/object/public/assets/vtm02.mp4"
+
+# ── 관리자 대시보드 표시용 AI 직원 (표시 전용 · DB 무관) ──
+AI_STAFF = [
+    ("몽해 블로그 작업 AI직원",   "블로그 작성중"),
+    ("탈모 블로그 작업 AI직원",   "블로그 작성중"),
+    ("강민호 전략실장 AI직원",    "몽해 비즈니스 전략 수립중"),
+    ("최도윤 영업팀장 AI직원",    "덴탈 팩토리 세일즈 계획수립중"),
+    ("김하린 마케팅 팀장 AI직원", "몽해 마케팅 진행중"),
+    ("VTM AI 총괄과장 AI직원",   "AI직원 역할분담 수행중"),
+    ("서윤 비서 실장 AI직원",     "본부장 스케줄 체크중"),
+]
+
 def init_data():
     """앱 세션 시작 시 기본 직원 데이터 확인 및 초기화 (세션당 1회 실행)"""
-    # 이미 이번 세션에서 초기화됐으면 스킵
     if st.session_state.get("_db_init_done"):
         return
 
     try:
         sb = _sb()
-
-        # ── Supabase 연결 확인 ──
         test = sb.table("employees").select("id").limit(1).execute()
 
-        # ── 기본 직원 없으면 삽입 ──
         check = sb.table("employees").select("id").eq("id","admin_park").execute()
         if not check.data:
             _now = now_str()
             sb.table("employees").insert([
                 {"id":"admin_park","name":"박동진 본부장","role":"본부장",
                  "is_admin":1,"password":"5638","active":1,"created_at":_now},
-                {"id":"emp_seo","name":"서아영 디자이너","role":"디자이너",
-                 "is_admin":0,"password":"","active":1,"created_at":_now},
                 {"id":"emp_ahn","name":"안효민 디렉터","role":"디렉터",
                  "is_admin":0,"password":"","active":1,"created_at":_now},
             ]).execute()
 
-        # ── 김소원 퇴사 처리 (행이 없어도 오류 없음) ──
         try:
             sb.table("employees").update({"active":0}).eq("id","emp_kim").execute()
+        except Exception:
+            pass
+
+        try:
+            sb.table("employees").update({"active":0}).eq("id","emp_seo").execute()
         except Exception:
             pass
 
@@ -82,6 +101,7 @@ def init_data():
             "2. Supabase SQL Editor에서 supabase_schema.sql 실행 (RLS 비활성화 포함)"
         )
         st.stop()
+
 
 # 세션 상태 기본값 설정 먼저
 for _k, _v in {"logged_in": False, "user_id": None, "user_name": None,
@@ -247,7 +267,6 @@ button[kind="header"],
 .tb-title {{ color:#D4AF37 !important; font-size:1.05rem; font-weight:900; }}
 .tb-info  {{ color:#94A3B8 !important; font-size:0.8rem; font-weight:700; }}
 
-/* ─── 입력 필드: 아이보리 그라데이션 + 검정 글자 ─── */
 .stTextInput>div>div>input,
 .stNumberInput>div>div>input {{
     background: linear-gradient(135deg,#FFFFF0 0%,#FFF8E7 50%,#FAEBD7 100%) !important;
@@ -319,7 +338,6 @@ label,.stTextInput label,.stSelectbox label,.stTextArea label,
 .tg-ok  {{ display:block; background:#10B981; color:#fff!important; border-radius:3px; padding:1px 2px; font-size:0.6rem; margin:1px 0; font-weight:700; }}
 .tg-no  {{ display:block; background:#374151; color:#9CA3AF!important; border-radius:3px; padding:1px 2px; font-size:0.6rem; margin:1px 0; }}
  
-/* ── expander 내부 텍스트 가독성 ── */
 [data-testid="stExpander"] details {{
     background: #1E293B !important;
     border: 1px solid #334155 !important;
@@ -359,9 +377,6 @@ label,.stTextInput label,.stSelectbox label,.stTextArea label,
     margin-left:6px;
     vertical-align:middle;
 }}
-
-/* ── 달력 투명 클릭 버튼 CSS는 page_emp_calendar() 안에서 별도 주입 ── */
-
 </style>
  
 <canvas id="vtm-stars" style="position:fixed;top:0;left:0;
@@ -416,85 +431,1346 @@ label,.stTextInput label,.stSelectbox label,.stTextArea label,
 }})();
 </script>
 """, unsafe_allow_html=True)
- 
+
+    if not st.session_state.get("logged_in", False):
+        st.markdown("""
+<style>
+html {
+    background:
+        radial-gradient(1100px 640px at 16% 26%, rgba(20,224,184,0.12) 0%, transparent 60%),
+        radial-gradient(920px 560px at 86% 78%, rgba(14,165,233,0.11) 0%, transparent 60%),
+        linear-gradient(180deg, #050B14 0%, #081222 48%, #04090F 100%) !important;
+}
+body { background: transparent !important; }
+.stApp,
+[data-testid="stAppViewContainer"],
+[data-testid="stAppViewContainer"]>section,
+[data-testid="stMain"],
+[data-testid="stMainBlockContainer"],
+.main, .main>div {
+    background: transparent !important;
+}
+
+.vtm-video-bg {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    object-fit: cover;
+    z-index: -2;
+    pointer-events: none;
+    opacity: 1;
+}
+.vtm-bgoverlay {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background:
+        radial-gradient(ellipse at 26% 38%, rgba(20,224,184,0.08) 0%, transparent 55%),
+        linear-gradient(180deg, rgba(0,0,0,0.62) 0%, rgba(0,0,0,0.48) 45%, rgba(0,0,0,0.72) 100%);
+}
+
+html, body,
+.stApp,
+[data-testid="stAppViewContainer"],
+[data-testid="stAppViewContainer"]>section {
+    height: 100vh !important;
+    max-height: 100vh !important;
+    overflow: hidden !important;
+}
+[data-testid="stMain"] {
+    height: 100vh !important;
+    max-height: 100vh !important;
+    overflow: hidden !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+[data-testid="stMainBlockContainer"] {
+    max-width: 1180px !important;
+    width: 100% !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    margin: 0 auto !important;
+}
+[data-testid="stHorizontalBlock"] {
+    zoom: 0.93;
+}
+
+[data-testid="stHorizontalBlock"] { align-items: center !important; }
+
+@keyframes vtmEnterBrand {
+    from { opacity: 0; transform: translateY(15px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes vtmEnterCard {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.vtm-brand {
+    padding: 0 26px 0 4px;
+    animation: vtmEnterBrand 0.7s cubic-bezier(0.22, 1, 0.36, 1) 0.05s backwards;
+}
+.vtm-brand-logo img {
+    width: 150px; max-width: 42vw; height: auto; display: block;
+    filter: drop-shadow(0 0 26px rgba(20,224,184,0.35));
+    margin-bottom: 26px;
+}
+.vtm-brand-title {
+    color: #E8FFFA; font-size: 2.45rem; font-weight: 900;
+    letter-spacing: 0.12em; line-height: 1.05; margin: 0;
+    background: linear-gradient(120deg, #7FF7DE 0%, #2DD4BF 45%, #38BDF8 100%);
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+.vtm-brand-sub {
+    color: #5EEAD4; font-size: 0.98rem; font-weight: 700;
+    letter-spacing: 0.42em; margin: 10px 0 0 2px;
+}
+
+.vtm-hx-badge {
+    display: inline-block; margin: 26px 0 0;
+    padding: 6px 14px; border-radius: 999px;
+    background: rgba(45,212,191,0.10);
+    border: 1px solid rgba(45,212,191,0.42);
+    color: #7FF7DE; font-size: 0.82rem; font-weight: 900;
+    letter-spacing: 0.14em;
+}
+.vtm-hx-line1 {
+    color: #DCE8F5; font-size: 1.02rem; font-weight: 700;
+    margin: 16px 0 0; letter-spacing: 0.01em;
+}
+.vtm-hx-line2 {
+    font-size: 0.92rem; font-weight: 800; margin: 6px 0 0;
+    background: linear-gradient(90deg, #7FF7DE 0%, #38BDF8 100%);
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent;
+    letter-spacing: 0.04em;
+}
+.vtm-brand-tag {
+    color: #7E93AB; font-size: 0.84rem; font-weight: 500;
+    margin: 12px 0 0; letter-spacing: 0.02em;
+}
+
+.vtm-feat-row { display: flex; gap: 34px; margin-top: 36px; flex-wrap: wrap; }
+.vtm-feat { text-align: center; min-width: 86px; }
+.vtm-feat svg { width: 28px; height: 28px; margin-bottom: 8px; }
+.vtm-feat-t { color: #F1F5F9; font-size: 0.84rem; font-weight: 800; margin: 0; }
+.vtm-feat-d { color: #7E93AB; font-size: 0.74rem; font-weight: 500; margin: 4px 0 0; }
+
+.vtm-wf-panel {
+    margin-top: 32px; max-width: 480px;
+    background: rgba(18,24,38,0.42);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(94,234,212,0.16);
+    border-radius: 16px;
+    padding: 16px 18px 14px;
+    box-shadow: 0 16px 44px rgba(0,0,0,0.4);
+}
+.vtm-wf-head {
+    color: #5EEAD4; font-size: 0.72rem; font-weight: 900;
+    letter-spacing: 0.2em; margin-bottom: 12px;
+    display: flex; align-items: center; gap: 7px;
+}
+.vtm-wf-head-dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: #2DD4BF; display: inline-block;
+    box-shadow: 0 0 8px rgba(45,212,191,0.9);
+    animation: vtmPulse 2s ease-in-out infinite;
+}
+.vtm-wf-grid { display: flex; gap: 10px; }
+.vtm-wf-item {
+    flex: 1; text-align: center;
+    background: rgba(8,17,31,0.55);
+    border: 1px solid rgba(94,234,212,0.10);
+    border-radius: 12px; padding: 12px 6px 10px;
+}
+.vtm-wf-num {
+    display: block; font-size: 1.55rem; font-weight: 900; line-height: 1;
+    background: linear-gradient(120deg, #7FF7DE 0%, #38BDF8 100%);
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+.vtm-wf-lbl {
+    display: block; color: #A9BDD3; font-size: 0.68rem;
+    font-weight: 700; margin-top: 6px; letter-spacing: 0.02em;
+}
+.vtm-wf-state {
+    display: inline-block; margin-top: 6px;
+    font-size: 0.62rem; font-weight: 800;
+    padding: 2px 8px; border-radius: 999px;
+}
+.vtm-wf-state.on    { color: #34D399; background: rgba(52,211,153,0.12); border: 1px solid rgba(52,211,153,0.35); }
+.vtm-wf-state.run   { color: #38BDF8; background: rgba(56,189,248,0.12); border: 1px solid rgba(56,189,248,0.35); }
+.vtm-wf-state.total { color: #7FF7DE; background: rgba(45,212,191,0.12); border: 1px solid rgba(45,212,191,0.35); }
+.vtm-wf-foot {
+    margin-top: 12px; padding-top: 10px;
+    border-top: 1px solid rgba(94,234,212,0.10);
+    display: flex; justify-content: space-between; align-items: center;
+    color: #7E93AB; font-size: 0.74rem; font-weight: 700;
+}
+.vtm-op {
+    color: #34D399; font-weight: 900;
+    display: inline-flex; align-items: center; gap: 6px;
+}
+.vtm-op-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: #34D399; display: inline-block;
+    box-shadow: 0 0 10px rgba(52,211,153,0.9);
+    animation: vtmPulse 1.6s ease-in-out infinite;
+}
+@keyframes vtmPulse {
+    0%, 100% { opacity: 1;   transform: scale(1); }
+    50%      { opacity: 0.45; transform: scale(0.82); }
+}
+
+.vtm-copy { color: #55677E; font-size: 0.72rem; font-weight: 500; margin-top: 30px; }
+
+[data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:last-child,
+[data-testid="stHorizontalBlock"] > div[data-testid="column"]:last-child {
+    position: relative;
+    background: rgba(18,24,38,0.42);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(94,234,212,0.10);
+    border-radius: 24px;
+    padding: 34px 30px 24px;
+    box-shadow: 0 34px 90px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.06);
+    animation: vtmEnterCard 0.9s cubic-bezier(0.22, 1, 0.36, 1) 0.18s backwards;
+    transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1),
+                box-shadow 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+    will-change: transform;
+}
+
+[data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:last-child:hover,
+[data-testid="stHorizontalBlock"] > div[data-testid="column"]:last-child:hover {
+    transform: scale(1.01);
+    box-shadow: 0 40px 100px rgba(0,0,0,0.65), inset 0 1px 0 rgba(255,255,255,0.07);
+}
+[data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:last-child:hover::before,
+[data-testid="stHorizontalBlock"] > div[data-testid="column"]:last-child:hover::before {
+    opacity: 1;
+}
+[data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:last-child:hover::after,
+[data-testid="stHorizontalBlock"] > div[data-testid="column"]:last-child:hover::after {
+    opacity: 1;
+}
+
+@property --vtm-a {
+    syntax: '<angle>';
+    initial-value: 0deg;
+    inherits: false;
+}
+@keyframes vtmNeonOrbit {
+    to { --vtm-a: 360deg; }
+}
+[data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:last-child::before,
+[data-testid="stHorizontalBlock"] > div[data-testid="column"]:last-child::before {
+    content: "";
+    position: absolute;
+    inset: -1.5px;
+    border-radius: 25px;
+    padding: 3px;
+    background: conic-gradient(from var(--vtm-a, 0deg),
+        transparent 0deg,
+        transparent 205deg,
+        rgba(34,211,238,0.30) 240deg,
+        rgba(34,211,238,0.85) 275deg,
+        rgba(59,130,246,0.95) 310deg,
+        rgba(139,92,246,0.85) 338deg,
+        rgba(139,92,246,0.25) 355deg,
+        transparent 360deg);
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+            mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            mask-composite: exclude;
+    animation: vtmNeonOrbit 9s linear infinite;
+    pointer-events: none;
+    opacity: 0.92;
+    transition: opacity 0.45s ease;
+}
+[data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:last-child::after,
+[data-testid="stHorizontalBlock"] > div[data-testid="column"]:last-child::after {
+    content: "";
+    position: absolute;
+    inset: -3px;
+    border-radius: 27px;
+    padding: 6px;
+    background: conic-gradient(from var(--vtm-a, 0deg),
+        transparent 0deg,
+        transparent 215deg,
+        rgba(34,211,238,0.30) 262deg,
+        rgba(59,130,246,0.42) 310deg,
+        rgba(139,92,246,0.30) 345deg,
+        transparent 360deg);
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+            mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            mask-composite: exclude;
+    filter: blur(8px);
+    animation: vtmNeonOrbit 9s linear infinite;
+    pointer-events: none;
+    opacity: 0.8;
+    transition: opacity 0.45s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .vtm-brand,
+    [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:last-child,
+    [data-testid="stHorizontalBlock"] > div[data-testid="column"]:last-child,
+    [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:last-child::before,
+    [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:last-child::after {
+        animation: none !important;
+        transition: none !important;
+    }
+}
+.vtm-login-card { text-align: center; margin-bottom: 16px; }
+.vtm-login-card img {
+    width: 56px; height: auto;
+    filter: drop-shadow(0 0 14px rgba(20,224,184,0.45));
+}
+.vtm-card-os {
+    color: #2DD4BF; font-size: 1rem; font-weight: 900;
+    letter-spacing: 0.24em; margin: 10px 0 4px;
+}
+.vtm-card-welcome { color: #FFFFFF; font-size: 1.68rem; font-weight: 900; margin: 0; }
+.vtm-card-sub { color: #8CA3BC; font-size: 0.85rem; font-weight: 500; margin: 8px 0 0; }
+.vtm-nopw {
+    background: rgba(45,212,191,0.10);
+    border: 1px solid rgba(45,212,191,0.45);
+    border-radius: 10px; padding: 9px; text-align: center; margin: 6px 0;
+}
+.vtm-nopw span { color: #2DD4BF; font-weight: 700; font-size: 0.84rem; }
+.vtm-ver {
+    text-align: center; color: #5E7490; font-size: 0.75rem;
+    font-weight: 600; margin-top: 14px;
+}
+.vtm-ver b { color: #7E93AB; }
+
+.stSelectbox>div>div {
+    background: rgba(8,17,31,0.75) !important;
+    border: 1px solid rgba(94,234,212,0.22) !important;
+    border-radius: 12px !important;
+}
+.stSelectbox * { color: #E2E8F0 !important; font-weight: 600 !important; }
+.stSelectbox svg { fill: #5EEAD4 !important; }
+
+.stTextInput>div>div>input {
+    background: rgba(8,17,31,0.75) !important;
+    color: #E2E8F0 !important;
+    border: 1px solid rgba(94,234,212,0.22) !important;
+    border-radius: 12px !important;
+    font-weight: 600 !important;
+}
+.stTextInput>div>div>input::placeholder {
+    color: #64748B !important; font-weight: 500 !important; opacity: 1 !important;
+}
+.stTextInput>div>div>input:focus,
+.stSelectbox>div>div:focus-within {
+    border-color: #2DD4BF !important;
+    box-shadow: 0 0 0 3px rgba(45,212,191,0.18) !important;
+}
+.stTextInput button {
+    background: transparent !important;
+    border: none !important;
+    color: #7E93AB !important;
+    box-shadow: none !important;
+}
+.stTextInput button:hover { color: #2DD4BF !important; }
+
+label, .stTextInput label, .stSelectbox label {
+    color: #A9BDD3 !important; font-weight: 700 !important;
+}
+
+[data-baseweb="popover"] [role="listbox"],
+[data-baseweb="popover"] ul {
+    background: #0B1526 !important;
+    border: 1px solid rgba(94,234,212,0.22) !important;
+    border-radius: 12px !important;
+}
+[data-baseweb="popover"] li,
+[data-baseweb="popover"] [role="option"] {
+    color: #E2E8F0 !important;
+    background: transparent !important;
+}
+[data-baseweb="popover"] li:hover,
+[data-baseweb="popover"] [role="option"]:hover,
+[data-baseweb="popover"] [aria-selected="true"] {
+    background: rgba(45,212,191,0.14) !important;
+    color: #7FF7DE !important;
+}
+
+.stButton>button {
+    background: linear-gradient(90deg, #14E0B8 0%, #22C9DD 55%, #0EA5E9 100%) !important;
+    color: #04121F !important;
+    border: none !important;
+    border-radius: 12px !important;
+    padding: 13px 18px !important;
+    font-weight: 900 !important;
+    font-size: 0.98rem !important;
+    letter-spacing: 0.02em !important;
+    box-shadow: 0 12px 34px rgba(20,224,184,0.34) !important;
+}
+.stButton>button:hover {
+    background: linear-gradient(90deg, #3BF0CC 0%, #38D6EA 55%, #38BDF8 100%) !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 16px 44px rgba(20,224,184,0.5) !important;
+    color: #04121F !important;
+}
+.stButton>button *, .stButton>button p, .stButton>button span {
+    color: #04121F !important; font-weight: 900 !important;
+}
+
+#vtm-stars { opacity: 0.35 !important; }
+
+@media (max-width: 920px) {
+    [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:first-child,
+    [data-testid="stHorizontalBlock"] > div[data-testid="column"]:first-child {
+        display: none !important;
+    }
+    [data-testid="stHorizontalBlock"] > [data-testid="stColumn"]:last-child,
+    [data-testid="stHorizontalBlock"] > div[data-testid="column"]:last-child {
+        width: 100% !important; flex: 1 1 100% !important;
+        padding: 26px 20px 20px; border-radius: 20px;
+    }
+    [data-testid="stMainBlockContainer"] {
+        padding-top: 0 !important;
+        max-width: 460px !important;
+    }
+    .vtm-card-welcome { font-size: 1.48rem; }
+}
+
+@media (max-height: 760px) {
+    [data-testid="stHorizontalBlock"] { zoom: 0.84; }
+}
+@media (max-height: 640px) {
+    [data-testid="stHorizontalBlock"] { zoom: 0.74; }
+}
+</style>
+""", unsafe_allow_html=True)
+
+
+def inject_admin_theme():
+    st.markdown(f"""
+<style>
+html {{
+    background:
+        radial-gradient(1200px 700px at 14% 20%, rgba(45,212,191,0.10) 0%, transparent 60%),
+        radial-gradient(1000px 640px at 88% 82%, rgba(139,92,246,0.10) 0%, transparent 60%),
+        linear-gradient(180deg, #050B14 0%, #081222 48%, #04090F 100%) !important;
+}}
+body {{ background: transparent !important; }}
+
+.stApp,
+[data-testid="stAppViewContainer"],
+[data-testid="stAppViewContainer"]>section,
+[data-testid="stMain"],
+[data-testid="stMainBlockContainer"],
+.main, .main>div {{
+    background: transparent !important;
+}}
+
+html, body,
+.stApp,
+[data-testid="stAppViewContainer"],
+[data-testid="stAppViewContainer"]>section {{
+    height: 100vh !important;
+    max-height: 100vh !important;
+    overflow: hidden !important;
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+}}
+html::-webkit-scrollbar,
+body::-webkit-scrollbar,
+.stApp::-webkit-scrollbar,
+[data-testid="stAppViewContainer"]::-webkit-scrollbar,
+[data-testid="stAppViewContainer"]>section::-webkit-scrollbar {{
+    width: 0 !important; height: 0 !important; display: none !important;
+}}
+[data-testid="stMain"] {{
+    height: 100vh !important;
+    max-height: 100vh !important;
+    overflow-y: auto !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+}}
+[data-testid="stMain"]::-webkit-scrollbar {{
+    width: 0 !important; height: 0 !important; display: none !important;
+}}
+[data-testid="stMainBlockContainer"] {{
+    max-width: 1400px !important;
+    width: 100% !important;
+    margin: auto !important;
+    padding-top: 8px !important;
+    padding-bottom: 8px !important;
+}}
+
+.vtm-admin-video {{
+    position: fixed;
+    top: 0; left: 0;
+    width: 100vw; height: 100vh;
+    object-fit: cover;
+    z-index: -2;
+    pointer-events: none;
+    opacity: 1;
+}}
+.vtm-admin-overlay {{
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background:
+        radial-gradient(ellipse at 22% 30%, rgba(45,212,191,0.07) 0%, transparent 55%),
+        radial-gradient(ellipse at 82% 78%, rgba(139,92,246,0.07) 0%, transparent 55%),
+        linear-gradient(180deg, rgba(4,9,18,0.80) 0%, rgba(6,14,26,0.72) 45%, rgba(4,9,15,0.86) 100%);
+}}
+
+#vtm-stars {{ opacity: 0.28 !important; }}
+
+.vtm-card {{
+    background: rgba(18,24,38,0.42) !important;
+    backdrop-filter: blur(20px) !important;
+    -webkit-backdrop-filter: blur(20px) !important;
+    border: 1px solid rgba(94,234,212,0.14) !important;
+    border-radius: 16px !important;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.45) !important;
+}}
+.vtm-card * {{ color: #E7EEF7 !important; }}
+.vtm-card h3 {{ color: #7FF7DE !important; }}
+
+.met-card {{
+    background: rgba(18,24,38,0.42) !important;
+    backdrop-filter: blur(20px) !important;
+    -webkit-backdrop-filter: blur(20px) !important;
+    border: 1px solid rgba(94,234,212,0.18) !important;
+    border-radius: 16px !important;
+    box-shadow: 0 12px 36px rgba(0,0,0,0.45) !important;
+}}
+.met-val {{
+    background: linear-gradient(120deg, #7FF7DE 0%, #38BDF8 100%) !important;
+    -webkit-background-clip: text !important; background-clip: text !important;
+    -webkit-text-fill-color: transparent !important;
+    color: #7FF7DE !important;
+}}
+.met-lbl {{ color: #A9BDD3 !important; }}
+
+.topbar {{
+    background: rgba(18,24,38,0.42) !important;
+    backdrop-filter: blur(20px) !important;
+    -webkit-backdrop-filter: blur(20px) !important;
+    border-bottom: 2px solid rgba(45,212,191,0.55) !important;
+    box-shadow: 0 8px 28px rgba(0,0,0,0.4) !important;
+}}
+.tb-title {{ color: #7FF7DE !important; }}
+
+.stButton>button {{
+    background: linear-gradient(90deg, #14E0B8 0%, #22C9DD 55%, #0EA5E9 100%) !important;
+    color: #04121F !important;
+    border: none !important;
+    border-radius: 12px !important;
+    box-shadow: 0 8px 24px rgba(20,224,184,0.28) !important;
+}}
+.stButton>button:hover {{
+    background: linear-gradient(90deg, #3BF0CC 0%, #38D6EA 55%, #38BDF8 100%) !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 12px 34px rgba(20,224,184,0.44) !important;
+    color: #04121F !important;
+}}
+.stButton>button *, .stButton>button p, .stButton>button span {{
+    color: #04121F !important; font-weight: 900 !important;
+}}
+
+.stTextInput>div>div>input,
+.stNumberInput>div>div>input,
+.stDateInput>div>div>input {{
+    background: rgba(8,17,31,0.72) !important;
+    color: #E7EEF7 !important;
+    border: 1px solid rgba(94,234,212,0.22) !important;
+    border-radius: 10px !important;
+}}
+.stTextInput>div>div>input::placeholder {{ color: #6B7E96 !important; }}
+.stTextArea textarea {{
+    background: rgba(8,17,31,0.72) !important;
+    color: #E7EEF7 !important;
+    border: 1px solid rgba(94,234,212,0.22) !important;
+    border-radius: 10px !important;
+}}
+.stTextArea textarea::placeholder {{ color: #6B7E96 !important; }}
+.stSelectbox>div>div,
+.stMultiSelect>div>div {{
+    background: rgba(8,17,31,0.72) !important;
+    border: 1px solid rgba(94,234,212,0.22) !important;
+    border-radius: 10px !important;
+}}
+.stSelectbox *, .stMultiSelect * {{ color: #E7EEF7 !important; }}
+.stSelectbox svg, .stMultiSelect svg {{ fill: #5EEAD4 !important; }}
+
+label,.stTextInput label,.stSelectbox label,.stTextArea label,
+.stSlider label,.stNumberInput label,.stDateInput label,.stMultiSelect label {{
+    color: #A9BDD3 !important;
+}}
+
+[data-baseweb="popover"] [role="listbox"],
+[data-baseweb="popover"] ul {{
+    background: #0B1526 !important;
+    border: 1px solid rgba(94,234,212,0.22) !important;
+    border-radius: 12px !important;
+}}
+[data-baseweb="popover"] li,
+[data-baseweb="popover"] [role="option"] {{
+    color: #E2E8F0 !important; background: transparent !important;
+}}
+[data-baseweb="popover"] li:hover,
+[data-baseweb="popover"] [role="option"]:hover,
+[data-baseweb="popover"] [aria-selected="true"] {{
+    background: rgba(45,212,191,0.14) !important; color: #7FF7DE !important;
+}}
+
+[data-testid="stDataFrame"] {{
+    background: rgba(11,18,32,0.6) !important;
+    border: 1px solid rgba(94,234,212,0.14) !important;
+    border-radius: 12px !important;
+}}
+
+.vadm-hero {{
+    display:flex; align-items:center; justify-content:space-between;
+    flex-wrap:wrap; gap:14px;
+    background: rgba(18,24,38,0.42);
+    backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(94,234,212,0.16);
+    border-radius: 18px;
+    padding: 18px 26px;
+    margin-bottom: 16px;
+    box-shadow: 0 14px 44px rgba(0,0,0,0.45);
+}}
+.vadm-hero-left {{ display:flex; align-items:center; gap:16px; }}
+.vadm-hero-logo img {{
+    width: 48px; height: auto; display: block;
+    filter: drop-shadow(0 0 14px rgba(20,224,184,0.45));
+}}
+.vadm-hero-title {{
+    font-size: 1.35rem; font-weight: 900; margin:0; letter-spacing:0.02em;
+    background: linear-gradient(120deg,#7FF7DE 0%,#38BDF8 55%,#8B5CF6 100%);
+    -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
+}}
+.vadm-hero-sub {{ color:#94A3B8; font-size:0.8rem; font-weight:700; margin:4px 0 0; }}
+.vadm-hero-badge {{
+    display:inline-flex; align-items:center; gap:7px;
+    background: rgba(52,211,153,0.12);
+    border: 1px solid rgba(52,211,153,0.4);
+    color:#34D399; font-weight:900; font-size:0.82rem;
+    padding:7px 16px; border-radius:999px;
+}}
+.vadm-hero-dot {{
+    width:8px; height:8px; border-radius:50%; background:#34D399;
+    box-shadow:0 0 10px rgba(52,211,153,0.9);
+    animation: vtmPulse 1.6s ease-in-out infinite;
+}}
+
+.vadm-kpi {{
+    position:relative; overflow:hidden;
+    background: rgba(18,24,38,0.42);
+    backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(94,234,212,0.16);
+    border-radius: 18px;
+    padding: 20px 20px 18px;
+    box-shadow: 0 14px 40px rgba(0,0,0,0.42);
+    min-height: 132px;
+}}
+.vadm-kpi::before {{
+    content:""; position:absolute; top:-40%; right:-30%;
+    width:180px; height:180px; border-radius:50%;
+    background: radial-gradient(circle, var(--glow,rgba(45,212,191,0.30)) 0%, transparent 70%);
+    filter: blur(6px);
+}}
+.vadm-kpi .k-top {{ display:flex; align-items:flex-start; justify-content:space-between; }}
+.vadm-kpi .k-num {{
+    font-size: 2.4rem; font-weight:900; line-height:1;
+    color:#F1F5F9; letter-spacing:-0.01em;
+}}
+.vadm-kpi .k-unit {{ font-size:1rem; font-weight:800; color:#94A3B8; margin-left:3px; }}
+.vadm-kpi .k-lbl {{ color:#E2E8F0; font-size:0.92rem; font-weight:800; margin:10px 0 2px; }}
+.vadm-kpi .k-en  {{ color:#7E93AB; font-size:0.68rem; font-weight:700; letter-spacing:0.14em; }}
+.vadm-kpi .k-ico {{
+    width:44px; height:44px; border-radius:12px;
+    display:flex; align-items:center; justify-content:center; font-size:1.3rem;
+    border:1px solid rgba(255,255,255,0.08);
+}}
+.vadm-kpi.c-teal   {{ --glow:rgba(45,212,191,0.30); }}
+.vadm-kpi.c-teal   .k-ico {{ background:rgba(45,212,191,0.14); }}
+.vadm-kpi.c-violet {{ --glow:rgba(139,92,246,0.30); }}
+.vadm-kpi.c-violet .k-ico {{ background:rgba(139,92,246,0.16); }}
+.vadm-kpi.c-cyan   {{ --glow:rgba(56,189,248,0.30); }}
+.vadm-kpi.c-cyan   .k-ico {{ background:rgba(56,189,248,0.14); }}
+.vadm-kpi.c-gold   {{ --glow:rgba(212,175,55,0.30); border-color:rgba(212,175,55,0.35); }}
+.vadm-kpi.c-gold   .k-ico {{ background:rgba(212,175,55,0.14); }}
+.vadm-kpi.c-gold   .k-num {{
+    background:linear-gradient(120deg,#F6D365,#D4AF37);
+    -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
+}}
+
+.vadm-sec-title {{
+    display:flex; align-items:center; gap:9px;
+    color:#7FF7DE; font-size:0.96rem; font-weight:900;
+    letter-spacing:0.04em; margin:6px 0 10px;
+}}
+.vadm-sec-title .cnt {{
+    font-size:0.72rem; font-weight:800; color:#38BDF8;
+    background:rgba(56,189,248,0.12); border:1px solid rgba(56,189,248,0.3);
+    padding:2px 10px; border-radius:999px;
+}}
+
+.vadm-emp-row {{
+    display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;
+    background: rgba(18,24,38,0.42);
+    backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(94,234,212,0.10);
+    border-radius: 12px; padding: 12px 18px; margin:5px 0;
+}}
+.vadm-emp-name {{ font-size:0.98rem; font-weight:900; color:#F1F5F9; }}
+.vadm-chip {{ font-weight:800; font-size:0.82rem; padding:3px 10px; border-radius:8px; }}
+.vadm-chip.on  {{ color:#34D399; background:rgba(52,211,153,0.12); }}
+.vadm-chip.off {{ color:#FCA5A5; background:rgba(239,68,68,0.12); }}
+.vadm-chip.mut {{ color:#94A3B8; background:rgba(148,163,184,0.10); }}
+.vadm-chip.rep {{ color:#38BDF8; background:rgba(56,189,248,0.12); }}
+.vadm-chip.gold{{ color:#F6D365; background:rgba(212,175,55,0.12); }}
+
+.vai-panel {{
+    background: rgba(18,24,38,0.42);
+    backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(139,92,246,0.24);
+    border-radius: 18px;
+    padding: 18px 20px 16px;
+    box-shadow: 0 14px 44px rgba(0,0,0,0.5);
+    height: 100%;
+}}
+.vai-head {{
+    display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;
+}}
+.vai-head .t {{
+    display:flex; align-items:center; gap:8px;
+    color:#C4B5FD; font-size:0.92rem; font-weight:900; letter-spacing:0.03em;
+}}
+.vai-head .live {{
+    display:inline-flex; align-items:center; gap:6px;
+    color:#8B5CF6; font-size:0.68rem; font-weight:900; letter-spacing:0.1em;
+    background:rgba(139,92,246,0.12); border:1px solid rgba(139,92,246,0.35);
+    padding:3px 10px; border-radius:999px;
+}}
+.vai-live-dot {{
+    width:7px; height:7px; border-radius:50%; background:#8B5CF6;
+    box-shadow:0 0 8px rgba(139,92,246,0.9);
+    animation: vtmPulse 1.4s ease-in-out infinite;
+}}
+
+.vai-view {{
+    position:relative; height:216px; overflow:hidden;
+    -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 12%, #000 88%, transparent 100%);
+            mask-image: linear-gradient(180deg, transparent 0, #000 12%, #000 88%, transparent 100%);
+}}
+.vai-track {{
+    display:flex; flex-direction:column; gap:8px;
+    animation: vaiRoll 21s linear infinite;
+}}
+.vai-view:hover .vai-track {{ animation-play-state: paused; }}
+.vai-item {{
+    display:flex; align-items:center; gap:12px;
+    background: rgba(23,30,48,0.7);
+    border: 1px solid rgba(139,92,246,0.14);
+    border-radius: 12px; padding: 10px 14px;
+    min-height: 64px;
+}}
+.vai-ava {{
+    width:38px; height:38px; border-radius:10px; flex-shrink:0;
+    display:flex; align-items:center; justify-content:center; font-size:1.15rem;
+    background: linear-gradient(135deg, rgba(139,92,246,0.28), rgba(56,189,248,0.22));
+    border:1px solid rgba(139,92,246,0.3);
+}}
+.vai-info {{ flex:1; min-width:0; }}
+.vai-name {{ color:#F1F5F9; font-size:0.9rem; font-weight:800; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }}
+.vai-task {{ color:#A9BDD3; font-size:0.76rem; font-weight:600; margin-top:2px;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }}
+.vai-state {{
+    flex-shrink:0; display:inline-flex; align-items:center; gap:5px;
+    color:#34D399; font-size:0.66rem; font-weight:900;
+    background:rgba(52,211,153,0.12); border:1px solid rgba(52,211,153,0.3);
+    padding:3px 9px; border-radius:999px;
+}}
+.vai-state-dot {{
+    width:6px; height:6px; border-radius:50%; background:#34D399;
+    box-shadow:0 0 6px rgba(52,211,153,0.9);
+    animation: vtmPulse 1.5s ease-in-out infinite;
+}}
+@keyframes vaiRoll {{
+    0%   {{ transform: translateY(0); }}
+    100% {{ transform: translateY(-50%); }}
+}}
+@media (prefers-reduced-motion: reduce) {{
+    .vai-track {{ animation: none !important; }}
+}}
+.vai-foot {{
+    margin-top:12px; padding-top:10px; border-top:1px solid rgba(139,92,246,0.14);
+    display:flex; justify-content:space-between; align-items:center;
+    color:#94A3B8; font-size:0.74rem; font-weight:700;
+}}
+.vai-foot .op {{ color:#34D399; font-weight:900; display:inline-flex; align-items:center; gap:6px; }}
+
+@media (max-width: 920px) {{
+    .vadm-kpi .k-num {{ font-size:2rem; }}
+}}
+</style>
+""", unsafe_allow_html=True)
+
+    st.markdown(f"""
+    <video id="vtm-admin-bg-video" autoplay muted loop playsinline preload="auto" class="vtm-admin-video">
+        <source src="{VTM_ADMIN_BG_VIDEO_URL}" type="video/mp4">
+    </video>
+    <div class="vtm-admin-overlay"></div>
+    """, unsafe_allow_html=True)
+
+
+# ═══════════════════════════════════════════════════════════════════
+#  ▼▼▼ 디렉터/직원 홈 전용 테마 + 배경 영상 (VTM OS 2.0.8 신규) ▼▼▼
+#  · 로그인 후 is_admin=False 이고 page == "home" 일 때만 주입됨
+#    → 출퇴근/업무보고/달력/VTM WAY 화면에는 영향 없음
+#  · 배경: HTML5 Video (vtm02.mp4) + Dark Overlay (전체화면 fixed cover)
+#  · 폴백: html(root) 다크 그라데이션 (영상 로드 실패 시 자동 노출)
+#  · 카드: 로그인 박스와 동일 Glassmorphism
+#    rgba(18,24,38,0.42) + backdrop-filter: blur(20px)
+#  · 표시 전용 스타일이며 DB/세션 로직과 무관
+# ═══════════════════════════════════════════════════════════════════
+def inject_director_theme():
+    st.markdown("""
+<style>
+html {
+    background:
+        radial-gradient(1200px 700px at 14% 20%, rgba(45,212,191,0.10) 0%, transparent 60%),
+        radial-gradient(1000px 640px at 88% 82%, rgba(139,92,246,0.10) 0%, transparent 60%),
+        linear-gradient(180deg, #050B14 0%, #081222 48%, #04090F 100%) !important;
+}
+body { background: transparent !important; }
+
+.stApp,
+[data-testid="stAppViewContainer"],
+[data-testid="stAppViewContainer"]>section,
+[data-testid="stMain"],
+[data-testid="stMainBlockContainer"],
+.main, .main>div {
+    background: transparent !important;
+}
+
+.vtm-dir-video {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100vw; height: 100vh;
+    object-fit: cover;
+    z-index: -2;
+    pointer-events: none;
+    opacity: 1;
+}
+.vtm-dir-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background:
+        radial-gradient(ellipse at 22% 30%, rgba(45,212,191,0.07) 0%, transparent 55%),
+        radial-gradient(ellipse at 82% 78%, rgba(139,92,246,0.07) 0%, transparent 55%),
+        linear-gradient(180deg, rgba(4,9,18,0.80) 0%, rgba(6,14,26,0.72) 45%, rgba(4,9,15,0.86) 100%);
+}
+
+#vtm-stars { opacity: 0.28 !important; }
+
+[data-testid="stMainBlockContainer"] {
+    max-width: 1400px !important;
+    width: 100% !important;
+}
+
+.stButton>button {
+    background: linear-gradient(90deg, #14E0B8 0%, #22C9DD 55%, #0EA5E9 100%) !important;
+    color: #04121F !important;
+    border: none !important;
+    border-radius: 12px !important;
+    box-shadow: 0 8px 24px rgba(20,224,184,0.28) !important;
+}
+.stButton>button:hover {
+    background: linear-gradient(90deg, #3BF0CC 0%, #38D6EA 55%, #38BDF8 100%) !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 12px 34px rgba(20,224,184,0.44) !important;
+    color: #04121F !important;
+}
+.stButton>button *, .stButton>button p, .stButton>button span {
+    color: #04121F !important; font-weight: 900 !important;
+}
+
+.vtm-card {
+    background: rgba(18,24,38,0.42) !important;
+    backdrop-filter: blur(20px) !important;
+    -webkit-backdrop-filter: blur(20px) !important;
+    border: 1px solid rgba(94,234,212,0.14) !important;
+    border-radius: 16px !important;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.45) !important;
+}
+.vtm-card * { color: #E7EEF7 !important; }
+.vtm-card h3 { color: #7FF7DE !important; }
+.met-card {
+    background: rgba(18,24,38,0.42) !important;
+    backdrop-filter: blur(20px) !important;
+    -webkit-backdrop-filter: blur(20px) !important;
+    border: 1px solid rgba(94,234,212,0.18) !important;
+    border-radius: 16px !important;
+}
+.topbar {
+    background: rgba(18,24,38,0.42) !important;
+    backdrop-filter: blur(20px) !important;
+    -webkit-backdrop-filter: blur(20px) !important;
+    border-bottom: 2px solid rgba(45,212,191,0.55) !important;
+}
+.tb-title { color: #7FF7DE !important; }
+
+@keyframes vdirPulse {
+    0%, 100% { opacity: 1;    transform: scale(1); }
+    50%      { opacity: 0.45; transform: scale(0.82); }
+}
+
+.vdir-hero {
+    display:flex; align-items:center; justify-content:space-between;
+    flex-wrap:wrap; gap:14px;
+    background: rgba(18,24,38,0.42);
+    backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(94,234,212,0.16);
+    border-radius: 18px;
+    padding: 20px 28px;
+    margin-bottom: 14px;
+    box-shadow: 0 14px 44px rgba(0,0,0,0.45);
+    position: relative; z-index: 1;
+}
+.vdir-hero-left { display:flex; align-items:center; gap:16px; }
+.vdir-hero-logo img {
+    width: 48px; height: auto; display: block;
+    filter: drop-shadow(0 0 14px rgba(20,224,184,0.45));
+}
+.vdir-hero-title {
+    font-size: 1.5rem; font-weight: 900; margin:0; letter-spacing:0.01em;
+    color:#F1F5F9;
+}
+.vdir-hero-title .nm {
+    background: linear-gradient(120deg,#7FF7DE 0%,#38BDF8 100%);
+    -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
+}
+.vdir-hero-sub { color:#A9BDD3; font-size:0.88rem; font-weight:700; margin:6px 0 0; }
+.vdir-hero-time { text-align:right; }
+.vdir-hero-time .d { color:#94A3B8; font-size:0.8rem; font-weight:800; }
+.vdir-hero-time .t {
+    font-size:2rem; font-weight:900; line-height:1.1; letter-spacing:0.02em;
+    color:#FFFFFF; text-shadow: 0 0 20px rgba(56,189,248,0.35);
+}
+
+.vdir-kpi-grid {
+    display:grid;
+    grid-template-columns: repeat(auto-fit, minmax(178px, 1fr));
+    gap: 12px;
+    margin-bottom: 14px;
+    position: relative; z-index: 1;
+}
+.vdir-kpi {
+    position:relative; overflow:hidden;
+    background: rgba(18,24,38,0.42);
+    backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(94,234,212,0.16);
+    border-radius: 16px;
+    padding: 16px 16px 14px;
+    box-shadow: 0 12px 36px rgba(0,0,0,0.42);
+    min-height: 118px;
+}
+.vdir-kpi::before {
+    content:""; position:absolute; top:-45%; right:-32%;
+    width:160px; height:160px; border-radius:50%;
+    background: radial-gradient(circle, var(--glow,rgba(45,212,191,0.28)) 0%, transparent 70%);
+    filter: blur(6px);
+}
+.vdir-kpi .k-ico {
+    width:38px; height:38px; border-radius:11px;
+    display:flex; align-items:center; justify-content:center; font-size:1.15rem;
+    border:1px solid rgba(255,255,255,0.08);
+    margin-bottom:9px;
+    background: var(--icobg, rgba(45,212,191,0.14));
+}
+.vdir-kpi .k-lbl { color:#A9BDD3; font-size:0.76rem; font-weight:800; letter-spacing:0.02em; }
+.vdir-kpi .k-val {
+    font-size:1.55rem; font-weight:900; line-height:1.2; margin:2px 0;
+    color:#F1F5F9;
+}
+.vdir-kpi .k-sub { color:#7E93AB; font-size:0.72rem; font-weight:700; }
+.vdir-kpi.c-teal   { --glow:rgba(45,212,191,0.30);  --icobg:rgba(45,212,191,0.14); }
+.vdir-kpi.c-teal   .k-val {
+    background: linear-gradient(120deg,#7FF7DE 0%,#2DD4BF 100%);
+    -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
+}
+.vdir-kpi.c-cyan   { --glow:rgba(56,189,248,0.30);  --icobg:rgba(56,189,248,0.14); }
+.vdir-kpi.c-cyan   .k-val {
+    background: linear-gradient(120deg,#7DD3FC 0%,#38BDF8 100%);
+    -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
+}
+.vdir-kpi.c-violet { --glow:rgba(139,92,246,0.30);  --icobg:rgba(139,92,246,0.16); }
+.vdir-kpi.c-violet .k-val {
+    background: linear-gradient(120deg,#C4B5FD 0%,#8B5CF6 100%);
+    -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
+}
+.vdir-kpi.c-gold   { --glow:rgba(212,175,55,0.26);  --icobg:rgba(212,175,55,0.12);
+                     border-color:rgba(212,175,55,0.28); }
+.vdir-kpi.c-gold   .k-val {
+    background: linear-gradient(120deg,#F6D365 0%,#D4AF37 100%);
+    -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
+}
+
+.vdir-panel {
+    background: rgba(18,24,38,0.42);
+    backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(94,234,212,0.14);
+    border-radius: 18px;
+    padding: 18px 20px 16px;
+    box-shadow: 0 14px 44px rgba(0,0,0,0.45);
+    position: relative; z-index: 1;
+    margin-bottom: 12px;
+}
+.vdir-sec-title {
+    display:flex; align-items:center; justify-content:space-between; gap:9px;
+    color:#7FF7DE; font-size:0.94rem; font-weight:900;
+    letter-spacing:0.04em; margin:0 0 12px;
+}
+.vdir-sec-title .cnt {
+    font-size:0.7rem; font-weight:800; color:#38BDF8;
+    background:rgba(56,189,248,0.12); border:1px solid rgba(56,189,248,0.3);
+    padding:2px 10px; border-radius:999px;
+}
+
+.vdir-tl { position:relative; padding-left: 4px; }
+.vdir-tl-item {
+    display:flex; gap:14px; position:relative;
+    padding: 0 0 18px 0;
+}
+.vdir-tl-item:last-child { padding-bottom: 4px; }
+.vdir-tl-rail {
+    display:flex; flex-direction:column; align-items:center; flex-shrink:0;
+}
+.vdir-tl-dot {
+    width:11px; height:11px; border-radius:50%;
+    background: var(--dot,#2DD4BF);
+    box-shadow: 0 0 10px var(--dot,#2DD4BF);
+    margin-top: 4px;
+}
+.vdir-tl-line {
+    width:2px; flex:1; margin-top:4px;
+    background: linear-gradient(180deg, var(--dot,#2DD4BF), rgba(94,234,212,0.08));
+}
+.vdir-tl-item:last-child .vdir-tl-line { display:none; }
+.vdir-tl-time { color:#7FF7DE; font-size:0.86rem; font-weight:900; min-width:52px; padding-top:2px; }
+.vdir-tl-body .t { color:#F1F5F9; font-size:0.9rem; font-weight:800; }
+.vdir-tl-body .d { color:#8CA3BC; font-size:0.76rem; font-weight:600; margin-top:2px; }
+.vdir-tl-item.c-teal   { --dot:#2DD4BF; }
+.vdir-tl-item.c-cyan   { --dot:#38BDF8; }
+.vdir-tl-item.c-violet { --dot:#8B5CF6; }
+.vdir-tl-item.c-gold   { --dot:#D4AF37; }
+.vdir-tl-item.c-mut    { --dot:#64748B; }
+
+.vdir-todo-item {
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    background: rgba(8,17,31,0.5);
+    border: 1px solid rgba(94,234,212,0.10);
+    border-radius: 11px;
+    padding: 11px 14px;
+    margin: 6px 0;
+}
+.vdir-todo-item .lt { display:flex; align-items:center; gap:10px; }
+.vdir-todo-ck {
+    width:19px; height:19px; border-radius:5px; flex-shrink:0;
+    border: 1.5px solid rgba(56,189,248,0.6);
+    background: rgba(56,189,248,0.10);
+    display:flex; align-items:center; justify-content:center;
+    color:#38BDF8; font-size:0.68rem; font-weight:900;
+}
+.vdir-todo-txt { color:#E7EEF7; font-size:0.86rem; font-weight:700; }
+.vdir-todo-arw { color:#5E7490; font-size:0.9rem; font-weight:900; }
+
+.vdir-sys-row {
+    display:flex; align-items:center; justify-content:space-between;
+    padding: 9px 2px;
+    border-bottom: 1px solid rgba(94,234,212,0.08);
+}
+.vdir-sys-row:last-child { border-bottom:none; }
+.vdir-sys-lbl {
+    display:inline-flex; align-items:center; gap:9px;
+    color:#CBD5E1; font-size:0.86rem; font-weight:700;
+}
+.vdir-sys-lbl .ic { font-size:1rem; }
+.vdir-sys-val { font-size:0.86rem; font-weight:900; }
+.vdir-sys-val.teal  { color:#7FF7DE; }
+.vdir-sys-val.cyan  { color:#38BDF8; }
+.vdir-sys-val.green { color:#34D399; }
+
+.vdai-panel {
+    background: rgba(18,24,38,0.42);
+    backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(139,92,246,0.24);
+    border-radius: 18px;
+    padding: 18px 20px 16px;
+    box-shadow: 0 14px 44px rgba(0,0,0,0.5);
+    position: relative; z-index: 1;
+    margin-bottom: 12px;
+}
+.vdai-head {
+    display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;
+}
+.vdai-head .t {
+    display:flex; align-items:center; gap:8px;
+    color:#C4B5FD; font-size:0.92rem; font-weight:900; letter-spacing:0.03em;
+}
+.vdai-head .live {
+    display:inline-flex; align-items:center; gap:6px;
+    color:#8B5CF6; font-size:0.68rem; font-weight:900; letter-spacing:0.1em;
+    background:rgba(139,92,246,0.12); border:1px solid rgba(139,92,246,0.35);
+    padding:3px 10px; border-radius:999px;
+}
+.vdai-live-dot {
+    width:7px; height:7px; border-radius:50%; background:#8B5CF6;
+    box-shadow:0 0 8px rgba(139,92,246,0.9);
+    animation: vdirPulse 1.4s ease-in-out infinite;
+}
+.vdai-view {
+    position:relative; height:432px; overflow:hidden;
+    -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 8%, #000 92%, transparent 100%);
+            mask-image: linear-gradient(180deg, transparent 0, #000 8%, #000 92%, transparent 100%);
+}
+.vdai-track {
+    display:flex; flex-direction:column; gap:8px;
+    animation: vdaiRoll 21s linear infinite;
+}
+.vdai-view:hover .vdai-track { animation-play-state: paused; }
+.vdai-item {
+    display:flex; align-items:center; gap:12px;
+    background: rgba(23,30,48,0.7);
+    border: 1px solid rgba(139,92,246,0.14);
+    border-radius: 12px; padding: 10px 14px;
+    min-height: 64px;
+}
+.vdai-ava {
+    width:38px; height:38px; border-radius:10px; flex-shrink:0;
+    display:flex; align-items:center; justify-content:center; font-size:1.15rem;
+    background: linear-gradient(135deg, rgba(139,92,246,0.28), rgba(56,189,248,0.22));
+    border:1px solid rgba(139,92,246,0.3);
+}
+.vdai-info { flex:1; min-width:0; }
+.vdai-name { color:#F1F5F9; font-size:0.9rem; font-weight:800; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.vdai-task { color:#A9BDD3; font-size:0.76rem; font-weight:600; margin-top:2px;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.vdai-state {
+    flex-shrink:0; display:inline-flex; align-items:center; gap:5px;
+    color:#34D399; font-size:0.66rem; font-weight:900;
+    background:rgba(52,211,153,0.12); border:1px solid rgba(52,211,153,0.3);
+    padding:3px 9px; border-radius:999px;
+}
+.vdai-state-dot {
+    width:6px; height:6px; border-radius:50%; background:#34D399;
+    box-shadow:0 0 6px rgba(52,211,153,0.9);
+    animation: vdirPulse 1.5s ease-in-out infinite;
+}
+@keyframes vdaiRoll {
+    0%   { transform: translateY(0); }
+    100% { transform: translateY(-50%); }
+}
+@media (prefers-reduced-motion: reduce) {
+    .vdai-track { animation: none !important; }
+    .vdai-live-dot, .vdai-state-dot { animation: none !important; }
+}
+.vdai-foot {
+    margin-top:12px; padding-top:10px; border-top:1px solid rgba(139,92,246,0.14);
+    display:flex; justify-content:space-between; align-items:center;
+    color:#94A3B8; font-size:0.74rem; font-weight:700;
+}
+.vdai-foot .op { color:#34D399; font-weight:900; display:inline-flex; align-items:center; gap:6px; }
+.vdai-foot .op-dot {
+    width:8px; height:8px; border-radius:50%; background:#34D399;
+    box-shadow:0 0 10px rgba(52,211,153,0.9);
+    animation: vdirPulse 1.6s ease-in-out infinite;
+}
+
+@media (max-width: 920px) {
+    .vdir-hero { flex-direction: column; align-items: flex-start; }
+    .vdir-hero-time { text-align: left; }
+    .vdir-hero-title { font-size: 1.25rem; }
+    .vdir-kpi-grid { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+    .vdai-view { height: 300px; }
+}
+</style>
+""", unsafe_allow_html=True)
+
+    st.markdown(f"""
+    <video id="vtm-dir-bg-video" autoplay muted loop playsinline preload="auto" class="vtm-dir-video">
+        <source src="{VTM_DIR_BG_VIDEO_URL}" type="video/mp4">
+    </video>
+    <div class="vtm-dir-overlay"></div>
+    """, unsafe_allow_html=True)
+
+
 def render_login():
     inject_all()
-    _, mid, _ = st.columns([1, 2, 1])
-    with mid:
+
+    st.markdown(f"""
+    <video id="vtm-bg-video" autoplay muted loop playsinline preload="auto" class="vtm-video-bg">
+        <source src="{VTM_BG_VIDEO_URL}" type="video/mp4">
+    </video>
+    <div id="vtm-bg-overlay" class="vtm-bgoverlay"></div>
+    """, unsafe_allow_html=True)
+
+    left, right = st.columns([1.25, 1], gap="large")
+
+    with left:
         st.markdown(f"""
-        <div style="margin-top:50px;background:rgba(15,23,42,0.92);
-            border:1px solid rgba(212,175,55,0.45);border-radius:22px;
-            padding:36px 32px;box-shadow:0 20px 55px rgba(0,0,0,0.6);
-            position:relative;z-index:2;">
-          <div style="text-align:center;margin-bottom:24px;">
-            {logo_svg(76)}
-            <h1 style="color:#D4AF37;font-size:1.5rem;font-weight:900;
-                       margin:12px 0 4px;">(주) 브이티엠</h1>
-            <p style="color:#94A3B8;font-size:0.87rem;font-weight:700;margin:0;">
-                VTM 운영 대시보드 v1.0
-            </p>
+        <div class="vtm-brand">
+          <div class="vtm-brand-logo">
+            <img src="{VTM_LOGO_URL}" alt="VTM Logo">
           </div>
-          <div style="background:rgba(212,175,55,0.12);border:1px solid rgba(212,175,55,0.3);
-                      border-radius:9px;padding:9px;text-align:center;margin-bottom:16px;">
-            <span style="color:#D4AF37;font-weight:900;font-size:0.84rem;">
-                🔐 시스템 접속 인증
-            </span>
+          <h1 class="vtm-brand-title">VTM</h1>
+          <p class="vtm-brand-sub">OPERATING&nbsp;SYSTEM</p>
+
+          <div class="vtm-hx-badge">HUMAN&nbsp;×&nbsp;AI&nbsp;WORKFORCE&nbsp;OS</div>
+          <p class="vtm-hx-line1">Real people and AI employees working as one.</p>
+          <p class="vtm-hx-line2">One Team. Two Workforces. Infinite Possibilities.</p>
+          <p class="vtm-brand-tag">AI와 사람이 함께 만드는 브랜드 커넥트의 미래</p>
+
+          <div class="vtm-feat-row">
+            <div class="vtm-feat">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#2DD4BF" stroke-width="1.7"
+                   stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 2l8 3.5v5.2c0 5-3.4 9.3-8 10.8-4.6-1.5-8-5.8-8-10.8V5.5L12 2z"/>
+                <path d="M9 12l2 2 4-4.5"/>
+              </svg>
+              <p class="vtm-feat-t">보안 중심</p>
+              <p class="vtm-feat-d">안전한 데이터 보호</p>
+            </div>
+            <div class="vtm-feat">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#2DD4BF" stroke-width="1.7"
+                   stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 21h18"/>
+                <rect x="5" y="12" width="3" height="6" rx="0.5"/>
+                <rect x="10.5" y="8" width="3" height="10" rx="0.5"/>
+                <rect x="16" y="10" width="3" height="8" rx="0.5"/>
+                <path d="M5 8l4-3 4 2 5-4"/>
+              </svg>
+              <p class="vtm-feat-t">업무 효율화</p>
+              <p class="vtm-feat-d">체계적인 업무 관리</p>
+            </div>
+            <div class="vtm-feat">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#2DD4BF" stroke-width="1.7"
+                   stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="6" cy="6" r="2.5"/>
+                <circle cx="18" cy="8" r="2.5"/>
+                <circle cx="12" cy="18" r="2.5"/>
+                <path d="M8.2 7.2l7.4 0M7.4 8.2l3.4 7.6M16.8 10.2l-3.4 5.6"/>
+              </svg>
+              <p class="vtm-feat-t">연결과 협업</p>
+              <p class="vtm-feat-d">유기적인 팀워크</p>
+            </div>
           </div>
+
+          <div class="vtm-wf-panel">
+            <div class="vtm-wf-head"><span class="vtm-wf-head-dot"></span>WORKFORCE&nbsp;STATUS</div>
+            <div class="vtm-wf-grid">
+              <div class="vtm-wf-item">
+                <span class="vtm-wf-num">3</span>
+                <span class="vtm-wf-lbl">Human Workforce</span>
+                <span class="vtm-wf-state on">Online</span>
+              </div>
+              <div class="vtm-wf-item">
+                <span class="vtm-wf-num">7</span>
+                <span class="vtm-wf-lbl">AI Workforce</span>
+                <span class="vtm-wf-state run">Running</span>
+              </div>
+              <div class="vtm-wf-item">
+                <span class="vtm-wf-num">10</span>
+                <span class="vtm-wf-lbl">Total Workforce</span>
+                <span class="vtm-wf-state total">Active</span>
+              </div>
+            </div>
+            <div class="vtm-wf-foot">
+              Automation Status
+              <span class="vtm-op"><span class="vtm-op-dot"></span>Operational</span>
+            </div>
+          </div>
+
+          <p class="vtm-copy">© 2026 VTM Co., Ltd. All rights reserved.</p>
         </div>
         """, unsafe_allow_html=True)
- 
-        emp_df  = get_employees(active_only=True)
-        options = ["담당자를 선택하세요"] + [
-            f"{r['name']} ({r['role']})" for _, r in emp_df.iterrows()
-        ]
-        sel = st.selectbox("👤 담당자 선택", options, key="login_sel")
- 
-        selected = None
-        if sel != "담당자를 선택하세요":
-            nm = sel.split(" (")[0]
-            m  = emp_df[emp_df["name"] == nm]
-            if not m.empty:
-                selected = m.iloc[0]
- 
-        pw_input = ""
-        if selected is not None:
-            if str(selected["password"]).strip():
-                pw_input = st.text_input("🔑 비밀번호", type="password",
-                    placeholder="비밀번호 입력", key="login_pw")
-            else:
-                st.markdown("""
-                <div style="background:rgba(16,185,129,0.15);border:1px solid #10B981;
-                    border-radius:8px;padding:8px;text-align:center;margin:6px 0;">
-                  <span style="color:#10B981;font-weight:700;font-size:0.84rem;">
-                      🔓 비밀번호 없이 접속 가능
-                  </span>
-                </div>""", unsafe_allow_html=True)
- 
-        st.markdown("<div style='height:6px'></div>", unsafe_allow_html=True)
-        if st.button("🚀  시스템 접속", key="btn_login", use_container_width=True):
-            if sel == "담당자를 선택하세요" or selected is None:
-                st.error("⚠️ 담당자를 선택해 주세요.")
-            else:
-                pw_ok = (not str(selected["password"]).strip()) or \
-                        (pw_input == str(selected["password"]))
-                if pw_ok:
-                    st.session_state.logged_in  = True
-                    st.session_state.user_id    = selected["id"]
-                    st.session_state.user_name  = selected["name"]
-                    st.session_state.is_admin   = bool(int(selected["is_admin"]))
-                    st.session_state.page       = "home"
-                    wlog("LOGIN", selected["name"])
-                    st.rerun()
+
+    with right:
+        card = st.container()
+
+        with card:
+            st.markdown(f"""
+            <div class="vtm-login-card">
+              <img src="{VTM_LOGO_URL}" alt="VTM OS">
+              <p class="vtm-card-os">VTM&nbsp;OS</p>
+              <h2 class="vtm-card-welcome">Welcome Back</h2>
+              <p class="vtm-card-sub">브이티엠 운영 시스템에 오신것을 환영합니다.</p>
+            </div>
+            """, unsafe_allow_html=True)
+
+            emp_df  = get_employees(active_only=True)
+            options = ["담당자를 선택하세요"] + [
+                f"{r['name']} ({r['role']})" for _, r in emp_df.iterrows()
+            ]
+            sel = st.selectbox("담당자 선택", options, key="login_sel")
+
+            selected = None
+            if sel != "담당자를 선택하세요":
+                nm = sel.split(" (")[0]
+                m  = emp_df[emp_df["name"] == nm]
+                if not m.empty:
+                    selected = m.iloc[0]
+
+            pw_input = ""
+            if selected is not None:
+                if str(selected["password"]).strip():
+                    pw_input = st.text_input("비밀번호", type="password",
+                        placeholder="비밀번호를 입력하세요", key="login_pw")
                 else:
-                    st.error("❌ 비밀번호가 올바르지 않습니다.")
- 
-        st.markdown("""
-        <div style="text-align:center;margin-top:16px;">
-          <p style="color:#475569;font-size:0.75rem;font-weight:700;">
-              개발자: 박동진 본부장
-          </p>
-        </div>""", unsafe_allow_html=True)
- 
+                    st.markdown("""
+                    <div class="vtm-nopw">
+                      <span>🔓 비밀번호 없이 접속 가능</span>
+                    </div>""", unsafe_allow_html=True)
+
+            st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
+            if st.button("시스템 접속  →", key="btn_login", use_container_width=True):
+                if sel == "담당자를 선택하세요" or selected is None:
+                    st.error("⚠️ 담당자를 선택해 주세요.")
+                else:
+                    pw_ok = (not str(selected["password"]).strip()) or \
+                            (pw_input == str(selected["password"]))
+                    if pw_ok:
+                        st.session_state.logged_in  = True
+                        st.session_state.user_id    = selected["id"]
+                        st.session_state.user_name  = selected["name"]
+                        st.session_state.is_admin   = bool(int(selected["is_admin"]))
+                        st.session_state.page       = "home"
+                        wlog("LOGIN", selected["name"])
+                        st.rerun()
+                    else:
+                        st.error("❌ 비밀번호가 올바르지 않습니다.")
+
+            st.markdown("""
+            <p class="vtm-ver"><b>VTM OS 2.0.8</b> · 개발자: 박동진 본부장</p>
+            """, unsafe_allow_html=True)
+
+
 def render_sidebar():
     role_txt = "🔴 관리자" if st.session_state.is_admin else "🟢 직원"
     kst_now  = now_kst().strftime("%H:%M")
@@ -505,7 +1781,7 @@ def render_sidebar():
                 background:linear-gradient(90deg,#0B1120,#1E293B);
                 border-bottom:2px solid #D4AF37;border-radius:12px 12px 0 0;
                 padding:10px 18px;margin-bottom:0;">
-      {logo_svg(44)}
+      <img src="{VTM_LOGO_URL}" alt="VTM Logo" style="width:44px;height:auto;display:block;filter:drop-shadow(0 0 10px rgba(20,224,184,0.45));">
       <div>
         <div style="color:#D4AF37;font-weight:900;font-size:1.05rem;line-height:1.2;">
             (주) 브이티엠
@@ -586,52 +1862,209 @@ def topbar(title):
     </div>""", unsafe_allow_html=True)
  
 # ═══════════════════════════════════════════
-#  직원: 홈
+#  직원/디렉터: 홈 (VTM OS 2.0.8 — 프리미엄 디렉터 대시보드 리디자인)
+#  · DB 조회 로직(attendance/reports select)은 기존과 동일 유지
+#  · UI만 리디자인: Hero + KPI 6카드 + 오늘 일정 타임라인 +
+#    AI Workforce 롤업 패널(표시 전용) + 오늘 할 일 + 시스템 상태
+#  · 배경 영상/테마는 메인 라우터에서 inject_director_theme() 로 주입
 # ═══════════════════════════════════════════
 def page_emp_home():
-    topbar("🏠 내 대시보드")
-    uid = st.session_state.user_id; td = today_str()
+    uid   = st.session_state.user_id
+    uname = st.session_state.user_name
+    td    = today_str()
     sb = _sb()
     att_r = sb.table("attendance").select("*").eq("emp_id",uid).eq("work_date",td).limit(1).execute()
     rep_r = sb.table("reports").select("*").eq("emp_id",uid).eq("work_date",td).limit(1).execute()
     att = pd.DataFrame(att_r.data) if att_r.data else pd.DataFrame()
     rep = pd.DataFrame(rep_r.data) if rep_r.data else pd.DataFrame()
- 
-    ci  = safe_str(att.iloc[0]["checkin"])  if not att.empty else None
-    co  = safe_str(att.iloc[0]["checkout"]) if not att.empty else None
-    ci  = ci[-8:-3]  if ci  else "--:--"
-    co  = co[-8:-3]  if co  else "--:--"
-    atp = safe_str(att.iloc[0]["att_type"]) if not att.empty else "미출근"
+
+    # ── 실제 DB 값 기반 KPI ──
+    ci_raw = safe_str(att.iloc[0]["checkin"])  if not att.empty else None
+    co_raw = safe_str(att.iloc[0]["checkout"]) if not att.empty else None
+    ci  = ci_raw[-8:-3] if ci_raw else "--:--"
+    if co_raw:
+        co, co_sub = co_raw[-8:-3], "퇴근 완료"
+    else:
+        co, co_sub = "17:00", "예정 퇴근"
+    atp = safe_str(att.iloc[0]["att_type"]) if not att.empty else None
     atp = atp or "미출근"
-    prg = int(rep.iloc[0]["pm_progress"]) if not rep.empty else 0
-    rst = safe_str(rep.iloc[0]["status"])  if not rep.empty else "미제출"
+    ci_sub = atp if not att.empty else "출근 체크 전"
+
+    try:
+        prg = int(rep.iloc[0]["pm_progress"]) if not rep.empty and safe_str(str(rep.iloc[0]["pm_progress"])) else 0
+    except (ValueError, TypeError):
+        prg = 0
+    rst = safe_str(rep.iloc[0]["status"]) if not rep.empty else None
     rst = rst or "미제출"
- 
-    c1, c2, c3, c4 = st.columns(4)
-    for col, lbl, val, sub in [
-        (c1, "출근 시간", ci, atp), (c2, "퇴근 시간", co, ""),
-        (c3, "업무 진행률", f"{prg}%", ""), (c4, "보고 상태", rst, "")]:
-        col.markdown(f"""<div class="met-card">
-          <span class="met-val">{val}</span>
-          <span class="met-lbl">{lbl}</span>
-          <span style="color:#64748B;font-size:0.66rem;font-weight:700;">{sub}</span>
-        </div>""", unsafe_allow_html=True)
- 
+    sub_at  = safe_str(rep.iloc[0]["submitted_at"]) if not rep.empty else None
+    rst_sub = f"최종 보고: {sub_at[-8:-3]}" if sub_at else "오늘 업무보고"
+
+    # 오늘 완료: reports 있으면 완료 업무(pm_done) 라인 수, 없으면 0건
+    pm_done_txt = safe_str(rep.iloc[0]["pm_done"]) if not rep.empty else None
+    if pm_done_txt:
+        done_cnt = len([ln for ln in pm_done_txt.splitlines() if ln.strip()])
+        done_cnt = max(done_cnt, 1)
+    else:
+        done_cnt = 0
+
+    kst = now_kst()
+    day_kr = ["월","화","수","목","금","토","일"][kst.weekday()]
+
+    # ── Hero ──
+    st.markdown(f"""
+    <div class="vdir-hero">
+      <div class="vdir-hero-left">
+        <div class="vdir-hero-logo"><img src="{VTM_LOGO_URL}" alt="VTM Logo"></div>
+        <div>
+          <h2 class="vdir-hero-title">안녕하세요, <span class="nm">{uname}</span> 👋</h2>
+          <p class="vdir-hero-sub">오늘도 AI 직원들과 함께 브랜드를 성장시키는 하루입니다.</p>
+        </div>
+      </div>
+      <div class="vdir-hero-time">
+        <div class="d">{kst.strftime('%Y.%m.%d')} ({day_kr})</div>
+        <div class="t">{kst.strftime('%H:%M')}</div>
+      </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # ── KPI 6카드 (반응형 CSS Grid — 모바일 자동 세로 스택) ──
+    kpis = [
+        ("🕘", "출근 시간",   ci,             ci_sub,        "teal"),
+        ("🕔", "퇴근 시간",   co,             co_sub,        "cyan"),
+        ("📈", "업무 진행률", f"{prg}%",      "오늘 보고 기준", "teal"),
+        ("📝", "보고 상태",   rst,            rst_sub,       "violet"),
+        ("🤖", "AI 지원",     "7명",          "상시 대기",     "violet"),
+        ("✅", "오늘 완료",   f"{done_cnt}건", "완료된 업무",   "gold"),
+    ]
+    kpi_html = '<div class="vdir-kpi-grid">'
+    for ico, lbl, val, sub, cls in kpis:
+        kpi_html += (
+            '<div class="vdir-kpi c-' + cls + '">'
+            '<div class="k-ico">' + ico + '</div>'
+            '<div class="k-lbl">' + lbl + '</div>'
+            '<div class="k-val">' + str(val) + '</div>'
+            '<div class="k-sub">' + sub + '</div>'
+            '</div>'
+        )
+    kpi_html += '</div>'
+    st.markdown(kpi_html, unsafe_allow_html=True)
+
+    # ── 관리자 승인/반려/보류 코멘트 배너 (기존 기능 유지) ──
     if not rep.empty:
         s = safe_str(rep.iloc[0]["status"]) or ""
         c = safe_str(rep.iloc[0]["admin_comment"]) or ""
         if   s == "승인": st.success(f"✅ 관리자 승인 완료  |  💬 {c or '승인되었습니다.'}")
         elif s == "반려": st.error(  f"❌ 보고 반려  |  💬 {c or '수정 후 재제출 바랍니다.'}")
         elif s == "보류": st.warning(f"⏸ 보류 처리  |  💬 {c}")
- 
-    st.markdown(f"""<div class="vtm-card" style="margin-top:12px;">
-      <h3>📌 오늘 현황</h3>
-      <p>{'✅ 출근 완료 — '+atp if not att.empty else '❗ 아직 출근 체크 전'}</p>
-      <p>{'📝 업무 보고: '+rst if not rep.empty else '📝 업무 보고 미제출'}</p>
-      <p style="color:#64748B;font-size:0.8rem;margin-top:6px;">
-          위쪽 메뉴 → ⏰ 출퇴근 → 📝 업무 보고 순으로 진행하세요.
-      </p>
-    </div>""", unsafe_allow_html=True)
+
+    # ── 좌: 오늘 일정 / 중: AI Workforce 롤업 / 우: 오늘 할 일 + 시스템 상태 ──
+    left, mid, right = st.columns([1, 1.35, 1], gap="medium")
+
+    with left:
+        att_done_desc = "정상 출근 완료" if not att.empty else "출근 체크를 진행하세요"
+        schedule = [
+            ("09:30", "출근",                       att_done_desc,                  "teal"),
+            ("10:00", "오전 블로그 발행",            "블로그 콘텐츠 발행 및 모니터링", "cyan"),
+            ("11:00", "몽해 일별 쇼츠 제작",         "쇼츠 영상 기획 및 제작",        "cyan"),
+            ("11:50", "점심시간",                   "휴식 및 재충전",                "mut"),
+            ("13:00", "몽해 주별 미드폼 콘텐츠 제작", "주간 미드폼 콘텐츠 기획 및 제작", "violet"),
+            ("16:00", "오후 블로그 발행",            "오후 콘텐츠 발행 및 성과 분석",  "gold"),
+            ("17:00", "퇴근",                       "업무 종료 및 마무리",           "mut"),
+        ]
+        tl_html = ""
+        for t_, title_, desc_, cls_ in schedule:
+            tl_html += (
+                '<div class="vdir-tl-item c-' + cls_ + '">'
+                '<div class="vdir-tl-rail"><div class="vdir-tl-dot"></div><div class="vdir-tl-line"></div></div>'
+                '<div class="vdir-tl-time">' + t_ + '</div>'
+                '<div class="vdir-tl-body"><div class="t">' + title_ + '</div><div class="d">' + desc_ + '</div></div>'
+                '</div>'
+            )
+        st.markdown(
+            '<div class="vdir-panel">'
+            '<div class="vdir-sec-title">🗓 오늘 일정</div>'
+            '<div class="vdir-tl">' + tl_html + '</div>'
+            '</div>',
+            unsafe_allow_html=True)
+
+    with mid:
+        # AI Workforce 롤업 — 7명 × 2벌 이어붙여 -50% 지점에서 무한 순환.
+        # 순수 CSS 애니메이션(21s linear)으로 한 칸씩 자연스럽게 롤업되며,
+        # Streamlit 위젯/세션과 충돌하지 않는 표시 전용 패널이다.
+        avatars = ["✍️","✍️","♟️","📈","📣","🧭","🗓️"]
+        items_html = ""
+        for _bank in range(2):
+            for idx, (nm, task) in enumerate(AI_STAFF):
+                ava = avatars[idx % len(avatars)]
+                items_html += (
+                    '<div class="vdai-item">'
+                    '<div class="vdai-ava">' + ava + '</div>'
+                    '<div class="vdai-info">'
+                    '<div class="vdai-name">' + nm + '</div>'
+                    '<div class="vdai-task">담당업무: ' + task + '</div>'
+                    '</div>'
+                    '<div class="vdai-state"><span class="vdai-state-dot"></span>업무 진행 중</div>'
+                    '</div>'
+                )
+        st.markdown(
+            '<div class="vdai-panel">'
+            '<div class="vdai-head">'
+            '<div class="t">🤖 AI WORKFORCE</div>'
+            '<div class="live"><span class="vdai-live-dot"></span>7명 상시 대기 중</div>'
+            '</div>'
+            '<div class="vdai-view"><div class="vdai-track">' + items_html + '</div></div>'
+            '<div class="vdai-foot">AI 자동화 상태'
+            '<span class="op"><span class="op-dot"></span>Running · 7 Agents</span>'
+            '</div>'
+            '</div>',
+            unsafe_allow_html=True)
+
+    with right:
+        todos = [
+            "오전 블로그 발행 확인",
+            "몽해 일별 쇼츠 제작 확인",
+            "몽해 주별 미드폼 제작 확인",
+            "오후 블로그 발행 확인",
+            "AI 결과물 검수",
+            "업무보고 작성",
+        ]
+        todo_html = ""
+        for t_ in todos:
+            todo_html += (
+                '<div class="vdir-todo-item">'
+                '<div class="lt"><div class="vdir-todo-ck">✓</div>'
+                '<div class="vdir-todo-txt">' + t_ + '</div></div>'
+                '<div class="vdir-todo-arw">›</div>'
+                '</div>'
+            )
+        st.markdown(
+            '<div class="vdir-panel">'
+            '<div class="vdir-sec-title">✅ 오늘 할 일 <span class="cnt">' + str(len(todos)) + '건</span></div>'
+            + todo_html +
+            '</div>',
+            unsafe_allow_html=True)
+
+        st.markdown("""
+        <div class="vdir-panel">
+          <div class="vdir-sec-title">🖥 시스템 상태</div>
+          <div class="vdir-sys-row">
+            <span class="vdir-sys-lbl"><span class="ic">🧑‍💼</span>Human Online</span>
+            <span class="vdir-sys-val teal">2명</span>
+          </div>
+          <div class="vdir-sys-row">
+            <span class="vdir-sys-lbl"><span class="ic">🤖</span>AI Online</span>
+            <span class="vdir-sys-val cyan">7명</span>
+          </div>
+          <div class="vdir-sys-row">
+            <span class="vdir-sys-lbl"><span class="ic">📡</span>Automation</span>
+            <span class="vdir-sys-val green">Running</span>
+          </div>
+          <div class="vdir-sys-row">
+            <span class="vdir-sys-lbl"><span class="ic">🗄</span>Supabase</span>
+            <span class="vdir-sys-val green">Connected</span>
+          </div>
+        </div>
+        """, unsafe_allow_html=True)
  
 # ═══════════════════════════════════════════
 #  직원: 출퇴근
@@ -804,7 +2237,6 @@ def render_day_detail(uid, d_str):
     except Exception:
         d_label = d_str
 
-    # 헤더
     st.markdown(
         f'<div style="background:linear-gradient(90deg,#1E293B,#0F172A);'
         f'border:2px solid #D4AF37;border-radius:14px;padding:12px 20px;margin:6px 0 2px;">'
@@ -813,7 +2245,6 @@ def render_day_detail(uid, d_str):
         f'(같은 날짜 버튼을 다시 누르면 닫힙니다)</span></span></div>',
         unsafe_allow_html=True)
 
-    # 출퇴근
     if not att.empty:
         a = att.iloc[0]
         ci_raw = safe_str(a["checkin"])
@@ -845,7 +2276,6 @@ def render_day_detail(uid, d_str):
 
     st.markdown("<div style='height:4px'></div>", unsafe_allow_html=True)
 
-    # 업무보고
     if not rep.empty:
         r = rep.iloc[0]
         status  = safe_str(r["status"]) or "대기중"
@@ -866,7 +2296,6 @@ def render_day_detail(uid, d_str):
         dl_val   = safe_str(r["drive_link"])
         rl_val   = safe_str(r["result_link"])
 
-        # 상단 헤더 카드
         st.markdown(
             f'<div class="vtm-card" style="padding:10px 16px;margin:4px 0 2px;">'
             f'<div style="display:flex;justify-content:space-between;align-items:center;">'
@@ -876,7 +2305,6 @@ def render_day_detail(uid, d_str):
             f'</div></div>',
             unsafe_allow_html=True)
 
-        # 오전 계획
         st.markdown(
             f'<div style="background:#F8FAFC;border:1px solid #E2E8F0;border-radius:10px;'
             f'padding:10px 16px;margin:3px 0;">'
@@ -887,7 +2315,6 @@ def render_day_detail(uid, d_str):
             f'우선순위: {am_pri}&nbsp;&nbsp;|&nbsp;&nbsp;특이사항: {am_notes}</p></div>',
             unsafe_allow_html=True)
 
-        # 퇴근 결과
         st.markdown(
             f'<div style="background:#F0FDF4;border:1px solid #BBF7D0;border-radius:10px;'
             f'padding:10px 16px;margin:3px 0;">'
@@ -903,7 +2330,6 @@ def render_day_detail(uid, d_str):
             + '</div>',
             unsafe_allow_html=True)
 
-        # 링크
         dl_a = (f'<a href="{dl_val}" target="_blank" style="color:#3B82F6;font-weight:700;">🔗 열기</a>'
                 if dl_val else '없음')
         rl_a = (f'<a href="{rl_val}" target="_blank" style="color:#3B82F6;font-weight:700;">🔗 열기</a>'
@@ -914,7 +2340,6 @@ def render_day_detail(uid, d_str):
             f'📁 Drive: {dl_a}&nbsp;&nbsp;&nbsp;🔗 결과물: {rl_a}</div>',
             unsafe_allow_html=True)
 
-        # 관리자 코멘트
         if cmt:
             st.markdown(
                 f'<div style="background:linear-gradient(135deg,#FFF8E7,#FFF3CD);'
@@ -925,7 +2350,6 @@ def render_day_detail(uid, d_str):
                 f'line-height:1.5;">{cmt}</p></div>',
                 unsafe_allow_html=True)
 
-        # 타임스탬프
         sub_disp  = sub_at[-17:-3]  if len(sub_at)  > 13 else sub_at
         appr_disp = appr_at[-17:-3] if len(appr_at) > 13 else appr_at
         tail = f'제출: {sub_disp}'
@@ -972,7 +2396,6 @@ def page_emp_calendar():
 
     COLG = '<colgroup><col style="width:16.8%"><col style="width:16.8%"><col style="width:16.8%"><col style="width:16.8%"><col style="width:16.8%"><col style="width:8%"><col style="width:8%"></colgroup>'
 
-    # ── CSS ──
     st.markdown("""<style>
 table.vtm-cal {
     width:100%; border-collapse:separate; border-spacing:3px;
@@ -1024,8 +2447,6 @@ table.vtm-cal .stamp {
     line-height:1.1; text-align:center;
 }
 
-/* ── 핵심: .cmark 마커 바로 다음 div의 버튼을 슬레이트 색으로 ── */
-/* 골드 그라데이션(.stButton>button)보다 높은 specificity로 override */
 div:has(> .cmark) + div .stButton > button {
     background: #334155 !important;
     color: #CBD5E1 !important;
@@ -1047,7 +2468,6 @@ div:has(> .cmark) + div .stButton > button:hover {
     transform: none !important;
     box-shadow: none !important;
 }
-/* 컬럼 간격을 HTML 테이블 border-spacing:3px 에 맞춤 */
 div:has(> .cmark) + div [data-testid="stHorizontalBlock"] {
     gap: 3px !important;
     margin-top: -1px !important;
@@ -1058,7 +2478,6 @@ div:has(> .cmark) + div [data-testid="stColumn"] {
 }
 </style>""", unsafe_allow_html=True)
 
-    # ── 헤더 ──
     st.markdown(
         f'<table class="vtm-cal">{COLG}'
         '<thead><tr>'
@@ -1069,9 +2488,7 @@ div:has(> .cmark) + div [data-testid="stColumn"] {
         '</tr></thead></table>',
         unsafe_allow_html=True)
 
-    # ── 주 단위 렌더 ──
     for wi, week in enumerate(cal_weeks):
-        # ① HTML 셀 (시각 전용)
         cells = f'<table class="vtm-cal">{COLG}<tbody><tr>'
         for i, day in enumerate(week):
             is_sat=(i==5); is_sun=(i==6); is_wk=is_sat or is_sun
@@ -1102,10 +2519,8 @@ div:has(> .cmark) + div [data-testid="stColumn"] {
         cells += '</tr></tbody></table>'
         st.markdown(cells, unsafe_allow_html=True)
 
-        # ② CSS 타겟 마커 (이 바로 다음 div = 버튼 행)
         st.markdown('<div class="cmark"></div>', unsafe_allow_html=True)
 
-        # ③ Streamlit 버튼 (마커 덕분에 슬레이트 색으로 오버라이드됨)
         cols = st.columns([1, 1, 1, 1, 1, 0.48, 0.48])
         for i, day in enumerate(week):
             with cols[i]:
@@ -1119,7 +2534,6 @@ div:has(> .cmark) + div [data-testid="stColumn"] {
                         st.session_state.cal_selected = None if is_sel else d
                         st.rerun()
 
-        # ④ 상세 카드
         week_dates = [f"{yr}-{mo:02d}-{day:02d}" for i,day in enumerate(week) if day!=0 and i<5]
         if sel in week_dates:
             render_day_detail(uid, sel)
@@ -1252,7 +2666,6 @@ def page_emp_guide():
 
 <div class="vtm-guide-wrap">
 
-  <!-- 히어로 -->
   <div class="vtm-guide-hero">
     <div class="en-title">VTM OS 1.0 &nbsp;·&nbsp; COMPANY GUIDE</div>
     <div class="ko-title">VTM WAY</div>
@@ -1262,7 +2675,6 @@ def page_emp_guide():
     </div>
   </div>
 
-  <!-- 핵심 가치 -->
   <div class="vtm-section">
     <div class="vtm-section-title">🏆 &nbsp;핵심 가치</div>
     <div class="vtm-value-item"><div class="vtm-value-num">1</div><div class="vtm-value-text">성장하는 과정을 중요하게 생각합니다.</div></div>
@@ -1273,7 +2685,6 @@ def page_emp_guide():
     <div class="vtm-value-item"><div class="vtm-value-num">6</div><div class="vtm-value-text">회사의 성장을 함께 만들어 갑니다.</div></div>
   </div>
 
-  <!-- 근태 규정 -->
   <div class="vtm-section">
     <div class="vtm-section-title">⏰ &nbsp;근태 규정</div>
     <div class="vtm-rule-grid">
@@ -1310,7 +2721,6 @@ def page_emp_guide():
     </div>
   </div>
 
-  <!-- 휴가 규정 -->
   <div class="vtm-section">
     <div class="vtm-section-title">🌴 &nbsp;휴가 규정</div>
     <div class="vtm-rule-grid">
@@ -1335,7 +2745,6 @@ def page_emp_guide():
     </div>
   </div>
 
-  <!-- 사무실 운영 -->
   <div class="vtm-section">
     <div class="vtm-section-title">🏢 &nbsp;사무실 운영 규정</div>
     <div class="vtm-rule-grid">
@@ -1352,7 +2761,6 @@ def page_emp_guide():
     </div>
   </div>
 
-  <!-- 업무 운영 원칙 -->
   <div class="vtm-section">
     <div class="vtm-section-title">📌 &nbsp;업무 운영 원칙</div>
     <ul class="vtm-bullet">
@@ -1362,7 +2770,6 @@ def page_emp_guide():
     </ul>
   </div>
 
-  <!-- AI 사용 규정 -->
   <div class="vtm-section">
     <div class="vtm-section-title">🤖 &nbsp;AI 프로그램 사용 규정</div>
     <div style="color:#94A3B8;font-size:0.78rem;font-weight:700;margin-bottom:10px;">자유롭게 활용 가능한 프로그램</div>
@@ -1379,7 +2786,6 @@ def page_emp_guide():
     </div>
   </div>
 
-  <!-- 커뮤니케이션 규정 -->
   <div class="vtm-section">
     <div class="vtm-section-title">💬 &nbsp;커뮤니케이션 규정</div>
     <ul class="vtm-bullet">
@@ -1397,7 +2803,6 @@ def page_emp_guide():
     </div>
   </div>
 
-  <!-- VTM 인재상 -->
   <div class="vtm-section">
     <div class="vtm-section-title">⭐ &nbsp;VTM 인재상</div>
     <div style="color:#94A3B8;font-size:0.82rem;font-weight:700;margin-bottom:10px;">우리는 이런 사람과 함께하고 싶습니다.</div>
@@ -1410,7 +2815,6 @@ def page_emp_guide():
     </div>
   </div>
 
-  <!-- VTM의 약속 -->
   <div class="vtm-promise">
     <p>
       능력은 함께 키울 수 있지만<br>
@@ -1427,80 +2831,169 @@ def page_emp_guide():
 def page_admin_home():
     topbar("🔴 관리자 대시보드")
     td = today_str(); sb = _sb()
-    total = (sb.table("employees").select("*",count="exact").eq("active",1).eq("is_admin",0).execute().count) or 0
+
+    human_total = (sb.table("employees").select("*",count="exact").eq("active",1).eq("is_admin",0).execute().count) or 0
     t_att = (sb.table("attendance").select("*",count="exact").eq("work_date",td).execute().count) or 0
     pend  = (sb.table("reports").select("*",count="exact").eq("status","대기중").execute().count) or 0
     appr  = (sb.table("reports").select("*",count="exact").eq("status","승인").eq("work_date",td).execute().count) or 0
-    emp_r   = sb.table("employees").select("id,name").eq("active",1).eq("is_admin",0).execute()
+
+    emp_r   = sb.table("employees").select("id,name,role").eq("active",1).eq("is_admin",0).execute()
     att_r   = sb.table("attendance").select("emp_id,att_type,checkin,checkout").eq("work_date",td).execute()
     rep_r   = sb.table("reports").select("emp_id,status,pm_progress").eq("work_date",td).execute()
     emp_df  = pd.DataFrame(emp_r.data)  if emp_r.data  else pd.DataFrame()
     att_td  = pd.DataFrame(att_r.data)  if att_r.data  else pd.DataFrame()
     rep_td  = pd.DataFrame(rep_r.data)  if rep_r.data  else pd.DataFrame()
- 
-    c1, c2, c3, c4 = st.columns(4)
-    for col, lbl, val, sub in [
-        (c1, "전체 직원", f"{total}명", ""),
-        (c2, "오늘 출근", f"{t_att}명", f"/{total}명"),
-        (c3, "승인 대기", f"{pend}건",  "검토 필요"),
-        (c4, "오늘 승인", f"{appr}건",  "")]:
-        col.markdown(f"""<div class="met-card">
-          <span class="met-val">{val}</span>
-          <span class="met-lbl">{lbl}</span>
-          <span style="color:#64748B;font-size:0.66rem;font-weight:700;">{sub}</span>
-        </div>""", unsafe_allow_html=True)
- 
-    st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
- 
-    att_map = {}
-    if not att_td.empty:
-        for _, row in att_td.iterrows():
-            att_map[row["emp_id"]] = row
- 
-    rep_map = {}
-    if not rep_td.empty:
-        for _, row in rep_td.iterrows():
-            rep_map[row["emp_id"]] = row
- 
-    for _, emp in emp_df.iterrows():
-        eid = emp["id"]; ename = emp["name"]
-        a = att_map.get(eid)
-        r = rep_map.get(eid)
- 
-        if a is not None:
-            ci_raw = safe_str(a["checkin"])
-            co_raw = safe_str(a["checkout"])
-            ci  = ci_raw[-8:-3] if ci_raw else "--:--"
-            co  = co_raw[-8:-3] if co_raw else "퇴근전"
-            atp = safe_str(a["att_type"]) or "정상출근"
-        else:
-            ci = "--:--"; co = "퇴근전"; atp = "미출근"
- 
-        if r is not None:
-            rs = safe_str(r["status"]) or "미제출"
-            try:
-                prg = int(r["pm_progress"]) if safe_str(str(r["pm_progress"])) else 0
-            except (ValueError, TypeError):
-                prg = 0
-        else:
-            rs = "미제출"; prg = 0
- 
-        ci_c = "#10B981" if a is not None else "#EF4444"
-        rs_c = {"승인":"#10B981","대기중":"#F59E0B","반려":"#EF4444"}.get(rs,"#6B7280")
-        st.markdown(f"""<div class="vtm-card" style="padding:12px;margin:3px 0;">
-          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;">
-            <span style="font-size:0.96rem;font-weight:900;">{ename}</span>
-            <div style="display:flex;gap:10px;flex-wrap:wrap;font-weight:700;font-size:0.84rem;">
-              <span style="color:{ci_c};">✅ 출근:{ci}</span>
-              <span style="color:#64748B;">🏠 퇴근:{co}</span>
-              <span>📋 {atp}</span>
-              <span style="color:{rs_c};">
-                  {'미제출(출근전)' if rs=='미제출' else '보고:'+rs}
-              </span>
-              <span>📊{prg}%</span>
+
+    ai_total       = len(AI_STAFF)                # 7
+    human_online   = int(t_att)                  # 오늘 출근한 휴먼 직원
+    total_workforce = human_total + ai_total     # 전체 Workforce
+
+    kst = now_kst()
+    day_kr = ["월","화","수","목","금","토","일"][kst.weekday()]
+    st.markdown(f"""
+    <div class="vadm-hero">
+      <div class="vadm-hero-left">
+       <div class="vadm-hero-logo"><img src="{VTM_LOGO_URL}" alt="VTM Logo"></div>
+        <div>
+          <h2 class="vadm-hero-title">관리자 대시보드</h2>
+          <p class="vadm-hero-sub">🇰🇷 KST {kst.strftime('%Y년 %m월 %d일')} ({day_kr}) {kst.strftime('%H:%M')} &nbsp;·&nbsp; 👤 {st.session_state.user_name}</p>
+        </div>
+      </div>
+      <div class="vadm-hero-badge"><span class="vadm-hero-dot"></span>SYSTEM OPERATIONAL · 정상 운영 중</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    k1, k2, k3, k4 = st.columns(4)
+    kpi_data = [
+        (k1, "c-teal",   f"{human_online}", "명", "오늘 출근 (휴먼 직원)", "HUMAN ONLINE", "🧑‍💼"),
+        (k2, "c-violet", f"{ai_total}",     "명", "오늘 출근 (AI 직원)",   "AI ONLINE",     "🤖"),
+        (k3, "c-cyan",   f"{ai_total}",     "명", "AI 직원 상시 대기",     "AI STANDBY",    "🛰️"),
+        (k4, "c-gold",   f"{appr}",         "건", "오늘 승인",             "TODAY'S APPROVALS", "🗂️"),
+    ]
+    for col, cls, num, unit, lbl, en, ico in kpi_data:
+        col.markdown(f"""
+        <div class="vadm-kpi {cls}">
+          <div class="k-top">
+            <div>
+              <span class="k-num">{num}</span><span class="k-unit">{unit}</span>
+              <div class="k-lbl">{lbl}</div>
+              <div class="k-en">{en}</div>
             </div>
+            <div class="k-ico">{ico}</div>
           </div>
-        </div>""", unsafe_allow_html=True)
+        </div>
+        """, unsafe_allow_html=True)
+
+    st.markdown(f"""
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin:14px 0 6px;">
+      <div class="vadm-chip on"   style="padding:7px 16px;border:1px solid rgba(52,211,153,0.35);">🧑‍💼 휴먼 직원 {human_total}명</div>
+      <div class="vadm-chip"      style="padding:7px 16px;color:#C4B5FD;background:rgba(139,92,246,0.12);border:1px solid rgba(139,92,246,0.35);">🤖 AI 직원 {ai_total}명</div>
+      <div class="vadm-chip gold" style="padding:7px 16px;border:1px solid rgba(212,175,55,0.35);">👥 전체 Workforce {total_workforce}명</div>
+      <div class="vadm-chip rep"  style="padding:7px 16px;border:1px solid rgba(56,189,248,0.35);">⏳ 승인 대기 {pend}건</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
+
+    left, right = st.columns([1.35, 1], gap="large")
+
+    with left:
+        st.markdown(
+            f'<div class="vadm-sec-title">🧑‍💼 휴먼 직원 현황 '
+            f'<span class="cnt">전체 {human_total}명</span></div>',
+            unsafe_allow_html=True)
+
+        att_map = {}
+        if not att_td.empty:
+            for _, row in att_td.iterrows():
+                att_map[row["emp_id"]] = row
+        rep_map = {}
+        if not rep_td.empty:
+            for _, row in rep_td.iterrows():
+                rep_map[row["emp_id"]] = row
+
+        if emp_df.empty:
+            st.markdown('<div class="vtm-card"><p>재직 중인 휴먼 직원이 없습니다.</p></div>', unsafe_allow_html=True)
+        else:
+            for _, emp in emp_df.iterrows():
+                eid = emp["id"]; ename = emp["name"]; erole = safe_str(emp.get("role")) or ""
+                a = att_map.get(eid)
+                r = rep_map.get(eid)
+
+                if a is not None:
+                    ci_raw = safe_str(a["checkin"])
+                    co_raw = safe_str(a["checkout"])
+                    ci  = ci_raw[-8:-3] if ci_raw else "--:--"
+                    co  = co_raw[-8:-3] if co_raw else "퇴근전"
+                    atp = safe_str(a["att_type"]) or "정상출근"
+                else:
+                    ci = "--:--"; co = "퇴근전"; atp = "미출근"
+
+                if r is not None:
+                    rs = safe_str(r["status"]) or "미제출"
+                    try:
+                        prg = int(r["pm_progress"]) if safe_str(str(r["pm_progress"])) else 0
+                    except (ValueError, TypeError):
+                        prg = 0
+                else:
+                    rs = "미제출"; prg = 0
+
+                ci_cls = "on" if a is not None else "off"
+                rep_cls = {"승인":"on","대기중":"gold","반려":"off","보류":"mut"}.get(rs, "mut")
+                rep_txt = "미제출(출근전)" if rs == "미제출" else "보고:" + rs
+
+                st.markdown(f"""
+                <div class="vadm-emp-row">
+                  <div style="display:flex;flex-direction:column;">
+                    <span class="vadm-emp-name">{ename}</span>
+                    <span style="color:#7E93AB;font-size:0.74rem;font-weight:700;">{erole}</span>
+                  </div>
+                  <div style="display:flex;gap:7px;flex-wrap:wrap;">
+                    <span class="vadm-chip {ci_cls}">✅ {ci}</span>
+                    <span class="vadm-chip mut">🏠 {co}</span>
+                    <span class="vadm-chip mut">📋 {atp}</span>
+                    <span class="vadm-chip {rep_cls}">{rep_txt}</span>
+                    <span class="vadm-chip rep">📊 {prg}%</span>
+                  </div>
+                </div>
+                """, unsafe_allow_html=True)
+
+    with right:
+        st.markdown(
+            f'<div class="vadm-sec-title">🤖 AI 직원 실시간 업무 '
+            f'<span class="cnt">{ai_total}명 가동</span></div>',
+            unsafe_allow_html=True)
+
+        avatars = ["✍️","✍️","♟️","📈","📣","🧭","🗓️"]
+        items_html = ""
+        for _bank in range(2):
+            for idx, (nm, task) in enumerate(AI_STAFF):
+                ava = avatars[idx % len(avatars)]
+                items_html += f"""
+                <div class="vai-item">
+                  <div class="vai-ava">{ava}</div>
+                  <div class="vai-info">
+                    <div class="vai-name">{nm}</div>
+                    <div class="vai-task">{task}</div>
+                  </div>
+                  <div class="vai-state"><span class="vai-state-dot"></span>업무중</div>
+                </div>"""
+
+        st.markdown(f"""
+        <div class="vai-panel">
+          <div class="vai-head">
+            <div class="t">🤖 AI WORKFORCE</div>
+            <div class="live"><span class="vai-live-dot"></span>LIVE</div>
+          </div>
+          <div class="vai-view">
+            <div class="vai-track">{items_html}</div>
+          </div>
+          <div class="vai-foot">
+            AI 자동화 상태
+            <span class="op"><span class="vadm-hero-dot"></span>Running · {ai_total} Agents</span>
+          </div>
+        </div>
+        """, unsafe_allow_html=True)
  
 # ═══════════════════════════════════════════
 #  관리자: 출퇴근 현황
@@ -1529,9 +3022,9 @@ def page_admin_attend():
         if not absent.empty:
             st.markdown("---")
             for _, row in absent.iterrows():
-                st.markdown(f"""<div style="background:rgba(239,68,68,0.1);border:1px solid #EF4444;
-                    border-radius:10px;padding:10px;margin:3px 0;">
-                  <span style="color:#EF4444;font-weight:900;">
+                st.markdown(f"""<div style="background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.5);
+                    border-radius:10px;padding:10px;margin:3px 0;backdrop-filter:blur(10px);">
+                  <span style="color:#FCA5A5;font-weight:900;">
                       ❗ {row['name']} — 미출근 / 출근 전
                   </span></div>""", unsafe_allow_html=True)
  
@@ -1568,8 +3061,8 @@ def page_admin_tasks():
  
         dl_val = safe_str(r["drive_link"])
         rl_val = safe_str(r["result_link"])
-        dl_html = f'<a href="{dl_val}" target="_blank" style="color:#3B82F6;font-weight:700;">링크열기</a>' if dl_val else "없음"
-        rl_html = f'<a href="{rl_val}" target="_blank" style="color:#3B82F6;font-weight:700;">링크열기</a>' if rl_val else "없음"
+        dl_html = f'<a href="{dl_val}" target="_blank" style="color:#38BDF8;font-weight:700;">링크열기</a>' if dl_val else "없음"
+        rl_html = f'<a href="{rl_val}" target="_blank" style="color:#38BDF8;font-weight:700;">링크열기</a>' if rl_val else "없음"
  
         am_tasks_txt  = safe_str(r["am_tasks"])  or "미입력"
         pm_done_txt   = safe_str(r["pm_done"])   or "미입력"
@@ -1588,7 +3081,7 @@ def page_admin_tasks():
             f'  <p><b>📁 Drive:</b> {dl_html} &nbsp;&nbsp; <b>🔗 결과물:</b> {rl_html}</p>',
         ]
         if cmt_val:
-            card_parts.append(f'  <p style="background:rgba(212,175,55,0.15);border-left:3px solid #D4AF37;padding:6px 10px;border-radius:4px;"><b>💬 코멘트:</b> {cmt_val}</p>')
+            card_parts.append(f'  <p style="background:rgba(45,212,191,0.15);border-left:3px solid #2DD4BF;padding:6px 10px;border-radius:4px;"><b>💬 코멘트:</b> {cmt_val}</p>')
         card_parts.append('</div>')
         st.markdown("\n".join(card_parts), unsafe_allow_html=True)
  
@@ -1637,10 +3130,10 @@ def page_admin_approve():
             rem = safe_str(r['pm_remarks'])  or '없음'
             st.markdown(f"""
 <div style="color:#F1F5F9;font-size:0.9rem;line-height:1.8;">
-  <p><span style="color:#D4AF37;font-weight:900;">🌅 오전 계획:</span>&nbsp; {am}</p>
-  <p><span style="color:#D4AF37;font-weight:900;">🌇 완료 업무:</span>&nbsp; {pm}</p>
-  <p><span style="color:#D4AF37;font-weight:900;">📅 내일 예정:</span>&nbsp; {tom}</p>
-  <p><span style="color:#D4AF37;font-weight:900;">💬 특이사항:</span>&nbsp; {rem}</p>
+  <p><span style="color:#7FF7DE;font-weight:900;">🌅 오전 계획:</span>&nbsp; {am}</p>
+  <p><span style="color:#7FF7DE;font-weight:900;">🌇 완료 업무:</span>&nbsp; {pm}</p>
+  <p><span style="color:#7FF7DE;font-weight:900;">📅 내일 예정:</span>&nbsp; {tom}</p>
+  <p><span style="color:#7FF7DE;font-weight:900;">💬 특이사항:</span>&nbsp; {rem}</p>
 </div>
 """, unsafe_allow_html=True)
             dl_val = safe_str(r.get("drive_link"))
@@ -1671,14 +3164,14 @@ def page_admin_emp():
     emp_df = get_employees(active_only=False)
     st.markdown("<div class='vtm-card'><h3>👥 전체 직원 목록</h3></div>", unsafe_allow_html=True)
     for _, emp in emp_df.iterrows():
-        ac  = "#10B981" if emp["active"] else "#EF4444"
+        ac  = "#34D399" if emp["active"] else "#FCA5A5"
         at  = "재직 중" if emp["active"] else "퇴직"
         adm = "🔴 관리자" if emp["is_admin"] else "🟢 직원"
         ci, cb = st.columns([5, 1])
         with ci:
             st.markdown(f"""<div class="vtm-card" style="padding:9px 15px;margin:2px 0;">
               <span style="font-weight:900;">{emp['name']}</span>
-              &nbsp;<span style="color:#64748B;font-weight:700;">{emp['role']}</span>
+              &nbsp;<span style="color:#94A3B8;font-weight:700;">{emp['role']}</span>
               &nbsp;<span style="color:{ac};font-weight:700;">{at}</span>
               &nbsp;<span style="font-weight:700;">{adm}</span>
             </div>""", unsafe_allow_html=True)
@@ -1742,7 +3235,7 @@ def page_admin_excel():
             we  = st.date_input("주 종료일", value=kst_today, key="ex_we")
             ws  = we - timedelta(days=we.weekday())
             d_from, d_to = str(ws), str(we)
-            st.markdown(f"<span style='color:#D4AF37;font-weight:700;font-size:0.84rem;'>"
+            st.markdown(f"<span style='color:#7FF7DE;font-weight:700;font-size:0.84rem;'>"
                         f"📅 {ws} ~ {we}</span>", unsafe_allow_html=True)
         elif period == "월간":
             my = st.number_input("연도", value=kst_today.year,  min_value=2024, max_value=2030, key="ex_my")
@@ -1810,6 +3303,14 @@ inject_all()
 if not st.session_state.logged_in:
     render_login()
 else:
+    # ── 관리자(본부장) 로그인 시: 프리미엄 테마 + 배경 영상(vtm01.mp4) 주입 ──
+    #    비관리자(디렉터/직원) + 홈(home) 화면일 때: 디렉터 테마 + 배경 영상(vtm02.mp4) 주입
+    #    → 출퇴근/업무보고/달력/VTM WAY 등 다른 직원 화면에는 영향 없음
+    if st.session_state.is_admin:
+        inject_admin_theme()
+    elif st.session_state.page == "home":
+        inject_director_theme()
+
     render_sidebar()
  
     if st.session_state.is_admin:
@@ -1838,4 +3339,5 @@ else:
     <div style="text-align:center;padding:20px;color:#475569;
                 font-size:0.74rem;font-weight:700;position:relative;z-index:1;">
         © 2026 (주) 브이티엠 운영 대시보드 v1.0 &nbsp;|&nbsp; 개발자: 박동진 본부장
+    </div>""", unsafe_allow_html=True)
     </div>""", unsafe_allow_html=True)
