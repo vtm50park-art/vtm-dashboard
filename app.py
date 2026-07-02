@@ -3340,4 +3340,3 @@ else:
                 font-size:0.74rem;font-weight:700;position:relative;z-index:1;">
         © 2026 (주) 브이티엠 운영 대시보드 v1.0 &nbsp;|&nbsp; 개발자: 박동진 본부장
     </div>""", unsafe_allow_html=True)
-    </div>""", unsafe_allow_html=True)
