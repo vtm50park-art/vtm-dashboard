@@ -3276,6 +3276,41 @@ def page_admin_emp():
                     _sb().table("employees").update({"active":1}).eq("id",emp["id"]).execute()
                     wlog("EMP_ACT", st.session_state.user_name, emp["name"])
                     st.success(f"'{emp['name']}' 복직 완료"); st.rerun()
+                        # ── AI 직원 롤업 목록 ──
+    st.markdown("<div class='vtm-card'><h3>🤖 AI 직원 실시간 업무</h3></div>", unsafe_allow_html=True)
+
+    avatars = ["✍️","✍️","♟️","📈","📣","🧭","🗓️"]
+    items_html = ""
+
+    for _bank in range(2):
+        for idx, (nm, task) in enumerate(AI_STAFF):
+            ava = avatars[idx % len(avatars)]
+            items_html += f"""
+            <div class="vai-item">
+              <div class="vai-ava">{ava}</div>
+              <div class="vai-info">
+                <div class="vai-name">{nm}</div>
+                <div class="vai-task">담당업무: {task}</div>
+              </div>
+              <div class="vai-state"><span class="vai-state-dot"></span>업무중</div>
+            </div>
+            """
+
+    st.markdown(f"""
+    <div class="vai-panel">
+      <div class="vai-head">
+        <div class="t">🤖 AI WORKFORCE</div>
+        <div class="live"><span class="vai-live-dot"></span>LIVE</div>
+      </div>
+      <div class="vai-view">
+        <div class="vai-track">{items_html}</div>
+      </div>
+      <div class="vai-foot">
+        AI 자동화 상태
+        <span class="op"><span class="vadm-hero-dot"></span>Running · {len(AI_STAFF)} Agents</span>
+      </div>
+    </div>
+    """, unsafe_allow_html=True)
     st.markdown("---")
     st.markdown("<div class='vtm-card'><h3>➕ 신규 직원 등록</h3></div>", unsafe_allow_html=True)
     with st.form("form_emp", clear_on_submit=True):
