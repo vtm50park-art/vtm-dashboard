@@ -1689,7 +1689,10 @@ label,.stTextInput label,.stSelectbox label,.stTextArea label,
     box-shadow:0 0 10px rgba(52,211,153,0.9);
     animation: vdirPulse 1.6s ease-in-out infinite;
 }
-
+.vdir-hero-title .hello-text {
+    color: #FFFFFF !important;
+    -webkit-text-fill-color: #FFFFFF !important;
+}
 @media (max-width: 920px) {
     .vdir-hero { flex-direction: column; align-items: flex-start; }
     .vdir-hero-time { text-align: left; }
