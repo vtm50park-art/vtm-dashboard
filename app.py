@@ -1450,11 +1450,8 @@ label,.stTextInput label,.stSelectbox label,.stTextArea label,
     color:#F1F5F9;
 }
 .vdir-hero-title .nm {
-    background: none !important;
-    -webkit-background-clip: initial !important;
-    background-clip: initial !important;
-    -webkit-text-fill-color: #FFFFFF !important;
-    color: #FFFFFF !important;
+    background: linear-gradient(120deg,#7FF7DE 0%,#38BDF8 100%);
+    -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
 }
 .vdir-hero-sub { color:#A9BDD3; font-size:0.88rem; font-weight:700; margin:6px 0 0; }
 .vdir-hero-time { text-align:right; }
