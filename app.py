@@ -3251,7 +3251,7 @@ def page_admin_approve():
 # ═══════════════════════════════════════════
 def page_admin_emp():
     topbar("👥 직원 관리")
-    emp_df = get_employees(active_only=False)
+    emp_df = get_employees(active_only=True)
     st.markdown("<div class='vtm-card'><h3>👥 전체 직원 목록</h3></div>", unsafe_allow_html=True)
     for _, emp in emp_df.iterrows():
         ac  = "#34D399" if emp["active"] else "#FCA5A5"
