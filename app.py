@@ -3301,21 +3301,6 @@ def page_admin_emp():
       </div>
     </div>''', unsafe_allow_html=True)
 
-    st.markdown(f"""
-    <div class="vai-panel">
-      <div class="vai-head">
-        <div class="t">🤖 AI WORKFORCE</div>
-        <div class="live"><span class="vai-live-dot"></span>LIVE</div>
-      </div>
-      <div class="vai-view">
-        <div class="vai-track">{items_html}</div>
-      </div>
-      <div class="vai-foot">
-        AI 자동화 상태
-        <span class="op"><span class="vadm-hero-dot"></span>Running · {len(AI_STAFF)} Agents</span>
-      </div>
-    </div>
-    """, unsafe_allow_html=True)
     st.markdown("---")
     st.markdown("<div class='vtm-card'><h3>➕ 신규 직원 등록</h3></div>", unsafe_allow_html=True)
     with st.form("form_emp", clear_on_submit=True):
