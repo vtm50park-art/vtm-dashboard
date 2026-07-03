@@ -2003,7 +2003,7 @@ def page_emp_home():
       <div class="vdir-hero-left">
         <div class="vdir-hero-logo"><img src="{VTM_LOGO_URL}" alt="VTM Logo"></div>
         <div>
-          <h2 class="vdir-hero-title">안녕하세요, <span class="nm">{uname}</span> 👋</h2>
+          <h2 class="vdir-hero-title"><span style="color:#FFFFFF !important;">안녕하세요,</span> <span class="nm">{uname}</span> 👋</h2>
           <p class="vdir-hero-sub">오늘도 AI 직원들과 함께 브랜드를 성장시키는 하루입니다.</p>
         </div>
       </div>
