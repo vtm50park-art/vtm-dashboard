@@ -3071,19 +3071,19 @@ def page_admin_home():
 
         st.markdown(f"""
         <div class="vai-panel">
-          <div class="vai-head">
-            <div class="t">🤖 AI WORKFORCE</div>
-            <div class="live"><span class="vai-live-dot"></span>LIVE</div>
-          </div>
-          <div class="vai-view">
-            <div class="vai-track">{items_html}</div>
-          </div>
-          <div class="vai-foot">
-            AI 자동화 상태
-            <span class="op"><span class="vadm-hero-dot"></span>Running · {ai_total} Agents</span>
-          </div>
-        </div>
-        """, unsafe_allow_html=True)
+      <div class="vai-head">
+        <div class="t">🤖 AI WORKFORCE</div>
+        <div class="live"><span class="vai-live-dot"></span>LIVE</div>
+      </div>
+      <div class="vai-view">
+        <div class="vai-track">{items_html}</div>
+      </div>
+      <div class="vai-foot">
+        AI 자동화 상태
+        <span class="op"><span class="vadm-hero-dot"></span>Running · {len(AI_STAFF)} Agents</span>
+      </div>
+    </div>
+    """, unsafe_allow_html=True)
  
 # ═══════════════════════════════════════════
 #  관리자: 출퇴근 현황
