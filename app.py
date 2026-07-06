@@ -1877,7 +1877,7 @@ def render_sidebar():
             (주) 브이티엠
         </div>
         <div style="color:#64748B;font-size:0.72rem;font-weight:700;">
-            VTM 운영 대시보드 v1.0
+            VTM 운영 대시보드 v2.0.8
         </div>
       </div>
       <div style="margin-left:auto;text-align:right;">
@@ -3453,5 +3453,6 @@ else:
     st.markdown("""
     <div style="text-align:center;padding:20px;color:#475569;
                 font-size:0.74rem;font-weight:700;position:relative;z-index:1;">
-        © 2026 (주) 브이티엠 운영 대시보드 v1.0 &nbsp;|&nbsp; 개발자: 박동진 본부장
+        © 2026 (주) 브이티엠 운영 대시보드 v2.0.8
+        &nbsp;|&nbsp; 개발자: 박동진 본부장
     </div>""", unsafe_allow_html=True)
