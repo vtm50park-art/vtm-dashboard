@@ -2208,12 +2208,30 @@ def page_emp_attend():
             st.rerun()
     else:
         st.success(f"✅ 출근 완료 — {ci_t} ({atp})")
-        if not co_raw:
-            if st.button("🏠  퇴근 체크아웃", key="btn_co", use_container_width=True):
-                _sb().table("attendance").update({"checkout":now_str()}).eq("emp_id",uid).eq("work_date",td).execute()
-                wlog("CHECKOUT", uname)
-                st.success(f"🏠 퇴근 완료! ({now_kst().strftime('%H:%M')} KST)")
-                st.rerun()
+        if st.button("🏠 퇴근 체크아웃", key="btn_co", use_container_width=True):
+
+    now_dt = now_kst()
+    weekday = now_dt.weekday()   # 월=0, 화=1, 수=2, 목=3, 금=4
+
+    if weekday in [0, 1, 2, 3]:
+        cutoff = now_dt.replace(hour=17, minute=0, second=0, microsecond=0)
+        if now_dt < cutoff:
+            st.warning("⏰ 17:00 이후 체크아웃 가능합니다.")
+            st.stop()
+
+    elif weekday == 4:
+        cutoff = now_dt.replace(hour=16, minute=30, second=0, microsecond=0)
+        if now_dt < cutoff:
+            st.warning("⏰ 16:30 이후 체크아웃 가능합니다.")
+            st.stop()
+
+    _sb().table("attendance").update({
+        "checkout": now_str()
+    }).eq("emp_id", uid).eq("work_date", td).execute()
+
+    wlog("CHECKOUT", uname)
+    st.success(f"🏠 퇴근 완료! ({now_dt.strftime('%H:%M')} KST)")
+    st.rerun()
         else:
             st.success(f"🏠 퇴근 완료 — {co_t}")
  
