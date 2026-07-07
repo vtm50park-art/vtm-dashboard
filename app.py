@@ -3108,25 +3108,51 @@ def page_admin_attend():
 
 st.markdown("""
 <style>
+[data-testid="stDataFrame"] {
+    border-radius: 16px !important;
+    overflow: hidden !important;
+    border: 1px solid rgba(94,234,212,0.22) !important;
+    box-shadow: 0 16px 40px rgba(0,0,0,0.35) !important;
+    background: rgba(8,17,31,0.72) !important;
+}
+
+[data-testid="stDataFrame"] div {
+    background-color: rgba(8,17,31,0.72) !important;
+}
+
+[data-testid="stDataFrame"] [role="columnheader"] {
+    background: rgba(15,23,42,0.96) !important;
+    color: #7FF7DE !important;
+    font-weight: 900 !important;
+}
+
+[data-testid="stDataFrame"] [role="gridcell"] {
+    background: rgba(11,18,32,0.78) !important;
+    color: #E7EEF7 !important;
+    font-weight: 700 !important;
+}
+
 [data-testid="stElementToolbar"] {
     background: rgba(8,17,31,0.88) !important;
     border: 1px solid rgba(94,234,212,0.25) !important;
     border-radius: 10px !important;
     padding: 4px !important;
 }
+
 [data-testid="stElementToolbar"] button,
 [data-testid="stElementToolbar"] svg {
     color: #7FF7DE !important;
     fill: #7FF7DE !important;
     stroke: #7FF7DE !important;
 }
+
 [data-testid="stElementToolbar"] button:hover {
     background: rgba(45,212,191,0.16) !important;
 }
 </style>
 """, unsafe_allow_html=True)
 
-        st.dataframe(att, use_container_width=True, hide_index=True)
+st.dataframe(att, use_container_width=True, hide_index=True)
     if sel_emp == "전체":
         all_emp = get_employees()
         checked = set(att["직원명"].tolist()) if not att.empty else set()
