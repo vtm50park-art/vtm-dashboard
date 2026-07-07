@@ -1909,7 +1909,7 @@ def render_sidebar():
         ]
  
     if st.session_state.is_admin:
-        cols = st.columns([1, 1, 1, 1, 1, 1, 1, 1.35, 1.35])
+        cols = st.columns([1, 1, 1, 1, 1, 1, 1, 1, 1.35, 1.35])
     else:
         cols = st.columns([1, 1, 1, 1, 1.35, 1.35])
 
