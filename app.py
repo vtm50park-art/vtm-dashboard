@@ -2206,7 +2206,7 @@ def page_emp_attend():
             wlog("CHECKIN", uname, "", sel_type)
             st.success(f"✅ 출근 완료! ({sel_type} {now_kst().strftime('%H:%M')} KST)")
             st.rerun()
-      else:
+    else:
         st.success(f"✅ 출근 완료 — {ci_t} ({atp})")
         if not co_raw:
             if st.button("🏠 퇴근 체크아웃", key="btn_co", use_container_width=True):
