@@ -2463,7 +2463,80 @@ def render_day_detail(uid, d_str):
             unsafe_allow_html=True)
 
     st.markdown("<hr style='border-color:#1E3A5F;margin:12px 0 4px;'>", unsafe_allow_html=True)
+    st.markdown("### 🏖 휴가 · 반차 신청")
 
+    leave_r = (
+        _sb()
+        .table("leave_requests")
+        .select("*")
+        .eq("emp_id", uid)
+        .eq("leave_date", d_str)
+        .execute()
+    )
+
+    leave_df = pd.DataFrame(leave_r.data) if leave_r.data else pd.DataFrame()
+
+    if leave_df.empty:
+
+        with st.form(f"leave_apply_{d_str}"):
+
+            leave_type = st.selectbox(
+                "신청 종류",
+                [
+                    "월차",
+                    "오전반차",
+                    "오후반차",
+                    "여름휴가"
+                ]
+            )
+
+            reason = st.text_area(
+                "사유",
+                placeholder="간단한 사유를 입력하세요."
+            )
+
+            if st.form_submit_button("📨 신청하기"):
+
+                _sb().table("leave_requests").insert({
+                    "emp_id": uid,
+                    "emp_name": st.session_state.user_name,
+                    "leave_date": d_str,
+                    "leave_type": leave_type,
+                    "reason": reason,
+                    "status": "대기중"
+                }).execute()
+
+                st.success("신청되었습니다.")
+                st.rerun()
+
+    else:
+
+        r = leave_df.iloc[0]
+
+        status = safe_str(r["status"])
+
+        color = {
+            "대기중":"orange",
+            "승인":"green",
+            "반려":"red"
+        }.get(status,"gray")
+
+        st.markdown(
+            f"""
+<div style="
+padding:14px;
+border-radius:10px;
+background:#F8FAFC;
+border-left:6px solid {color};
+margin-top:10px;
+">
+<b>신청 종류</b> : {r['leave_type']}<br>
+<b>상태</b> : {status}<br>
+<b>사유</b> : {safe_str(r['reason'])}
+</div>
+""",
+            unsafe_allow_html=True
+        )
 
 def page_emp_calendar():
     topbar("📅 업무 달력")
