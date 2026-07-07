@@ -2860,16 +2860,62 @@ def page_emp_guide():
     </ul>
   </div>
 
-  <div class="vtm-section">
-    <div class="vtm-section-title">🤖 &nbsp;AI 프로그램 사용 규정</div>
-    <div style="color:#94A3B8;font-size:0.78rem;font-weight:700;margin-bottom:10px;">자유롭게 활용 가능한 프로그램</div>
-    <div class="vtm-badge-row">
-      <span class="vtm-badge">ChatGPT</span>
-      <span class="vtm-badge">Gemini</span>
-      <span class="vtm-badge">Claude</span>
-      <span class="vtm-badge">Genspark</span>
+<div class="ai-rule-wrap">
+
+    <h3>🌀 AI 프로그램 사용 규정</h3>
+
+    <div class="ai-section">
+        <div class="ai-title">브이티엠에서 사용할 수 있는 AI 생성 플랫폼</div>
+
+        <div class="ai-sub">자유롭게 활용 가능한 프로그램</div>
+        <div class="ai-buttons">
+            <a href="https://chatgpt.com/" target="_blank">ChatGPT</a>
+            <a href="https://gemini.google.com/" target="_blank">Gemini</a>
+            <a href="https://claude.ai/" target="_blank">Claude</a>
+            <a href="https://www.genspark.ai/" target="_blank">Genspark</a>
+        </div>
+
+        <div class="ai-card">
+            <h4>🎵 음악 관련 AI <span>[텔레그램 사용공유]</span></h4>
+            <ul>
+                <li><a href="https://suno.com/" target="_blank">Suno</a></li>
+                <li><a href="https://www.munute.com/" target="_blank">Munute Mastering</a></li>
+            </ul>
+        </div>
+
+        <div class="ai-card">
+            <h4>🎬 영상 관련 AI <span>[텔레그램 사용공유]</span></h4>
+            <ul>
+                <li><a href="https://labs.google/fx/tools/flow" target="_blank">Flow</a></li>
+                <li><a href="https://openart.ai/" target="_blank">OpenArt</a></li>
+                <li><a href="https://higgsfield.ai/" target="_blank">Higgsfield</a></li>
+                <li><a href="https://www.topview.ai/" target="_blank">TopView</a></li>
+                <li><a href="https://www.seaart.ai/" target="_blank">SeaArt</a></li>
+                <li><a href="https://www.domoai.app/ko" target="_blank">DomoAI</a></li>
+            </ul>
+        </div>
+
+        <div class="ai-card">
+            <h4>🖼 이미지 관련 AI <span>[텔레그램 사용공유]</span></h4>
+            <ul>
+                <li><a href="https://www.midjourney.com/" target="_blank">Midjourney</a></li>
+                <li><a href="https://nijijourney.com/ko/" target="_blank">Niji Journey</a></li>
+                <li><a href="https://www.dzine.ai/" target="_blank">Dzine AI</a></li>
+                <li><a href="https://www.canva.com/" target="_blank">Canva</a></li>
+            </ul>
+        </div>
+
+        <div class="ai-card">
+            <h4>🎤 음성 관련 AI <span>[텔레그램 사용공유]</span></h4>
+            <ul>
+                <li><a href="https://app.typecast.ai/" target="_blank">Typecast</a></li>
+                <li><a href="https://elevenlabs.io/" target="_blank">ElevenLabs</a></li>
+            </ul>
+        </div>
+
     </div>
-    <div class="vtm-highlight" style="margin-top:14px;">
+
+</div>
       📢 <strong>텔레그램 공유 의무</strong><br>
       <span style="font-size:0.84rem;color:#CBD5E1;">위 4개 외 AI·자동화 툴은 사용 시작 및 종료 시 텔레그램 업무방에 공유합니다.<br>
       점심시간 전 반드시 사용 중인 프로그램 종료 공유 후 식사합니다.</span>
