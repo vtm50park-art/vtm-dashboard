@@ -3887,7 +3887,7 @@ div:has(> .admin-cmark) + div [data-testid="stColumn"] {
                 </div>
                 """, unsafe_allow_html=True)
                 
-                if st.button("🗑 휴가 신청 삭제", key=f"delete_leave_{lv_id}", use_container_width=True):
+                if st.button(f"🗑 {leave_type} 신청 삭제", key=f"delete_leave_{lv_id}", use_container_width=True):
                     sb.table("leave_requests").delete().eq("id", lv_id).execute()
                     wlog("LEAVE_DELETE", st.session_state.user_name, emp_name, f"{sel} {leave_type}")
                     st.warning("🗑 휴가/반차 신청이 삭제되었습니다.")
