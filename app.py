@@ -1908,7 +1908,10 @@ def render_sidebar():
             ("emp_guide",    "📋 VTM WAY",  False),
         ]
  
-    cols = st.columns([1] * len(menus) + [1])
+    if st.session_state.is_admin:
+    cols = st.columns([1, 1, 1, 1, 1, 1, 1, 1.35, 1.35])
+else:
+    cols = st.columns([1, 1, 1, 1, 1.35, 1.35])
     for i, (key, label, is_home) in enumerate(menus):
         with cols[i]:
             is_active = (st.session_state.page == key)
