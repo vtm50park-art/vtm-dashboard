@@ -3106,7 +3106,7 @@ def page_admin_attend():
         att.columns = ["직원명","유형","출근","퇴근","날짜"]
         att["퇴근"] = att["퇴근"].fillna("퇴근 전")
 
-st.markdown("""
+        st.markdown("""
 <style>
 [data-testid="stDataFrame"] {
     border-radius: 16px !important;
@@ -3152,19 +3152,49 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-st.dataframe(att, use_container_width=True, hide_index=True)
+        st.dataframe(att, use_container_width=True, hide_index=True)
+
     if sel_emp == "전체":
         all_emp = get_employees()
         checked = set(att["직원명"].tolist()) if not att.empty else set()
-        absent  = all_emp[(~all_emp["name"].isin(checked)) & (all_emp["is_admin"] == 0)]
+        absent = all_emp[(~all_emp["name"].isin(checked)) & (all_emp["is_admin"] == 0)]
+
         if not absent.empty:
             st.markdown("---")
             for _, row in absent.iterrows():
-                st.markdown(f"""<div style="background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.5);
-                    border-radius:10px;padding:10px;margin:3px 0;backdrop-filter:blur(10px);">
-                  <span style="color:#FCA5A5;font-weight:900;">
-                      ❗ {row['name']} — 미출근 / 출근 전
-                  </span></div>""", unsafe_allow_html=True)
+                st.markdown(f"""
+<div style="background:rgba(239,68,68,0.12);
+border:1px solid rgba(239,68,68,0.5);
+border-radius:10px;
+padding:10px;
+margin:3px 0;
+backdrop-filter:blur(10px);">
+<span style="color:#FCA5A5;font-weight:900;">
+❗ {row['name']} — 미출근 / 출근 전
+</span>
+</div>
+""", unsafe_allow_html=True)
+
+    if sel_emp == "전체":
+        all_emp = get_employees()
+        checked = set(att["직원명"].tolist()) if not att.empty else set()
+        absent = all_emp[(~all_emp["name"].isin(checked)) & (all_emp["is_admin"] == 0)]
+
+        if not absent.empty:
+            st.markdown("---")
+            for _, row in absent.iterrows():
+                st.markdown(f"""
+<div style="background:rgba(239,68,68,0.12);
+border:1px solid rgba(239,68,68,0.5);
+border-radius:10px;
+padding:10px;
+margin:3px 0;
+backdrop-filter:blur(10px);">
+<span style="color:#FCA5A5;font-weight:900;">
+❗ {row['name']} — 미출근 / 출근 전
+</span>
+</div>
+""", unsafe_allow_html=True)
  
 # ═══════════════════════════════════════════
 #  관리자: 업무 현황
