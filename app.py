@@ -3109,34 +3109,47 @@ def page_admin_attend():
         st.markdown("""
 <style>
 [data-testid="stDataFrame"] {
-    border-radius: 16px !important;
+    border-radius: 18px !important;
     overflow: hidden !important;
-    border: 1px solid rgba(94,234,212,0.22) !important;
-    box-shadow: 0 16px 40px rgba(0,0,0,0.35) !important;
-    background: rgba(8,17,31,0.72) !important;
+    border: 1px solid rgba(94,234,212,0.26) !important;
+    box-shadow: 0 18px 44px rgba(0,0,0,0.42), 0 0 24px rgba(45,212,191,0.08) !important;
+    background: rgba(10, 18, 32, 0.54) !important;
 }
 
+/* 너무 칙칙한 회색 덮어쓰기 */
 [data-testid="stDataFrame"] div {
-    background-color: rgba(8,17,31,0.72) !important;
+    background-color: transparent !important;
 }
 
+/* 헤더 */
 [data-testid="stDataFrame"] [role="columnheader"] {
-    background: rgba(15,23,42,0.96) !important;
+    background: rgba(12, 24, 42, 0.92) !important;
     color: #7FF7DE !important;
     font-weight: 900 !important;
+    border-bottom: 1px solid rgba(94,234,212,0.25) !important;
 }
 
+/* 셀 */
 [data-testid="stDataFrame"] [role="gridcell"] {
-    background: rgba(11,18,32,0.78) !important;
-    color: #E7EEF7 !important;
+    background: rgba(8, 17, 31, 0.46) !important;
+    color: #EAFBFF !important;
     font-weight: 700 !important;
+    border-color: rgba(94,234,212,0.10) !important;
 }
 
+/* 셀 안 텍스트 */
+[data-testid="stDataFrame"] [role="gridcell"] span,
+[data-testid="stDataFrame"] [role="gridcell"] div {
+    color: #EAFBFF !important;
+}
+
+/* 툴바 아이콘 */
 [data-testid="stElementToolbar"] {
-    background: rgba(8,17,31,0.88) !important;
-    border: 1px solid rgba(94,234,212,0.25) !important;
-    border-radius: 10px !important;
+    background: rgba(8,17,31,0.86) !important;
+    border: 1px solid rgba(94,234,212,0.28) !important;
+    border-radius: 12px !important;
     padding: 4px !important;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.35) !important;
 }
 
 [data-testid="stElementToolbar"] button,
@@ -3147,7 +3160,7 @@ def page_admin_attend():
 }
 
 [data-testid="stElementToolbar"] button:hover {
-    background: rgba(45,212,191,0.16) !important;
+    background: rgba(45,212,191,0.18) !important;
 }
 </style>
 """, unsafe_allow_html=True)
