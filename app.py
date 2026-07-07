@@ -2692,11 +2692,25 @@ div:has(> .cmark) + div [data-testid="stColumn"] {
             base = "sun" if is_sun else ("sat" if is_sat else "wd")
             cls  = base + (" sel" if is_sel else (" today" if is_td else ""))
             badges = ""
+
+            for ev in event_map.get(d, [])[:2]:
+                badges += f'<span class="badge b-ok">📌 {safe_str(ev.get("event_type"))}</span><br>'
+
+            for lv in leave_map.get(d, [])[:2]:
+                lv_status = safe_str(lv.get("status")) or "대기중"
+                lv_emp = safe_str(lv.get("emp_name")) or "-"
+                lv_type = safe_str(lv.get("leave_type")) or "-"
+                if lv_status == "승인":
+                    badges += f'<span class="badge b-att">🏖 {lv_emp} {lv_type}</span><br>'
+                else:
+                    badges += f'<span class="badge b-pend">⏳ {lv_emp} {lv_type}</span><br>'
+
             if not is_wk:
                 if has_att:
                     badges += f'<span class="badge b-att">✅ {(att_map[d]["att_type"] or "출근")[:4]}</span><br>'
                 else:
                     badges += '<span class="badge b-none">미출근</span><br>'
+
                 if has_rep:
                     if rep_st=="승인":   badges += f'<span class="badge b-ok">📋 {rep_prg}%</span>'
                     elif rep_st=="반려": badges += '<span class="badge b-rjct">❌ 반려</span>'
