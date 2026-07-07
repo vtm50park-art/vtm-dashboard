@@ -1908,7 +1908,7 @@ def render_sidebar():
             ("emp_guide",    "📋 VTM WAY",  False),
         ]
  
-    if st.session_state.is_admin:
+if st.session_state.is_admin:
     cols = st.columns([1, 1, 1, 1, 1, 1, 1, 1.35, 1.35])
 else:
     cols = st.columns([1, 1, 1, 1, 1.35, 1.35])
