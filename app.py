@@ -2552,13 +2552,35 @@ def page_emp_calendar():
     yr = int(yr); mo = int(mo)
 
     sb = _sb()
-    att_dr = sb.table("attendance").select("work_date,att_type").eq("emp_id",uid).like("work_date",f"{yr}-{mo:02d}-%").execute()
-    rep_dr = sb.table("reports").select("work_date,status,pm_progress").eq("emp_id",uid).like("work_date",f"{yr}-{mo:02d}-%").execute()
+    from_date = f"{yr}-{mo:02d}-01"
+    last_day = calendar.monthrange(yr, mo)[1]
+    to_date = f"{yr}-{mo:02d}-{last_day:02d}"
+
+    att_dr = sb.table("attendance").select("work_date,att_type").eq("emp_id",uid).gte("work_date",from_date).lte("work_date",to_date).execute()
+    rep_dr = sb.table("reports").select("work_date,status,pm_progress").eq("emp_id",uid).gte("work_date",from_date).lte("work_date",to_date).execute()
+    ev_dr = sb.table("company_events").select("*").eq("is_public",True).gte("event_date",from_date).lte("event_date",to_date).execute()
+    lv_dr = sb.table("leave_requests").select("*").gte("leave_date",from_date).lte("leave_date",to_date).execute()
+
     att_df = pd.DataFrame(att_dr.data) if att_dr.data else pd.DataFrame()
     rep_df = pd.DataFrame(rep_dr.data) if rep_dr.data else pd.DataFrame()
+    ev_df = pd.DataFrame(ev_dr.data) if ev_dr.data else pd.DataFrame()
+    lv_df = pd.DataFrame(lv_dr.data) if lv_dr.data else pd.DataFrame()
+
+    if not lv_df.empty:
+        lv_df = lv_df[(lv_df["status"] == "승인") | (lv_df["emp_id"] == uid)]
 
     att_map = {r["work_date"]: r for _, r in att_df.iterrows()} if not att_df.empty else {}
     rep_map = {r["work_date"]: r for _, r in rep_df.iterrows()} if not rep_df.empty else {}
+
+    event_map = {}
+    if not ev_df.empty:
+        for _, r in ev_df.iterrows():
+            event_map.setdefault(r["event_date"], []).append(r)
+
+    leave_map = {}
+    if not lv_df.empty:
+        for _, r in lv_df.iterrows():
+            leave_map.setdefault(r["leave_date"], []).append(r)
     cal_weeks = calendar.monthcalendar(yr, mo)
     sel = st.session_state.cal_selected
 
