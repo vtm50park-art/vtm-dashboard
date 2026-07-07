@@ -3104,52 +3104,14 @@ def page_admin_attend():
         st.info(f"📭 {sel_date} 출퇴근 기록 없음")
     else:
         att.columns = ["직원명","유형","출근","퇴근","날짜"]
-        att["퇴근"] = att["퇴근"].fillna("퇴근 전")
 
         st.markdown("""
 <style>
-[data-testid="stDataFrame"] {
-    border-radius: 18px !important;
-    overflow: hidden !important;
-    border: 1px solid rgba(94,234,212,0.26) !important;
-    box-shadow: 0 18px 44px rgba(0,0,0,0.42), 0 0 24px rgba(45,212,191,0.08) !important;
-    background: rgba(10, 18, 32, 0.54) !important;
-}
-
-/* 너무 칙칙한 회색 덮어쓰기 */
-[data-testid="stDataFrame"] div {
-    background-color: transparent !important;
-}
-
-/* 헤더 */
-[data-testid="stDataFrame"] [role="columnheader"] {
-    background: rgba(12, 24, 42, 0.92) !important;
-    color: #7FF7DE !important;
-    font-weight: 900 !important;
-    border-bottom: 1px solid rgba(94,234,212,0.25) !important;
-}
-
-/* 셀 */
-[data-testid="stDataFrame"] [role="gridcell"] {
-    background: rgba(8, 17, 31, 0.46) !important;
-    color: #EAFBFF !important;
-    font-weight: 700 !important;
-    border-color: rgba(94,234,212,0.10) !important;
-}
-
-/* 셀 안 텍스트 */
-[data-testid="stDataFrame"] [role="gridcell"] span,
-[data-testid="stDataFrame"] [role="gridcell"] div {
-    color: #EAFBFF !important;
-}
-
-/* 툴바 아이콘 */
 [data-testid="stElementToolbar"] {
-    background: rgba(8,17,31,0.86) !important;
-    border: 1px solid rgba(94,234,212,0.28) !important;
-    border-radius: 12px !important;
+    background: rgba(8,17,31,0.88) !important;
+    border: 1px solid rgba(94,234,212,0.25) !important;
+    border-radius: 10px !important;
     padding: 4px !important;
-    box-shadow: 0 8px 24px rgba(0,0,0,0.35) !important;
 }
 
 [data-testid="stElementToolbar"] button,
@@ -3160,54 +3122,23 @@ def page_admin_attend():
 }
 
 [data-testid="stElementToolbar"] button:hover {
-    background: rgba(45,212,191,0.18) !important;
+    background: rgba(45,212,191,0.16) !important;
 }
 </style>
 """, unsafe_allow_html=True)
-
         st.dataframe(att, use_container_width=True, hide_index=True)
-
     if sel_emp == "전체":
         all_emp = get_employees()
         checked = set(att["직원명"].tolist()) if not att.empty else set()
-        absent = all_emp[(~all_emp["name"].isin(checked)) & (all_emp["is_admin"] == 0)]
-
+        absent  = all_emp[(~all_emp["name"].isin(checked)) & (all_emp["is_admin"] == 0)]
         if not absent.empty:
             st.markdown("---")
             for _, row in absent.iterrows():
-                st.markdown(f"""
-<div style="background:rgba(239,68,68,0.12);
-border:1px solid rgba(239,68,68,0.5);
-border-radius:10px;
-padding:10px;
-margin:3px 0;
-backdrop-filter:blur(10px);">
-<span style="color:#FCA5A5;font-weight:900;">
-❗ {row['name']} — 미출근 / 출근 전
-</span>
-</div>
-""", unsafe_allow_html=True)
-
-    if sel_emp == "전체":
-        all_emp = get_employees()
-        checked = set(att["직원명"].tolist()) if not att.empty else set()
-        absent = all_emp[(~all_emp["name"].isin(checked)) & (all_emp["is_admin"] == 0)]
-
-        if not absent.empty:
-            st.markdown("---")
-            for _, row in absent.iterrows():
-                st.markdown(f"""
-<div style="background:rgba(239,68,68,0.12);
-border:1px solid rgba(239,68,68,0.5);
-border-radius:10px;
-padding:10px;
-margin:3px 0;
-backdrop-filter:blur(10px);">
-<span style="color:#FCA5A5;font-weight:900;">
-❗ {row['name']} — 미출근 / 출근 전
-</span>
-</div>
-""", unsafe_allow_html=True)
+                st.markdown(f"""<div style="background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.5);
+                    border-radius:10px;padding:10px;margin:3px 0;backdrop-filter:blur(10px);">
+                  <span style="color:#FCA5A5;font-weight:900;">
+                      ❗ {row['name']} — 미출근 / 출근 전
+                  </span></div>""", unsafe_allow_html=True)
  
 # ═══════════════════════════════════════════
 #  관리자: 업무 현황
