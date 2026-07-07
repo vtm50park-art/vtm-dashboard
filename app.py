@@ -1895,7 +1895,7 @@ def render_sidebar():
             ("admin_approve", "✅ 결과승인",False),
             ("admin_emp",     "👥 직원관리",False),
             ("admin_excel",   "📥 엑셀",    False),
-            ("admin_company_calendar", "📅 회사일정", False),
+            ("admin_company_calendar", "📅 일정", False),
             ("admin_logs",    "🔍 로그",    False),
             ("emp_guide",     "📋 VTM WAY", False),
         ]
@@ -3502,10 +3502,10 @@ def page_admin_excel():
         st.success("✅ 파일 준비 완료! 위 버튼을 눌러 저장하세요.")
  
 # ═══════════════════════════════════════════
-#  관리자: 회사일정
+#  관리자: 일정
 # ═══════════════════════════════════════════
 def page_admin_company_calendar():
-    topbar("📅 회사 일정")
+    topbar("📅 일정")
 
     sb = _sb()
     today = now_kst().date()
