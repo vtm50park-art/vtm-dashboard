@@ -3151,8 +3151,7 @@ st.markdown("""
 }
 </style>
 """, unsafe_allow_html=True)
-
-        st.dataframe(att, use_container_width=True, hide_index=True)
+st.dataframe(att, use_container_width=True, hide_index=True)
     if sel_emp == "전체":
         all_emp = get_employees()
         checked = set(att["직원명"].tolist()) if not att.empty else set()
