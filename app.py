@@ -3886,7 +3886,13 @@ div:has(> .admin-cmark) + div [data-testid="stColumn"] {
                     <p><b>사유:</b> {reason}</p>
                 </div>
                 """, unsafe_allow_html=True)
-
+                
+                if st.button("🗑 휴가 신청 삭제", key=f"delete_leave_{lv_id}", use_container_width=True):
+                    sb.table("leave_requests").delete().eq("id", lv_id).execute()
+                    wlog("LEAVE_DELETE", st.session_state.user_name, emp_name, f"{sel} {leave_type}")
+                    st.warning("🗑 휴가/반차 신청이 삭제되었습니다.")
+                    st.rerun()
+                    
                 if status == "대기중":
                     comment = st.text_input("관리자 코멘트", key=f"leave_comment_{lv_id}", placeholder="승인 또는 반려 사유")
 
