@@ -3526,27 +3526,27 @@ def page_admin_company_calendar():
     yr = int(yr)
     mo = int(mo)
 
-from_date = f"{yr}-{mo:02d}-01"
-last_day = calendar.monthrange(yr, mo)[1]
-to_date = f"{yr}-{mo:02d}-{last_day:02d}"
+    from_date = f"{yr}-{mo:02d}-01"
+    last_day = calendar.monthrange(yr, mo)[1]
+    to_date = f"{yr}-{mo:02d}-{last_day:02d}"
 
-ev_r = (
-    sb.table("company_events")
-    .select("*")
-    .gte("event_date", from_date)
-    .lte("event_date", to_date)
-    .order("event_date")
-    .execute()
-)
+    ev_r = (
+        sb.table("company_events")
+        .select("*")
+        .gte("event_date", from_date)
+        .lte("event_date", to_date)
+        .order("event_date")
+        .execute()
+    )
 
-lv_r = (
-    sb.table("leave_requests")
-    .select("*")
-    .gte("leave_date", from_date)
-    .lte("leave_date", to_date)
-    .order("leave_date")
-    .execute()
-)
+    lv_r = (
+        sb.table("leave_requests")
+        .select("*")
+        .gte("leave_date", from_date)
+        .lte("leave_date", to_date)
+        .order("leave_date")
+        .execute()
+    )
 
     ev_df = pd.DataFrame(ev_r.data) if ev_r.data else pd.DataFrame()
     lv_df = pd.DataFrame(lv_r.data) if lv_r.data else pd.DataFrame()
