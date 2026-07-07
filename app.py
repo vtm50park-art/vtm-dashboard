@@ -3104,7 +3104,7 @@ def page_admin_attend():
         st.info(f"📭 {sel_date} 출퇴근 기록 없음")
     else:
         att.columns = ["직원명","유형","출근","퇴근","날짜"]
-att["퇴근"] = att["퇴근"].fillna("퇴근 전")
+        att["퇴근"] = att["퇴근"].fillna("퇴근 전")
 
 st.markdown("""
 <style>
@@ -3151,6 +3151,7 @@ st.markdown("""
 }
 </style>
 """, unsafe_allow_html=True)
+
         st.dataframe(att, use_container_width=True, hide_index=True)
     if sel_emp == "전체":
         all_emp = get_employees()
