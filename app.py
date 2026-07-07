@@ -1891,11 +1891,11 @@ def render_sidebar():
         menus = [
             ("home",          "🏠 홈",      True),
             ("admin_attend",  "📋 출퇴근",  False),
-            ("admin_tasks",   "📊 업무현황",False),
-            ("admin_approve", "✅ 결과승인",False),
-            ("admin_emp",     "👥 직원관리",False),
+            ("admin_tasks",   "📊 업무",False),
+            ("admin_approve", "✅ 결과",False),
+            ("admin_emp",     "👥 관리",False),
             ("admin_excel",   "📥 엑셀",    False),
-            ("admin_company_calendar", "📅 회사일정", False),
+            ("admin_company_calendar", "📅 일정", False),
             ("admin_logs",    "🔍 로그",    False),
             ("emp_guide",     "📋 VTM WAY", False),
         ]
