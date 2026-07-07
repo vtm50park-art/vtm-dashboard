@@ -3104,6 +3104,28 @@ def page_admin_attend():
         st.info(f"📭 {sel_date} 출퇴근 기록 없음")
     else:
         att.columns = ["직원명","유형","출근","퇴근","날짜"]
+
+        st.markdown("""
+<style>
+[data-testid="stElementToolbar"] {
+    background: rgba(8,17,31,0.88) !important;
+    border: 1px solid rgba(94,234,212,0.25) !important;
+    border-radius: 10px !important;
+    padding: 4px !important;
+}
+
+[data-testid="stElementToolbar"] button,
+[data-testid="stElementToolbar"] svg {
+    color: #7FF7DE !important;
+    fill: #7FF7DE !important;
+    stroke: #7FF7DE !important;
+}
+
+[data-testid="stElementToolbar"] button:hover {
+    background: rgba(45,212,191,0.16) !important;
+}
+</style>
+""", unsafe_allow_html=True)
         st.dataframe(att, use_container_width=True, hide_index=True)
     if sel_emp == "전체":
         all_emp = get_employees()
