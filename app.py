@@ -3314,6 +3314,7 @@ def page_admin_attend():
 }
 </style>
 """, unsafe_allow_html=True)
+        att["퇴근"] = att["퇴근"].fillna("퇴근 전")
         st.dataframe(att, use_container_width=True, hide_index=True)
     if sel_emp == "전체":
         all_emp = get_employees()
