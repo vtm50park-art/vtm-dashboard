@@ -3144,7 +3144,7 @@ def page_admin_home():
     k1, k2, k3, k4 = st.columns(4)
     kpi_data = [
         (k1, "c-teal",   f"{human_online}", "명", "오늘 출근 (휴먼 직원)", "HUMAN ONLINE", "🧑‍💼"),
-        (k2, "c-violet", f"{ai_total}",     "명", "오늘 출근 (AI 직원)",   "AI ONLINE",     "⚙️"),
+        (k2, "c-violet", f"{ai_total}",     "명", "오늘 출근 (AI 직원)",   "AI ONLINE",     "🧠"),
         (k3, "c-cyan",   f"{ai_total}",     "명", "AI 직원 상시 대기",     "AI STANDBY",    "🛰️"),
         (k4, "c-gold",   f"{appr}",         "건", "오늘 승인",             "TODAY'S APPROVALS", "🗂️"),
     ]
