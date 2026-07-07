@@ -2860,7 +2860,7 @@ def page_emp_guide():
     </ul>
   </div>
 
- <div class="vtm-section">
+<div class="vtm-section">
     <div class="vtm-section-title">🤖 &nbsp;AI 프로그램 사용 규정</div>
 
     <div style="color:#94A3B8;font-size:0.78rem;font-weight:700;margin-bottom:10px;">
@@ -2930,8 +2930,6 @@ def page_emp_guide():
       </span>
     </div>
   </div>
-
-핵심은 <div class="ai-rule-wrap">를 쓰지 말고 vtm-section을 쓰는 것이야. 그러면 기존 VTM WAY 디자인이랑 바로 맞아.
 
   <div class="vtm-section">
     <div class="vtm-section-title">💬 &nbsp;커뮤니케이션 규정</div>
