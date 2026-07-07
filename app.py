@@ -3504,7 +3504,7 @@ def page_admin_excel():
             use_container_width=True
         )
         st.success("✅ 파일 준비 완료! 위 버튼을 눌러 저장하세요.")
- 
+
 # ═══════════════════════════════════════════
 #  관리자: 회사 일정
 # ═══════════════════════════════════════════
@@ -3514,138 +3514,281 @@ def page_admin_company_calendar():
     sb = _sb()
     today = now_kst().date()
 
-    st.markdown("<div class='vtm-card'><h3>📌 회사 일정 등록</h3></div>", unsafe_allow_html=True)
+    if "admin_cal_selected" not in st.session_state:
+        st.session_state.admin_cal_selected = None
 
-    with st.form("form_company_event", clear_on_submit=True):
-        c1, c2 = st.columns(2)
-        with c1:
-            event_date = st.date_input("일정 시작일", value=today, key="ce_date")
-            end_date = st.date_input("일정 종료일", value=today, key="ce_end")
-            event_type = st.selectbox(
-                "일정 유형",
-                ["회의", "미팅", "출장", "회식", "회사행사", "교육", "생일", "공휴일", "기타"],
-                key="ce_type"
-            )
-        with c2:
-            title = st.text_input("일정 제목", placeholder="예) 전체 회의 / 김다현 생일 / 거래처 미팅")
-            description = st.text_area("상세 내용", height=110, placeholder="일정 설명을 입력하세요.")
-
-        submitted = st.form_submit_button("✅ 회사 일정 등록", use_container_width=True)
-
-        if submitted:
-            if not title.strip():
-                st.error("일정 제목을 입력하세요.")
-            else:
-                sb.table("company_events").insert({
-                    "event_date": str(event_date),
-                    "end_date": str(end_date) if end_date else None,
-                    "event_type": event_type,
-                    "title": title.strip(),
-                    "description": description.strip(),
-                    "created_by_id": st.session_state.user_id,
-                    "created_by_name": st.session_state.user_name,
-                    "is_public": True,
-                    "created_at": now_str(),
-                    "updated_at": now_str()
-                }).execute()
-                wlog("COMPANY_EVENT_ADD", st.session_state.user_name, title.strip(), event_type)
-                st.success("✅ 회사 일정이 등록되었습니다.")
-                st.rerun()
-
-    st.markdown("---")
-
-    st.markdown("<div class='vtm-card'><h3>🟡 휴가 / 반차 승인 대기</h3></div>", unsafe_allow_html=True)
-
-    leave_r = (
-        sb.table("leave_requests")
-        .select("*")
-        .eq("status", "대기중")
-        .order("leave_date")
-        .execute()
-    )
-    leaves = pd.DataFrame(leave_r.data) if leave_r.data else pd.DataFrame()
-
-    if leaves.empty:
-        st.success("✅ 승인 대기 중인 휴가/반차 신청이 없습니다.")
-    else:
-        for _, r in leaves.iterrows():
-            rid = int(r["id"])
-            emp_name = safe_str(r["emp_name"]) or "-"
-            leave_date = safe_str(r["leave_date"]) or "-"
-            leave_type = safe_str(r["leave_type"]) or "-"
-            reason = safe_str(r["reason"]) or "사유 없음"
-
-            st.markdown(f"""
-            <div class="vtm-card">
-              <h3>🏖 {emp_name} · {leave_date}</h3>
-              <p><b>유형:</b> {leave_type}</p>
-              <p><b>사유:</b> {reason}</p>
-            </div>
-            """, unsafe_allow_html=True)
-
-            comment = st.text_input("관리자 코멘트", key=f"leave_comment_{rid}", placeholder="승인 또는 반려 사유")
-
-            ca, cb = st.columns(2)
-            with ca:
-                if st.button("✅ 승인", key=f"leave_ok_{rid}", use_container_width=True):
-                    sb.table("leave_requests").update({
-                        "status": "승인",
-                        "admin_comment": comment or "승인되었습니다.",
-                        "approved_at": now_str(),
-                        "approved_by_id": st.session_state.user_id,
-                        "approved_by_name": st.session_state.user_name
-                    }).eq("id", rid).execute()
-                    wlog("LEAVE_APPROVE", st.session_state.user_name, emp_name, f"{leave_date} {leave_type}")
-                    st.success("✅ 승인 완료")
-                    st.rerun()
-
-            with cb:
-                if st.button("❌ 반려", key=f"leave_no_{rid}", use_container_width=True):
-                    sb.table("leave_requests").update({
-                        "status": "반려",
-                        "admin_comment": comment or "반려되었습니다.",
-                        "approved_at": now_str(),
-                        "approved_by_id": st.session_state.user_id,
-                        "approved_by_name": st.session_state.user_name
-                    }).eq("id", rid).execute()
-                    wlog("LEAVE_REJECT", st.session_state.user_name, emp_name, f"{leave_date} {leave_type}")
-                    st.warning("❌ 반려 처리 완료")
-                    st.rerun()
-
-    st.markdown("---")
-
-    st.markdown("<div class='vtm-card'><h3>📅 등록된 회사 일정</h3></div>", unsafe_allow_html=True)
-
-    c1, c2 = st.columns(2)
+    c1, c2, _ = st.columns([1, 1, 2])
     with c1:
-        from_date = st.date_input("조회 시작일", value=today.replace(day=1), key="company_from")
+        yr = st.number_input("연도", value=today.year, min_value=2024, max_value=2030, key="admin_cy")
     with c2:
-        to_date = st.date_input("조회 종료일", value=today + timedelta(days=31), key="company_to")
+        mo = st.number_input("월", value=today.month, min_value=1, max_value=12, key="admin_cm")
 
-    ev_r = (
-        sb.table("company_events")
-        .select("*")
-        .gte("event_date", str(from_date))
-        .lte("event_date", str(to_date))
-        .order("event_date")
-        .execute()
+    yr = int(yr)
+    mo = int(mo)
+    month_like = f"{yr}-{mo:02d}-%"
+
+    ev_r = sb.table("company_events").select("*").like("event_date", month_like).order("event_date").execute()
+    lv_r = sb.table("leave_requests").select("*").like("leave_date", month_like).order("leave_date").execute()
+
+    ev_df = pd.DataFrame(ev_r.data) if ev_r.data else pd.DataFrame()
+    lv_df = pd.DataFrame(lv_r.data) if lv_r.data else pd.DataFrame()
+
+    event_map = {}
+    if not ev_df.empty:
+        for _, r in ev_df.iterrows():
+            d = safe_str(r.get("event_date"))
+            event_map.setdefault(d, []).append(r)
+
+    leave_map = {}
+    if not lv_df.empty:
+        for _, r in lv_df.iterrows():
+            d = safe_str(r.get("leave_date"))
+            leave_map.setdefault(d, []).append(r)
+
+    cal_weeks = calendar.monthcalendar(yr, mo)
+    sel = st.session_state.admin_cal_selected
+
+    COLG = '<colgroup><col style="width:16.8%"><col style="width:16.8%"><col style="width:16.8%"><col style="width:16.8%"><col style="width:16.8%"><col style="width:8%"><col style="width:8%"></colgroup>'
+
+    st.markdown("""
+<style>
+table.vtm-cal {
+    width:100%; border-collapse:separate; border-spacing:3px;
+    table-layout:fixed; margin:0 !important;
+}
+table.vtm-cal th {
+    padding:8px 4px; text-align:center; font-weight:900;
+    font-size:0.86rem; border-radius:7px;
+}
+table.vtm-cal th.hwd  { background:#1E293B; color:#2DD4BF; }
+table.vtm-cal th.hsat { background:#1a2d44; color:#93C5FD; }
+table.vtm-cal th.hsun { background:#2a1520; color:#FCA5A5; }
+table.vtm-cal td {
+    border-radius:8px 8px 0 0; vertical-align:top;
+    padding:7px 7px 5px; height:96px;
+    border:1.5px solid transparent; border-bottom:none !important;
+    position:relative;
+}
+table.vtm-cal td.wd    { background:#FFFFFF; border-color:#CBD5E1; }
+table.vtm-cal td.sat   { background:#EFF6FF; border-color:#BFDBFE; }
+table.vtm-cal td.sun   { background:#FFF1F2; border-color:#FECDD3; }
+table.vtm-cal td.today { background:#ECFEFF !important; border:2px solid #2DD4BF !important; border-bottom:none !important; }
+table.vtm-cal td.sel   { background:#EFF6FF !important; border:2px solid #3B82F6 !important; border-bottom:none !important; }
+table.vtm-cal td.empty { background:transparent !important; border:none !important; }
+table.vtm-cal .daynum  { font-size:1rem; font-weight:900; display:block; margin-bottom:4px; line-height:1; }
+table.vtm-cal td.wd .daynum { color:#1E293B; }
+table.vtm-cal td.sat .daynum { color:#1D4ED8; }
+table.vtm-cal td.sun .daynum { color:#BE123C; }
+table.vtm-cal .badge {
+    display:inline-block; border-radius:4px;
+    padding:1px 5px; font-size:0.56rem; font-weight:800;
+    margin:1px 0; line-height:1.5; white-space:nowrap;
+}
+table.vtm-cal .b-event { background:#DBEAFE; color:#1E40AF; }
+table.vtm-cal .b-ok { background:#D1FAE5; color:#065F46; }
+table.vtm-cal .b-pend { background:#FEF3C7; color:#92400E; }
+table.vtm-cal .b-rej { background:#FEE2E2; color:#991B1B; }
+
+div:has(> .admin-cmark) + div .stButton > button {
+    background:#334155 !important;
+    color:#CBD5E1 !important;
+    height:28px !important;
+    min-height:28px !important;
+    border-radius:0 0 8px 8px !important;
+    font-size:0.62rem !important;
+    font-weight:700 !important;
+    padding:5px 2px !important;
+    box-shadow:none !important;
+    border:none !important;
+    width:100% !important;
+}
+div:has(> .admin-cmark) + div .stButton > button:hover {
+    background:#1E40AF !important;
+    color:#BFDBFE !important;
+}
+div:has(> .admin-cmark) + div [data-testid="stHorizontalBlock"] {
+    gap:3px !important;
+    margin-top:-1px !important;
+}
+div:has(> .admin-cmark) + div [data-testid="stColumn"] {
+    padding:0 !important;
+    min-width:0 !important;
+}
+</style>
+""", unsafe_allow_html=True)
+
+    st.markdown(
+        f'<table class="vtm-cal">{COLG}'
+        '<thead><tr>'
+        '<th class="hwd">월</th><th class="hwd">화</th><th class="hwd">수</th>'
+        '<th class="hwd">목</th><th class="hwd">금</th>'
+        '<th class="hsat">토</th><th class="hsun">일</th>'
+        '</tr></thead></table>',
+        unsafe_allow_html=True
     )
-    events = pd.DataFrame(ev_r.data) if ev_r.data else pd.DataFrame()
 
-    if events.empty:
-        st.info("📭 등록된 회사 일정이 없습니다.")
-    else:
-        for _, r in events.iterrows():
-            st.markdown(f"""
-            <div class="vtm-card">
-              <h3>📌 {r.get("event_date")} · {r.get("event_type")}</h3>
-              <p><b>{r.get("title")}</b></p>
-              <p>{safe_str(r.get("description")) or ""}</p>
-              <p style="color:#94A3B8;font-size:0.8rem;">
-                등록자: {safe_str(r.get("created_by_name")) or "-"}
-              </p>
-            </div>
-            """, unsafe_allow_html=True)
+    for week in cal_weeks:
+        cells = f'<table class="vtm-cal">{COLG}<tbody><tr>'
+
+        for i, day in enumerate(week):
+            is_sat = i == 5
+            is_sun = i == 6
+
+            if day == 0:
+                cells += '<td class="empty"></td>'
+                continue
+
+            d = f"{yr}-{mo:02d}-{day:02d}"
+            base = "sun" if is_sun else ("sat" if is_sat else "wd")
+            cls = base + (" sel" if d == sel else (" today" if d == today_str() else ""))
+
+            badges = ""
+
+            for ev in event_map.get(d, [])[:2]:
+                badges += f'<span class="badge b-event">📌 {safe_str(ev.get("event_type"))}</span><br>'
+
+            for lv in leave_map.get(d, [])[:3]:
+                status = safe_str(lv.get("status")) or "대기중"
+                emp = safe_str(lv.get("emp_name")) or "-"
+                ltype = safe_str(lv.get("leave_type")) or "-"
+
+                if status == "승인":
+                    badges += f'<span class="badge b-ok">🏖 {emp} {ltype}</span><br>'
+                elif status == "반려":
+                    badges += f'<span class="badge b-rej">❌ {emp}</span><br>'
+                else:
+                    badges += f'<span class="badge b-pend">⏳ {emp} {ltype}</span><br>'
+
+            cells += f'<td class="{cls}"><span class="daynum">{day}</span>{badges}</td>'
+
+        cells += '</tr></tbody></table>'
+        st.markdown(cells, unsafe_allow_html=True)
+
+        st.markdown('<div class="admin-cmark"></div>', unsafe_allow_html=True)
+
+        cols = st.columns([1, 1, 1, 1, 1, 0.48, 0.48])
+        for i, day in enumerate(week):
+            with cols[i]:
+                if day == 0 or i >= 5:
+                    st.markdown("<div style='height:28px'></div>", unsafe_allow_html=True)
+                else:
+                    d = f"{yr}-{mo:02d}-{day:02d}"
+                    is_sel = d == sel
+                    lbl = "▲ 닫기" if is_sel else "상세내역 확인"
+                    if st.button(lbl, key=f"admin_cbtn_{d}", use_container_width=True):
+                        st.session_state.admin_cal_selected = None if is_sel else d
+                        st.rerun()
+
+        week_dates = [f"{yr}-{mo:02d}-{day:02d}" for i, day in enumerate(week) if day != 0 and i < 5]
+
+        if sel in week_dates:
+            st.markdown(f"<div class='vtm-card'><h3>📅 {sel} 상세내역</h3></div>", unsafe_allow_html=True)
+
+            st.markdown("<div class='vtm-card'><h3>📌 회사 일정 등록</h3></div>", unsafe_allow_html=True)
+
+            with st.form(f"form_company_event_{sel}", clear_on_submit=True):
+                c1, c2 = st.columns(2)
+                with c1:
+                    event_type = st.selectbox(
+                        "일정 유형",
+                        ["회의", "미팅", "출장", "회식", "회사행사", "교육", "생일", "공휴일", "기타"],
+                        key=f"ce_type_{sel}"
+                    )
+                    end_date = st.date_input("종료일", value=datetime.strptime(sel, "%Y-%m-%d").date(), key=f"ce_end_{sel}")
+                with c2:
+                    title = st.text_input("일정 제목", placeholder="예) 전체 회의 / 김다현 생일 / 거래처 미팅", key=f"ce_title_{sel}")
+                    description = st.text_area("상세 내용", height=90, placeholder="일정 설명을 입력하세요.", key=f"ce_desc_{sel}")
+
+                submitted = st.form_submit_button("✅ 회사 일정 등록", use_container_width=True)
+
+                if submitted:
+                    if not title.strip():
+                        st.error("일정 제목을 입력하세요.")
+                    else:
+                        sb.table("company_events").insert({
+                            "event_date": sel,
+                            "end_date": str(end_date) if end_date else sel,
+                            "event_type": event_type,
+                            "title": title.strip(),
+                            "description": description.strip(),
+                            "created_by_id": st.session_state.user_id,
+                            "created_by_name": st.session_state.user_name,
+                            "is_public": True,
+                            "created_at": now_str(),
+                            "updated_at": now_str()
+                        }).execute()
+                        wlog("COMPANY_EVENT_ADD", st.session_state.user_name, title.strip(), event_type)
+                        st.success("✅ 회사 일정이 등록되었습니다.")
+                        st.rerun()
+
+            day_events = event_map.get(sel, [])
+            day_leaves = leave_map.get(sel, [])
+
+            if not day_events and not day_leaves:
+                st.info("📭 이 날짜에는 등록된 회사 일정이나 휴가 신청이 없습니다.")
+
+            for ev in day_events:
+                ev_id = int(ev.get("id"))
+                st.markdown(f"""
+                <div class="vtm-card">
+                    <h3>📌 {safe_str(ev.get("event_type"))} · {safe_str(ev.get("title"))}</h3>
+                    <p>{safe_str(ev.get("description")) or ""}</p>
+                    <p style="color:#94A3B8;font-size:0.8rem;">
+                        등록자: {safe_str(ev.get("created_by_name")) or "-"}
+                    </p>
+                </div>
+                """, unsafe_allow_html=True)
+
+                if st.button("🗑 회사 일정 삭제", key=f"delete_event_{ev_id}", use_container_width=True):
+                    sb.table("company_events").delete().eq("id", ev_id).execute()
+                    wlog("COMPANY_EVENT_DELETE", st.session_state.user_name, safe_str(ev.get("title")), safe_str(ev.get("event_type")))
+                    st.warning("🗑 회사 일정이 삭제되었습니다.")
+                    st.rerun()
+
+            for lv in day_leaves:
+                lv_id = int(lv.get("id"))
+                status = safe_str(lv.get("status")) or "대기중"
+                emp_name = safe_str(lv.get("emp_name")) or "-"
+                leave_type = safe_str(lv.get("leave_type")) or "-"
+                reason = safe_str(lv.get("reason")) or "사유 없음"
+
+                st.markdown(f"""
+                <div class="vtm-card">
+                    <h3>🏖 {emp_name} · {leave_type}</h3>
+                    <p><b>상태:</b> {status}</p>
+                    <p><b>사유:</b> {reason}</p>
+                </div>
+                """, unsafe_allow_html=True)
+
+                if status == "대기중":
+                    comment = st.text_input("관리자 코멘트", key=f"leave_comment_{lv_id}", placeholder="승인 또는 반려 사유")
+
+                    ca, cb = st.columns(2)
+                    with ca:
+                        if st.button("✅ 휴가 승인", key=f"leave_ok_{lv_id}", use_container_width=True):
+                            sb.table("leave_requests").update({
+                                "status": "승인",
+                                "admin_comment": comment or "승인되었습니다.",
+                                "approved_at": now_str(),
+                                "approved_by_id": st.session_state.user_id,
+                                "approved_by_name": st.session_state.user_name
+                            }).eq("id", lv_id).execute()
+                            wlog("LEAVE_APPROVE", st.session_state.user_name, emp_name, f"{sel} {leave_type}")
+                            st.success("✅ 승인 완료")
+                            st.rerun()
+
+                    with cb:
+                        if st.button("❌ 휴가 반려", key=f"leave_no_{lv_id}", use_container_width=True):
+                            sb.table("leave_requests").update({
+                                "status": "반려",
+                                "admin_comment": comment or "반려되었습니다.",
+                                "approved_at": now_str(),
+                                "approved_by_id": st.session_state.user_id,
+                                "approved_by_name": st.session_state.user_name
+                            }).eq("id", lv_id).execute()
+                            wlog("LEAVE_REJECT", st.session_state.user_name, emp_name, f"{sel} {leave_type}")
+                            st.warning("❌ 반려 처리 완료")
+                            st.rerun()
 # ═══════════════════════════════════════════
 #  관리자: 로그
 # ═══════════════════════════════════════════            
