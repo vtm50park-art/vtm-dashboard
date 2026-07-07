@@ -3104,9 +3104,34 @@ def page_admin_attend():
         st.info(f"📭 {sel_date} 출퇴근 기록 없음")
     else:
         att.columns = ["직원명","유형","출근","퇴근","날짜"]
+att["퇴근"] = att["퇴근"].fillna("퇴근 전")
 
-        st.markdown("""
+st.markdown("""
 <style>
+[data-testid="stDataFrame"] {
+    border-radius: 16px !important;
+    overflow: hidden !important;
+    border: 1px solid rgba(94,234,212,0.22) !important;
+    box-shadow: 0 16px 40px rgba(0,0,0,0.35) !important;
+    background: rgba(8,17,31,0.72) !important;
+}
+
+[data-testid="stDataFrame"] div {
+    background-color: rgba(8,17,31,0.72) !important;
+}
+
+[data-testid="stDataFrame"] [role="columnheader"] {
+    background: rgba(15,23,42,0.96) !important;
+    color: #7FF7DE !important;
+    font-weight: 900 !important;
+}
+
+[data-testid="stDataFrame"] [role="gridcell"] {
+    background: rgba(11,18,32,0.78) !important;
+    color: #E7EEF7 !important;
+    font-weight: 700 !important;
+}
+
 [data-testid="stElementToolbar"] {
     background: rgba(8,17,31,0.88) !important;
     border: 1px solid rgba(94,234,212,0.25) !important;
