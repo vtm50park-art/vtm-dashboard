@@ -2208,7 +2208,7 @@ def page_emp_attend():
             st.rerun()
     else:
         st.success(f"✅ 출근 완료 — {ci_t} ({atp})")
-            if st.button("🏠 퇴근 체크아웃", key="btn_co", use_container_width=True):
+                    if st.button("🏠 퇴근 체크아웃", key="btn_co", use_container_width=True):
 
                 now_dt = now_kst()
                 weekday = now_dt.weekday()
