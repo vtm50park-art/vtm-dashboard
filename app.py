@@ -2860,71 +2860,71 @@ def page_emp_guide():
     </ul>
   </div>
 
-<div class="vtm-section">
-    <div class="vtm-section-title">🤖 &nbsp;AI 프로그램 사용 규정</div>
+<div class='vtm-section'>
+    <div class='vtm-section-title'>🤖 &nbsp;AI 프로그램 사용 규정</div>
 
-    <div style="color:#94A3B8;font-size:0.78rem;font-weight:700;margin-bottom:10px;">
+    <div style='color:#94A3B8;font-size:0.78rem;font-weight:700;margin-bottom:10px;'>
       브이티엠에서 사용할 수 있는 AI 생성 플랫폼
     </div>
 
-    <div style="color:#CBD5E1;font-size:0.82rem;font-weight:800;margin:10px 0 8px;">
+    <div style='color:#CBD5E1;font-size:0.82rem;font-weight:800;margin:10px 0 8px;'>
       자유롭게 활용 가능한 프로그램
     </div>
 
-    <div class="vtm-badge-row">
-      <a class="vtm-badge" href="https://chatgpt.com/" target="_blank">ChatGPT</a>
-      <a class="vtm-badge" href="https://gemini.google.com/" target="_blank">Gemini</a>
-      <a class="vtm-badge" href="https://claude.ai/" target="_blank">Claude</a>
-      <a class="vtm-badge" href="https://www.genspark.ai/" target="_blank">Genspark</a>
+    <div class='vtm-badge-row'>
+      <a class='vtm-badge' href='https://chatgpt.com/' target='_blank'>ChatGPT</a>
+      <a class='vtm-badge' href='https://gemini.google.com/' target='_blank'>Gemini</a>
+      <a class='vtm-badge' href='https://claude.ai/' target='_blank'>Claude</a>
+      <a class='vtm-badge' href='https://www.genspark.ai/' target='_blank'>Genspark</a>
     </div>
 
-    <div class="vtm-highlight" style="margin-top:14px;">
+    <div class='vtm-highlight' style='margin-top:14px;'>
       🎵 <strong>음악 관련 AI</strong>
-      <span style="color:#2DD4BF;font-weight:900;">[텔레그램 사용공유]</span><br>
-      <a href="https://suno.com/" target="_blank" style="color:#7FF7DE;font-weight:800;">수노</a>
+      <span style='color:#2DD4BF;font-weight:900;'>[텔레그램 사용공유]</span><br>
+      <a href='https://suno.com/' target='_blank' style='color:#7FF7DE;font-weight:800;'>수노</a>
       &nbsp;·&nbsp;
-      <a href="https://www.munute.com/" target="_blank" style="color:#7FF7DE;font-weight:800;">마스터링</a>
+      <a href='https://www.munute.com/' target='_blank' style='color:#7FF7DE;font-weight:800;'>마스터링</a>
     </div>
 
-    <div class="vtm-highlight" style="margin-top:12px;">
+    <div class='vtm-highlight' style='margin-top:12px;'>
       🎬 <strong>영상 관련 AI</strong>
-      <span style="color:#2DD4BF;font-weight:900;">[텔레그램 사용공유]</span><br>
-      <a href="https://labs.google/fx/tools/flow" target="_blank" style="color:#7FF7DE;font-weight:800;">플로우</a>
+      <span style='color:#2DD4BF;font-weight:900;'>[텔레그램 사용공유]</span><br>
+      <a href='https://labs.google/fx/tools/flow' target='_blank' style='color:#7FF7DE;font-weight:800;'>플로우</a>
       &nbsp;·&nbsp;
-      <a href="https://openart.ai/" target="_blank" style="color:#7FF7DE;font-weight:800;">오픈아트</a>
+      <a href='https://openart.ai/' target='_blank' style='color:#7FF7DE;font-weight:800;'>오픈아트</a>
       &nbsp;·&nbsp;
-      <a href="https://higgsfield.ai/" target="_blank" style="color:#7FF7DE;font-weight:800;">힉스필드</a>
+      <a href='https://higgsfield.ai/' target='_blank' style='color:#7FF7DE;font-weight:800;'>힉스필드</a>
       &nbsp;·&nbsp;
-      <a href="https://www.topview.ai/" target="_blank" style="color:#7FF7DE;font-weight:800;">탑뷰</a>
+      <a href='https://www.topview.ai/' target='_blank' style='color:#7FF7DE;font-weight:800;'>탑뷰</a>
       &nbsp;·&nbsp;
-      <a href="https://www.seaart.ai/" target="_blank" style="color:#7FF7DE;font-weight:800;">씨아트</a>
+      <a href='https://www.seaart.ai/' target='_blank' style='color:#7FF7DE;font-weight:800;'>씨아트</a>
       &nbsp;·&nbsp;
-      <a href="https://www.domoai.app/ko" target="_blank" style="color:#7FF7DE;font-weight:800;">도모AI</a>
+      <a href='https://www.domoai.app/ko' target='_blank' style='color:#7FF7DE;font-weight:800;'>도모AI</a>
     </div>
 
-    <div class="vtm-highlight" style="margin-top:12px;">
+    <div class='vtm-highlight' style='margin-top:12px;'>
       🖼 <strong>이미지 관련 AI</strong>
-      <span style="color:#2DD4BF;font-weight:900;">[텔레그램 사용공유]</span><br>
-      <a href="https://www.midjourney.com/" target="_blank" style="color:#7FF7DE;font-weight:800;">미드저니</a>
+      <span style='color:#2DD4BF;font-weight:900;'>[텔레그램 사용공유]</span><br>
+      <a href='https://www.midjourney.com/' target='_blank' style='color:#7FF7DE;font-weight:800;'>미드저니</a>
       &nbsp;·&nbsp;
-      <a href="https://nijijourney.com/ko/" target="_blank" style="color:#7FF7DE;font-weight:800;">니지저니</a>
+      <a href='https://nijijourney.com/ko/' target='_blank' style='color:#7FF7DE;font-weight:800;'>니지저니</a>
       &nbsp;·&nbsp;
-      <a href="https://www.dzine.ai/" target="_blank" style="color:#7FF7DE;font-weight:800;">디자인AI</a>
+      <a href='https://www.dzine.ai/' target='_blank' style='color:#7FF7DE;font-weight:800;'>디자인AI</a>
       &nbsp;·&nbsp;
-      <a href="https://www.canva.com/" target="_blank" style="color:#7FF7DE;font-weight:800;">캔바</a>
+      <a href='https://www.canva.com/' target='_blank' style='color:#7FF7DE;font-weight:800;'>캔바</a>
     </div>
 
-    <div class="vtm-highlight" style="margin-top:12px;">
+    <div class='vtm-highlight' style='margin-top:12px;'>
       🎤 <strong>음성 관련 AI</strong>
-      <span style="color:#2DD4BF;font-weight:900;">[텔레그램 사용공유]</span><br>
-      <a href="https://app.typecast.ai/" target="_blank" style="color:#7FF7DE;font-weight:800;">타입캐스트</a>
+      <span style='color:#2DD4BF;font-weight:900;'>[텔레그램 사용공유]</span><br>
+      <a href='https://app.typecast.ai/' target='_blank' style='color:#7FF7DE;font-weight:800;'>타입캐스트</a>
       &nbsp;·&nbsp;
-      <a href="https://elevenlabs.io/" target="_blank" style="color:#7FF7DE;font-weight:800;">일레븐랩스</a>
+      <a href='https://elevenlabs.io/' target='_blank' style='color:#7FF7DE;font-weight:800;'>일레븐랩스</a>
     </div>
 
-    <div class="vtm-highlight" style="margin-top:14px;">
+    <div class='vtm-highlight' style='margin-top:14px;'>
       📢 <strong>텔레그램 공유 의무</strong><br>
-      <span style="font-size:0.84rem;color:#CBD5E1;">
+      <span style='font-size:0.84rem;color:#CBD5E1;'>
         자유 활용 프로그램 외 음악·영상·이미지·음성 관련 AI는 사용 시작 및 종료 시 텔레그램 업무방에 공유합니다.<br>
         점심시간 전 반드시 사용 중인 프로그램 종료 공유 후 식사합니다.
       </span>
