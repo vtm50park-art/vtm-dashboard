@@ -3275,12 +3275,38 @@ def page_admin_tasks():
 # ═══════════════════════════════════════════
 def page_admin_approve():
     topbar("✅ 결과 승인")
-    pend_r = _sb().table("reports").select("*").eq("status","대기중").order("submitted_at",desc=True).execute()
+    c1, c2, c3 = st.columns(3)
+
+    with c1:
+        sel_date = st.date_input("날짜", value=now_kst().date(), key="approve_date")
+
+    with c2:
+        emp_df = get_employees()
+        names = ["전체"] + list(emp_df["name"])
+        sel_emp = st.selectbox("직원", names, key="approve_emp")
+
+    with c3:
+        sel_status = st.selectbox("상태", ["대기중", "승인", "반려", "보류", "전체"], key="approve_status")
+
+    rq = _sb().table("reports").select("*").eq("work_date", str(sel_date))
+
+    if sel_emp != "전체":
+        rq = rq.eq("emp_name", sel_emp)
+
+    if sel_status != "전체":
+        rq = rq.eq("status", sel_status)
+
+    pend_r = rq.order("submitted_at", desc=True).execute()
     pend = pd.DataFrame(pend_r.data) if pend_r.data else pd.DataFrame()
+
     if pend.empty:
-        st.success("✅ 승인 대기 보고 없음")
+        st.info("📭 선택한 조건의 업무보고가 없습니다.")
         return
-    st.markdown(f"<div class='vtm-card'><h3>📋 대기 {len(pend)}건</h3></div>", unsafe_allow_html=True)
+
+    st.markdown(
+        f"<div class='vtm-card'><h3>📋 조회 결과 {len(pend)}건</h3></div>",
+        unsafe_allow_html=True
+    )
  
     def do_approve(rid, status, emp, comment):
         _sb().table("reports").update({
