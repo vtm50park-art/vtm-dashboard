@@ -2107,7 +2107,7 @@ def page_emp_home():
             '<div class="vdai-panel">'
             '<div class="vdai-head">'
             '<div class="t">🤖 AI WORKFORCE</div>'
-            '<div class="live"><span class="vdai-live-dot"></span>{len(AI_STAFF)}명 상시 대기 중</div>'
+            '<div class="live"><span class="vdai-live-dot"></span>' + str(len(AI_STAFF)) + '명 상시 대기 중</div>'
             '</div>'
             '<div class="vdai-view"><div class="vdai-track">' + items_html + '</div></div>'
             '<div class="vdai-foot">AI 자동화 상태'
