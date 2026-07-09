@@ -60,6 +60,8 @@ AI_STAFF = [
     ("김하린 마케팅 팀장 AI직원", "몽해 마케팅 진행중"),
     ("VTM AI 총괄과장 AI직원",   "AI직원 역할분담 수행중"),
     ("서윤 비서 실장 AI직원",     "본부장 스케줄 체크중"),
+    ("유튜브 쇼츠 AI직원", "쇼츠 제작중"),
+    ("(주)브이티엠 개발자 AI직원", "OYAR 제작중")
 ]
 
 def init_data():
@@ -2105,7 +2107,7 @@ def page_emp_home():
             '<div class="vdai-panel">'
             '<div class="vdai-head">'
             '<div class="t">🤖 AI WORKFORCE</div>'
-            '<div class="live"><span class="vdai-live-dot"></span>7명 상시 대기 중</div>'
+            '<div class="live"><span class="vdai-live-dot"></span>{len(AI_STAFF)}명 상시 대기 중</div>'
             '</div>'
             '<div class="vdai-view"><div class="vdai-track">' + items_html + '</div></div>'
             '<div class="vdai-foot">AI 자동화 상태'
@@ -3242,7 +3244,7 @@ def page_admin_home():
             f'<span class="cnt">{ai_total}명 가동</span></div>',
             unsafe_allow_html=True)
 
-        avatars = ["✍️","✍️","♟️","📈","📣","🧭","🗓️"]
+        avatars = ["✍️","✍️","♟️","📈","📣","🧭","🗓️","📊","🛠️"]
         items_html = ""
         for _bank in range(2):
             for idx, (nm, task) in enumerate(AI_STAFF):
