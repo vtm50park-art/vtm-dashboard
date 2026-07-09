@@ -2030,7 +2030,7 @@ def page_emp_home():
         ("🕔", "퇴근 시간",   co,             co_sub,        "cyan"),
         ("📈", "업무 진행률", f"{prg}%",      "오늘 보고 기준", "teal"),
         ("📝", "보고 상태",   rst,            rst_sub,       "violet"),
-        ("🤖", "AI 지원",     "7명",          "상시 대기",     "violet"),
+        ("🤖", "AI 지원",     "9명",          "상시 대기",     "violet"),
         ("✅", "오늘 완료",   f"{done_cnt}건", "완료된 업무",   "gold"),
     ]
     kpi_html = '<div class="vdir-kpi-grid">'
