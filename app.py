@@ -2150,7 +2150,7 @@ def page_emp_home():
           </div>
           <div class="vdir-sys-row">
             <span class="vdir-sys-lbl"><span class="ic">🤖</span>AI Online</span>
-            <span class="vdir-sys-val cyan">7명</span>
+            <span class="vdir-sys-val cyan">9명</span>
           </div>
           <div class="vdir-sys-row">
             <span class="vdir-sys-lbl"><span class="ic">📡</span>Automation</span>
