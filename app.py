@@ -1783,12 +1783,12 @@ def render_login():
                 <span class="vtm-wf-state on">Online</span>
               </div>
               <div class="vtm-wf-item">
-                <span class="vtm-wf-num">7</span>
+                <span class="vtm-wf-num">9</span>
                 <span class="vtm-wf-lbl">AI Workforce</span>
                 <span class="vtm-wf-state run">Running</span>
               </div>
               <div class="vtm-wf-item">
-                <span class="vtm-wf-num">10</span>
+                <span class="vtm-wf-num">12</span>
                 <span class="vtm-wf-lbl">Total Workforce</span>
                 <span class="vtm-wf-state total">Active</span>
               </div>
