@@ -2088,7 +2088,7 @@ def page_emp_home():
         # AI Workforce 롤업 — 9명 × 2벌 이어붙여 -50% 지점에서 무한 순환.
         # 순수 CSS 애니메이션(21s linear)으로 한 칸씩 자연스럽게 롤업되며,
         # Streamlit 위젯/세션과 충돌하지 않는 표시 전용 패널이다.
-        avatars = ["✍️","✍️","♟️","📈","📣","🧭","🗓️"]
+        avatars = ["✍️","✍️","♟️","📈","📣","🧭","🗓️","📊","🛠️"]
         items_html = ""
         for _bank in range(2):
             for idx, (nm, task) in enumerate(AI_STAFF):
@@ -3518,7 +3518,7 @@ def page_admin_emp():
                         # ── AI 직원 롤업 목록 ──
     st.markdown("<div class='vtm-card'><h3>🤖 AI 직원 실시간 업무</h3></div>", unsafe_allow_html=True)
 
-    avatars = ["✍️","✍️","♟️","📈","📣","🧭","🗓️"]
+    avatars = ["✍️","✍️","♟️","📈","📣","🧭","🗓️","📊","🛠️"]
     items_html = ""
 
     for _bank in range(2):
