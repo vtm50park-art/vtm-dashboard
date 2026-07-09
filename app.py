@@ -2085,7 +2085,7 @@ def page_emp_home():
             unsafe_allow_html=True)
 
     with mid:
-        # AI Workforce 롤업 — 7명 × 2벌 이어붙여 -50% 지점에서 무한 순환.
+        # AI Workforce 롤업 — 9명 × 2벌 이어붙여 -50% 지점에서 무한 순환.
         # 순수 CSS 애니메이션(21s linear)으로 한 칸씩 자연스럽게 롤업되며,
         # Streamlit 위젯/세션과 충돌하지 않는 표시 전용 패널이다.
         avatars = ["✍️","✍️","♟️","📈","📣","🧭","🗓️"]
