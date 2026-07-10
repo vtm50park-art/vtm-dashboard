@@ -1863,11 +1863,12 @@ def render_login():
             """, unsafe_allow_html=True)
 
 
-def render_sidebar():
+@st.fragment(run_every="1s")
+def render_sidebar_header():
     role_txt = "🔴 관리자" if st.session_state.is_admin else "🟢 직원"
-    kst_now  = now_kst().strftime("%H:%M")
+    kst_now  = now_kst().strftime("%H:%M:%S")
     kst_date = now_kst().strftime("%m/%d")
- 
+
     st.markdown(f"""
     <div style="display:flex;align-items:center;gap:14px;
                 background:linear-gradient(90deg,#0B1120,#1E293B);
@@ -1888,6 +1889,10 @@ def render_sidebar():
       </div>
     </div>
     """, unsafe_allow_html=True)
+
+
+def render_sidebar():
+    render_sidebar_header()
  
     if st.session_state.is_admin:
         menus = [
@@ -1945,6 +1950,7 @@ def render_sidebar():
  
     st.markdown("<hr style='border-color:#1E3A5F;margin:4px 0 10px;'>", unsafe_allow_html=True)
  
+@st.fragment(run_every="1s")
 def topbar(title):
     kst = now_kst()
     day_kr = ["월","화","수","목","금","토","일"][kst.weekday()]
@@ -1953,11 +1959,32 @@ def topbar(title):
       <span class="tb-title">{title}</span>
       <span class="tb-info">
           📅 {kst.strftime('%Y년 %m월 %d일')} ({day_kr})
-          &nbsp;·&nbsp; 🇰🇷 KST {kst.strftime('%H:%M')}
+          &nbsp;·&nbsp; 🇰🇷 KST {kst.strftime('%H:%M:%S')}
           &nbsp;·&nbsp; 👤 {st.session_state.user_name}
       </span>
     </div>""", unsafe_allow_html=True)
  
+@st.fragment(run_every="1s")
+def render_emp_live_hero(uname):
+    kst = now_kst()
+    day_kr = ["월","화","수","목","금","토","일"][kst.weekday()]
+    st.markdown(f"""
+    <div class="vdir-hero">
+      <div class="vdir-hero-left">
+        <div class="vdir-hero-logo"><img src="{VTM_LOGO_URL}" alt="VTM Logo"></div>
+        <div>
+          <h2 class="vdir-hero-title"><span class="hello-text">안녕하세요,</span> <span class="nm">{uname}</span> 👋</h2>
+          <p class="vdir-hero-sub">오늘도 AI 직원들과 함께 브랜드를 성장시키는 하루입니다.</p>
+        </div>
+      </div>
+      <div class="vdir-hero-time">
+        <div class="d">{kst.strftime('%Y.%m.%d')} ({day_kr})</div>
+        <div class="t">{kst.strftime('%H:%M:%S')}</div>
+      </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+
 # ═══════════════════════════════════════════
 #  직원/디렉터: 홈 (VTM OS 2.0.8 — 프리미엄 디렉터 대시보드 리디자인)
 #  · DB 조회 로직(attendance/reports select)은 기존과 동일 유지
@@ -2004,25 +2031,8 @@ def page_emp_home():
     else:
         done_cnt = 0
 
-    kst = now_kst()
-    day_kr = ["월","화","수","목","금","토","일"][kst.weekday()]
-
-    # ── Hero ──
-    st.markdown(f"""
-    <div class="vdir-hero">
-      <div class="vdir-hero-left">
-        <div class="vdir-hero-logo"><img src="{VTM_LOGO_URL}" alt="VTM Logo"></div>
-        <div>
-          <h2 class="vdir-hero-title"><span class="hello-text">안녕하세요,</span> <span class="nm">{uname}</span> 👋</h2>
-          <p class="vdir-hero-sub">오늘도 AI 직원들과 함께 브랜드를 성장시키는 하루입니다.</p>
-        </div>
-      </div>
-      <div class="vdir-hero-time">
-        <div class="d">{kst.strftime('%Y.%m.%d')} ({day_kr})</div>
-        <div class="t">{kst.strftime('%H:%M')}</div>
-      </div>
-    </div>
-    """, unsafe_allow_html=True)
+    # ── Hero 실시간 시계 ──
+    render_emp_live_hero(uname)
 
     # ── KPI 6카드 (반응형 CSS Grid — 모바일 자동 세로 스택) ──
     kpis = [
@@ -2111,7 +2121,7 @@ def page_emp_home():
             '</div>'
             '<div class="vdai-view"><div class="vdai-track">' + items_html + '</div></div>'
             '<div class="vdai-foot">AI 자동화 상태'
-            '<span class="op"><span class="op-dot"></span>Running · 7 Agents</span>'
+            '<span class="op"><span class="op-dot"></span>Running · ' + str(len(AI_STAFF)) + ' Agents</span>'
             '</div>'
             '</div>',
             unsafe_allow_html=True)
@@ -2167,6 +2177,17 @@ def page_emp_home():
 #  직원: 출퇴근
 # ═══════════════════════════════════════════
 ATT_TYPES = ["정상출근","오전 반차","오후 반차","조퇴","연차","병가","공가"]
+
+@st.fragment(run_every="1s")
+def render_attendance_current_time(co_t):
+    kst_now_display = now_kst().strftime("%H:%M:%S")
+    st.markdown(f"""<div class="vtm-card" style="text-align:center;">
+      <h3>🔴 퇴근 시간</h3>
+      <p style="font-size:1.8rem;font-weight:900;color:#EF4444;margin:8px 0;">{co_t}</p>
+      <p style="color:#64748B;">현재 KST: {kst_now_display}</p>
+    </div>""", unsafe_allow_html=True)
+
+
  
 def page_emp_attend():
     topbar("⏰ 출퇴근")
@@ -2182,8 +2203,7 @@ def page_emp_attend():
     co_t = co_raw[-8:-3] if co_raw else "--:--"
     atp  = safe_str(att.iloc[0]["att_type"]) if not att.empty else "미출근"
     atp  = atp or "미출근"
-    kst_now_display = now_kst().strftime("%H:%M")
- 
+
     with c1:
         st.markdown(f"""<div class="vtm-card" style="text-align:center;">
           <h3>🟢 출근 시간</h3>
@@ -2191,11 +2211,7 @@ def page_emp_attend():
           <p style="color:#64748B;">{atp}</p>
         </div>""", unsafe_allow_html=True)
     with c2:
-        st.markdown(f"""<div class="vtm-card" style="text-align:center;">
-          <h3>🔴 퇴근 시간</h3>
-          <p style="font-size:1.8rem;font-weight:900;color:#EF4444;margin:8px 0;">{co_t}</p>
-          <p style="color:#64748B;">현재 KST: {kst_now_display}</p>
-        </div>""", unsafe_allow_html=True)
+        render_attendance_current_time(co_t)
  
     st.markdown("---")
     if att.empty:
@@ -3108,6 +3124,24 @@ def page_emp_guide():
 """, unsafe_allow_html=True)
 
 
+@st.fragment(run_every="1s")
+def render_admin_live_hero():
+    kst = now_kst()
+    day_kr = ["월","화","수","목","금","토","일"][kst.weekday()]
+    st.markdown(f"""
+    <div class="vadm-hero">
+      <div class="vadm-hero-left">
+       <div class="vadm-hero-logo"><img src="{VTM_LOGO_URL}" alt="VTM Logo"></div>
+        <div>
+          <h2 class="vadm-hero-title">관리자 대시보드</h2>
+          <p class="vadm-hero-sub">🇰🇷 KST {kst.strftime('%Y년 %m월 %d일')} ({day_kr}) {kst.strftime('%H:%M:%S')} &nbsp;·&nbsp; 👤 {st.session_state.user_name}</p>
+        </div>
+      </div>
+      <div class="vadm-hero-badge"><span class="vadm-hero-dot"></span>SYSTEM OPERATIONAL · 정상 운영 중</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+
 def page_admin_home():
     topbar("🔴 관리자 대시보드")
     td = today_str(); sb = _sb()
@@ -3128,20 +3162,7 @@ def page_admin_home():
     human_online   = int(t_att)                  # 오늘 출근한 휴먼 직원
     total_workforce = human_total + ai_total     # 전체 Workforce
 
-    kst = now_kst()
-    day_kr = ["월","화","수","목","금","토","일"][kst.weekday()]
-    st.markdown(f"""
-    <div class="vadm-hero">
-      <div class="vadm-hero-left">
-       <div class="vadm-hero-logo"><img src="{VTM_LOGO_URL}" alt="VTM Logo"></div>
-        <div>
-          <h2 class="vadm-hero-title">관리자 대시보드</h2>
-          <p class="vadm-hero-sub">🇰🇷 KST {kst.strftime('%Y년 %m월 %d일')} ({day_kr}) {kst.strftime('%H:%M')} &nbsp;·&nbsp; 👤 {st.session_state.user_name}</p>
-        </div>
-      </div>
-      <div class="vadm-hero-badge"><span class="vadm-hero-dot"></span>SYSTEM OPERATIONAL · 정상 운영 중</div>
-    </div>
-    """, unsafe_allow_html=True)
+    render_admin_live_hero()
 
     k1, k2, k3, k4 = st.columns(4)
     kpi_data = [
