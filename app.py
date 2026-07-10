@@ -1,6 +1,5 @@
 # vtm_dashboard.py  ← Supabase 마이그레이션 버전
 import streamlit as st
-import streamlit.components.v1 as components
 import pandas as pd
 from supabase import create_client, Client
 import io
@@ -1714,86 +1713,6 @@ label,.stTextInput label,.stSelectbox label,.stTextArea label,
     """, unsafe_allow_html=True)
 
 
-
-def inject_live_clock_engine():
-    """브라우저에서 KST 시계를 1초마다 갱신한다 (Streamlit rerun 불필요)."""
-    components.html(
-        r"""
-<script>
-(function () {
-    try {
-        const doc = window.parent.document;
-        const pad = (v) => String(v).padStart(2, "0");
-        const days = ["일", "월", "화", "수", "목", "금", "토"];
-
-        function getKstParts() {
-            const now = new Date();
-            const parts = new Intl.DateTimeFormat("en-US", {
-                timeZone: "Asia/Seoul",
-                year: "numeric",
-                month: "2-digit",
-                day: "2-digit",
-                hour: "2-digit",
-                minute: "2-digit",
-                second: "2-digit",
-                hour12: false,
-                weekday: "short"
-            }).formatToParts(now);
-
-            const out = {};
-            parts.forEach((part) => { out[part.type] = part.value; });
-
-            const dayMap = {
-                Sun: "일", Mon: "월", Tue: "화", Wed: "수",
-                Thu: "목", Fri: "금", Sat: "토"
-            };
-            out.dayKr = dayMap[out.weekday] || "";
-            return out;
-        }
-
-        function setText(selector, value) {
-            doc.querySelectorAll(selector).forEach((el) => {
-                el.textContent = value;
-            });
-        }
-
-        function tickAll() {
-            const k = getKstParts();
-            const hms = `${k.hour}:${k.minute}:${k.second}`;
-            const hm = `${k.hour}:${k.minute}`;
-            const dateDot = `${k.year}.${k.month}.${k.day} (${k.dayKr})`;
-            const dateKo = `${k.year}년 ${k.month}월 ${k.day}일 (${k.dayKr})`;
-            const md = `${k.month}/${k.day}`;
-
-            setText(".vtm-live-hms", hms);
-            setText(".vtm-live-hm", hm);
-            setText(".vtm-live-date", dateDot);
-            setText(".vtm-live-date-ko", dateKo);
-            setText(".vtm-live-md", md);
-        }
-
-        tickAll();
-        const timer = setInterval(tickAll, 1000);
-
-        const observer = new MutationObserver(tickAll);
-        if (doc.body) {
-            observer.observe(doc.body, { childList: true, subtree: true });
-        }
-
-        window.addEventListener("beforeunload", () => {
-            clearInterval(timer);
-            observer.disconnect();
-        });
-    } catch (error) {
-        console.error("VTM live clock initialization failed:", error);
-    }
-})();
-</script>
-        """,
-        height=0,
-        scrolling=False,
-    )
-
 def render_login():
     inject_all()
 
@@ -1965,10 +1884,7 @@ def render_sidebar():
       </div>
       <div style="margin-left:auto;text-align:right;">
         <div style="color:#D4AF37;font-size:0.75rem;font-weight:900;">{role_txt} {st.session_state.user_name}</div>
-        <div style="color:#64748B;font-size:0.68rem;font-weight:700;">
-            🇰🇷 KST <span class="vtm-live-md">{kst_date}</span>
-            <span class="vtm-live-hm" style="color:#D4AF37;font-weight:900;">{kst_now}</span>
-        </div>
+        <div style="color:#64748B;font-size:0.68rem;font-weight:700;">🇰🇷 KST {kst_date} {kst_now}</div>
       </div>
     </div>
     """, unsafe_allow_html=True)
@@ -2032,15 +1948,12 @@ def render_sidebar():
 def topbar(title):
     kst = now_kst()
     day_kr = ["월","화","수","목","금","토","일"][kst.weekday()]
-    date_fallback = f"{kst.strftime('%Y년 %m월 %d일')} ({day_kr})"
-    time_fallback = kst.strftime('%H:%M:%S')
     st.markdown(f"""
     <div class="topbar">
       <span class="tb-title">{title}</span>
       <span class="tb-info">
-          📅 <span class="vtm-live-date-ko">{date_fallback}</span>
-          &nbsp;·&nbsp; 🇰🇷 KST
-          <span class="vtm-live-hms" style="color:#D4AF37;font-weight:900;">{time_fallback}</span>
+          📅 {kst.strftime('%Y년 %m월 %d일')} ({day_kr})
+          &nbsp;·&nbsp; 🇰🇷 KST {kst.strftime('%H:%M')}
           &nbsp;·&nbsp; 👤 {st.session_state.user_name}
       </span>
     </div>""", unsafe_allow_html=True)
@@ -2105,8 +2018,8 @@ def page_emp_home():
         </div>
       </div>
       <div class="vdir-hero-time">
-        <div class="d vtm-live-date">{kst.strftime('%Y.%m.%d')} ({day_kr})</div>
-        <div class="t vtm-live-hms">{kst.strftime('%H:%M:%S')}</div>
+        <div class="d">{kst.strftime('%Y.%m.%d')} ({day_kr})</div>
+        <div class="t">{kst.strftime('%H:%M')}</div>
       </div>
     </div>
     """, unsafe_allow_html=True)
@@ -2281,9 +2194,7 @@ def page_emp_attend():
         st.markdown(f"""<div class="vtm-card" style="text-align:center;">
           <h3>🔴 퇴근 시간</h3>
           <p style="font-size:1.8rem;font-weight:900;color:#EF4444;margin:8px 0;">{co_t}</p>
-          <p style="color:#64748B;">현재 KST:
-            <span class="vtm-live-hms" style="color:#D4AF37;font-weight:900;font-size:1rem;">{kst_now_display}:00</span>
-          </p>
+          <p style="color:#64748B;">현재 KST: {kst_now_display}</p>
         </div>""", unsafe_allow_html=True)
  
     st.markdown("---")
@@ -3225,11 +3136,7 @@ def page_admin_home():
        <div class="vadm-hero-logo"><img src="{VTM_LOGO_URL}" alt="VTM Logo"></div>
         <div>
           <h2 class="vadm-hero-title">관리자 대시보드</h2>
-          <p class="vadm-hero-sub">🇰🇷 KST
-            <span class="vtm-live-date-ko">{kst.strftime('%Y년 %m월 %d일')} ({day_kr})</span>
-            <span class="vtm-live-hms" style="color:#D4AF37;font-weight:900;">{kst.strftime('%H:%M:%S')}</span>
-            &nbsp;·&nbsp; 👤 {st.session_state.user_name}
-          </p>
+          <p class="vadm-hero-sub">🇰🇷 KST {kst.strftime('%Y년 %m월 %d일')} ({day_kr}) {kst.strftime('%H:%M')} &nbsp;·&nbsp; 👤 {st.session_state.user_name}</p>
         </div>
       </div>
       <div class="vadm-hero-badge"><span class="vadm-hero-dot"></span>SYSTEM OPERATIONAL · 정상 운영 중</div>
@@ -4067,7 +3974,6 @@ else:
         inject_director_theme()
 
     render_sidebar()
-    inject_live_clock_engine()
  
     if st.session_state.is_admin:
         pages = {
