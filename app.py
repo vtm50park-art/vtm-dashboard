@@ -1964,7 +1964,8 @@ def render_sidebar():
             st.session_state.page = "home"; st.rerun()
  
     st.markdown("<hr style='border-color:#1E3A5F;margin:4px 0 10px;'>", unsafe_allow_html=True)
- 
+
+@st.fragment(run_every="1s") 
 def topbar(title):
     kst = now_kst()
     day_kr = ["월","화","수","목","금","토","일"][kst.weekday()]
