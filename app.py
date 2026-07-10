@@ -1,5 +1,6 @@
 # vtm_dashboard.py  ← Supabase 마이그레이션 버전
 import streamlit as st
+import streamlit.components.v1 as components
 import pandas as pd
 from supabase import create_client, Client
 import io
