@@ -430,6 +430,25 @@ label,.stTextInput label,.stSelectbox label,.stTextArea label,
         draw();
     }}
     bootStars();
+
+function updateKstClock(){{
+    const now = new Date();
+    const kstText = now.toLocaleTimeString("ko-KR", {{
+        timeZone: "Asia/Seoul",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: false
+    }});
+
+    document.querySelectorAll(".js-kst-clock").forEach(function(el){{
+        el.textContent = kstText;
+    }});
+}}
+
+updateKstClock();
+setInterval(updateKstClock, 1000);
+
 }})();
 </script>
 """, unsafe_allow_html=True)
