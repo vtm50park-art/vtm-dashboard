@@ -1947,17 +1947,89 @@ def render_sidebar():
     st.markdown("<hr style='border-color:#1E3A5F;margin:4px 0 10px;'>", unsafe_allow_html=True)
  
 def topbar(title):
-    kst = now_kst()
-    day_kr = ["월","화","수","목","금","토","일"][kst.weekday()]
-    st.markdown(f"""
-    <div class="topbar">
-      <span class="tb-title">{title}</span>
-      <span class="tb-info">
-          📅 {kst.strftime('%Y년 %m월 %d일')} ({day_kr})
-          &nbsp;·&nbsp; 🇰🇷 KST {kst.strftime('%H:%M')}
-          &nbsp;·&nbsp; 👤 {st.session_state.user_name}
-      </span>
-    </div>""", unsafe_allow_html=True)
+    user_name = st.session_state.user_name or ""
+
+    components.html(
+        f"""
+        <style>
+        html, body {{
+            margin: 0;
+            padding: 0;
+            background: transparent;
+            overflow: hidden;
+            font-family: 'Noto Sans KR', sans-serif;
+        }}
+
+        .topbar {{
+            box-sizing: border-box;
+            width: 100%;
+            background: linear-gradient(90deg, #1E293B 0%, #0F172A 100%);
+            border-bottom: 2px solid #D4AF37;
+            padding: 12px 18px;
+            border-radius: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+        }}
+
+        .tb-title {{
+            color: #D4AF37;
+            font-size: 1.05rem;
+            font-weight: 900;
+        }}
+
+        .tb-info {{
+            color: #94A3B8;
+            font-size: 0.8rem;
+            font-weight: 700;
+        }}
+        </style>
+
+        <div class="topbar">
+            <span class="tb-title">{title}</span>
+
+            <span class="tb-info">
+                📅 <span id="vtm-date"></span>
+                &nbsp;·&nbsp;
+                🇰🇷 KST <span id="vtm-clock"></span>
+                &nbsp;·&nbsp;
+                👤 {user_name}
+            </span>
+        </div>
+
+        <script>
+        function updateVtmClock() {{
+            const now = new Date();
+
+            const dateText = new Intl.DateTimeFormat("ko-KR", {{
+                timeZone: "Asia/Seoul",
+                year: "numeric",
+                month: "2-digit",
+                day: "2-digit",
+                weekday: "short"
+            }}).format(now);
+
+            const timeText = new Intl.DateTimeFormat("ko-KR", {{
+                timeZone: "Asia/Seoul",
+                hour: "2-digit",
+                minute: "2-digit",
+                second: "2-digit",
+                hour12: false
+            }}).format(now);
+
+            document.getElementById("vtm-date").textContent = dateText;
+            document.getElementById("vtm-clock").textContent = timeText;
+        }}
+
+        updateVtmClock();
+        setInterval(updateVtmClock, 1000);
+        </script>
+        """,
+        height=62,
+        scrolling=False
+    )
  
 # ═══════════════════════════════════════════
 #  직원/디렉터: 홈 (VTM OS 2.0.8 — 프리미엄 디렉터 대시보드 리디자인)
