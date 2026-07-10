@@ -3155,7 +3155,7 @@ def page_admin_home():
        <div class="vadm-hero-logo"><img src="{VTM_LOGO_URL}" alt="VTM Logo"></div>
         <div>
           <h2 class="vadm-hero-title">관리자 대시보드</h2>
-          <p class="vadm-hero-sub">🇰🇷 KST {kst.strftime('%Y년 %m월 %d일')} ({day_kr}) {kst.strftime('%H:%M')} &nbsp;·&nbsp; 👤 {st.session_state.user_name}</p>
+          <p class="vadm-hero-sub">🇰🇷 KR KST {kst.strftime('%Y년 %m월 %d일')} ({day_kr}) <span class="js-kst-clock">{kst.strftime('%H:%M:%S')}</span> &nbsp;·&nbsp; 👤 {st.session_state.user_name}</p>
         </div>
       </div>
       <div class="vadm-hero-badge"><span class="vadm-hero-dot"></span>SYSTEM OPERATIONAL · 정상 운영 중</div>
